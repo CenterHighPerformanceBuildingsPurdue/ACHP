@@ -75,6 +75,7 @@ class CompressorClass():
             ('Outlet Enthalpy','J/kg',self.hout_r),
             ('Overall isentropic efficiency','-',self.eta_oi),
             ('Pumped flow rate','m^3/s',self.Vdot_pumped)
+            ('Ambient heat loss','W',self.Q_amb)
          ]
         
     def Calculate(self):
@@ -137,6 +138,7 @@ class CompressorClass():
         self.W=power
         self.CycleEnergyIn=power*(1-self.fp)
         self.Vdot_pumped=mdot/PropsSI('D','T',self.Tin_r,'P',P1,self.Ref)
+        self.Q_amb=-self.fp*power
         
 if __name__=='__main__':        
     for i in range(1):
@@ -154,3 +156,4 @@ if __name__=='__main__':
         Comp.Calculate()
         print Comp.W,'W'
         print Comp.Vdot_pumped,'m^3/s'
+        print Comp.Q_amb, 'W'
