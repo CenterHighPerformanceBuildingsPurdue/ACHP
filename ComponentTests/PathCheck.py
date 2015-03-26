@@ -3,6 +3,9 @@ Created on Mar 20, 2015
 
 @author: AmmarBahman
 '''
+
+''' This code is just for demonstration and has nothing to do with ACHP'''
+
 from __future__ import division
 
 import sys
