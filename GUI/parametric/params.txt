@@ -1,0 +1,22 @@
+################################################################################
+# This file lists all the variables that can be altered in the parametric study
+# All items in this file will appear in the parametric solver
+# Structured in this way so that parametric solver can be more flexible 
+# 
+# fields are demarcated with :: delimiter
+# fields are:
+#  short description :: units :: variable name 
+################################################################################
+
+Cond. air inlet temp :: K :: Cycle.Condenser.Fins.Air.Tdb
+Evap. air Vdot :: m^3/s :: Cycle.Evaporator.Fins.Air.Vdot_ha
+Evap. air RH :: - :: Cycle.Evaporator.Fins.Air.RH
+Evaporator superheat :: K :: Cycle.Evaporator.DT_sh
+Evaporator air dry bulb air :: K :: Cycle.Evaporator.Fins.Air.Tdb
+IHX Length :: m :: Cycle.CoaxialIHX.L
+Number of PHE plates :: - :: Cycle.PHEIHX.Nplates
+Sec. Fluid mdot :: kg/s :: Cycle.Pump.mdot_g
+Cooling Coil Ncircuits :: - :: Cycle.CoolingCoil.Fins.Tubes.Ncircuits
+Cooling Coil RH :: - :: Cycle.CoolingCoil.Fins.Air.RH
+Cooling Coil Nbanks :: - :: Cycle.CoolingCoil.Fins.Tubes.Nbank
+Compr. Scale Factor :: - :: Cycle.Compressor.Vdot_ratio

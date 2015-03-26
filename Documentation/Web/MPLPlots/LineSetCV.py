@@ -1,0 +1,16 @@
+import numpy as np,pylab
+
+fig=pylab.figure()
+ax=fig.add_axes((0,0,1,1))
+pylab.plot([0.5,0.6,0.6,0.5,0.5],[0,0,1,1,0],'k--')
+pylab.plot([0,1],[0,0],'k',lw=10)
+pylab.plot([0,1],[1,1],'k',lw=10)
+pylab.gca().text(0.48,0.5,'$T$',ha='right',va='center')
+pylab.gca().text(0.62,0.5,'$T+dT$',ha='left',va='center')
+pylab.gca().set_xlim(0,1)
+pylab.gca().set_ylim(-0.1,1.6)
+pylab.gca().text(0.55,1.5,r'$T_{\infty}$',ha='left',va='center')
+pylab.gca().text(0.55,1.05,r'$dx$',ha='left',va='bottom')
+## pylab.gca().set_aspect(1)
+pylab.gca().axis('off')
+pylab.show()
