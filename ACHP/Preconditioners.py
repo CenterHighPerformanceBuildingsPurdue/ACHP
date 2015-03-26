@@ -1,9 +1,3 @@
-'''
-Created on Mar 25, 2015
-
-@author: AmmarBahman
-'''
-
 from CoolProp.CoolProp import PropsSI, HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp
 #from CoolProp.HumidAirProp import HAPropsSI  
 from scipy.optimize import fsolve
@@ -76,44 +70,13 @@ def DXPreconditioner(Cycle,epsilon=0.96):
         resids=[Qevap+W+Qcond,Qcond+Qcond_enthalpy]#,Qevap,f_dry]
         return resids
     
+    Tevap_init=Cycle.Evaporator.Fins.Air.Tdb-15
+    Tcond_init=Cycle.Condenser.Fins.Air.Tdb+8
+    x=fsolve(OBJECTIVE,[Tevap_init,Tcond_init])
+    DT_evap=Cycle.Evaporator.Fins.Air.Tdb-x[0]
+    DT_cond=x[1]-Cycle.Condenser.Fins.Air.Tdb
     
-#     Tevap_init=Cycle.Evaporator.Fins.Air.Tdb-15
-#     Tcond_init=Cycle.Condenser.Fins.Air.Tdb+8
-#       
-#     x=fsolve(OBJECTIVE,[Tevap_init,Tcond_init])
-#       
-#     DT_evap=Cycle.Evaporator.Fins.Air.Tdb-x[0]
-#     DT_cond=x[1]-Cycle.Condenser.Fins.Air.Tdb
-#       
-#     return DT_evap-3, DT_cond+3
-    '''start of modified section'''
-    solverFunc=fsolve
-    if Cycle.Mode=='AC':
-        Tevap_init=Cycle.Evaporator.Fins.Air.Tdb-15
-        Tcond_init=Cycle.Condenser.Fins.Air.Tdb+8
-        #First try using the fsolve algorithm
-        try:
-            x=fsolve(OBJECTIVE,[Tevap_init,Tcond_init])
-        except:
-            #If that doesnt work, try the Mult-Dimensional Newton-raphson solver
-            try:
-                x=MultiDimNewtRaph(OBJECTIVE,[Tevap_init,Tcond_init])
-            except:
-                x=[Tevap_init,Tcond_init]
-        DT_evap=Cycle.Evaporator.Fins.Air.Tdb-x[0]
-        DT_cond=x[1]-Cycle.Condenser.Fins.Air.Tdb
-    elif Cycle.Mode=='HP':
-        Tevap_init=Cycle.Evaporator.Fins.Air.Tdb-8
-        Tcond_init=Cycle.Condenser.Fins.Air.Tdb+15
-        x=solverFunc(OBJECTIVE,[Tevap_init,Tcond_init])
-        DT_evap=Cycle.Evaporator.Fins.Air.Tdb-x[0]
-        DT_cond=x[1]-Cycle.Condenser.Fins.Air.Tdb
-    else:
-        raise ValueError()
-
     return DT_evap-3, DT_cond+3
-
-    '''End of modified code'''
 
 def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
     rho_air=1.1
@@ -234,3 +197,4 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
         raise ValueError()
         
     return DT_evap,DT_cond,Tin_CC
+    
