@@ -35,6 +35,7 @@ params={'Ref': 'R410A',
         'Tin_r': 333.15,
         'psat_r': PropsSI('P','T',323.15,'Q',1.0,'R410A'),
         'Fins': Fins,
+        'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
         'Verbosity': 0
         }
 

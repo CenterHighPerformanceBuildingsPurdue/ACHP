@@ -2,7 +2,7 @@ from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi,log,exp
 from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube,ShahCondensation_Average,LMPressureGradientAvg,TwoPhaseDensity,AccelPressureDrop 
-from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass
+from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
 from scipy.optimize import brentq
 from ACHPTools import ValidateFields
 class FinVals():
@@ -83,6 +83,7 @@ class CondenserClass():
             reqFields=[
                ('Ref',str,None,None),
                ('Fins',IsFinsClass,None,None),
+               ('FinsType',str,None,None),
                ('mdot_r',float,0.00001,20),
                ('Tin_r',float,200,500),
                ('psat_r',float,0.01,20000000)              #0.00001,20000 changed to 0.01,20000000
@@ -172,7 +173,14 @@ class CondenserClass():
             
         cp_r = PropsSI('C', 'T', (Tdew+self.Tin_r)/2, 'P', self.psat_r, self.Ref)*1. #*1000. #//[J/kg-K]
 
-        WavyLouveredFins(self.Fins)
+        #Compute Fins Efficiency based on FinsType 
+        if self.FinsType == 'WavyLouveredFins':
+            WavyLouveredFins(self.Fins)
+        elif self.FinsType == 'HerringboneFins':
+            HerringboneFins(self.Fins)
+        elif self.FinsType == 'PlainFins':
+            PlainFins(self.Fins)
+            
         self.mdot_da=self.Fins.mdot_da
         
         # Cross-flow in the superheated region.  
@@ -342,6 +350,7 @@ def SampleCondenser(T=41.37):
         'Tin_r': T+20+273.15,
         'psat_r': PropsSI('P','T',T+273.15,'Q',1.0,'R410A'), 
         'Fins': Fins,
+        'FinsType': 'HerringboneFins',                                          #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'Verbosity':0
     }
     Cond=CondenserClass(**params)
