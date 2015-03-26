@@ -21,7 +21,7 @@ def SampleSecondaryLoopSystem():
     Cycle.DT_sc_target = 7.0
     Cycle.Charge_target = 2.4
     Cycle.Ref='R410A'
-    Cycle.SecLoopFluid = 'EG-20%'
+    Cycle.SecLoopFluid = 'INCOMP::MEG-20%'
     Cycle.IHXType = 'PHE'# or could be 'Coaxial'
     Cycle.Mode='AC'
     
