@@ -4,7 +4,7 @@ from CoolProp.CoolProp import PropsSI #,UseSaturationLUT
 from Correlations import f_h_1phase_Tube,ShahEvaporation_Average, LockhartMartinelli,LMPressureGradientAvg,AccelPressureDrop,TwoPhaseDensity
 from scipy.optimize import brentq #solver to find roots (zero points) of functions
 from scipy.interpolate import interp1d
-from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass
+from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
 from DryWetSegment import DWSVals, DryWetSegment
 from ACHPTools import ValidateFields
 import numpy as np
@@ -82,7 +82,13 @@ class EvaporatorClass():
         return Output_List
         
     def AirSideCalcs(self):
-        WavyLouveredFins(self.Fins)
+        #Update with user FinType
+        if self.FinsType == 'WavyLouveredFins':
+            WavyLouveredFins(self.Fins)
+        elif self.FinsType == 'HerringboneFins':
+            HerringboneFins(self.Fins)
+        elif self.FinsType == 'PlainFins':
+            PlainFins(self.Fins)
     
     def Initialize(self):
         #Input validation the first call of Initialize
@@ -92,6 +98,7 @@ class EvaporatorClass():
                        ('Ref',str,None,None),
                        ('psat_r',float,0.001,100000000),                        #0.000001,100000 is updated to 0.001,100000000
                        ('Fins',IsFinsClass,None,None),
+                       ('FinsType',str,None,None),
                        ('hin_r',float,-100000,10000000),
                        ('mdot_r',float,0.000001,10),
                        ]
@@ -134,7 +141,15 @@ class EvaporatorClass():
         self.h_fg=(PropsSI('H','T',self.Tdew_r,'Q',1.0,self.Ref)-PropsSI('H','T',self.Tbubble_r,'Q',0.0,self.Ref))*1. #*1000. #[J/kg]
         
         self.Fins.Air.RHmean=self.Fins.Air.RH
-        WavyLouveredFins(self.Fins)
+        
+        #Update with user FinType
+        if self.FinsType == 'WavyLouveredFins':
+            WavyLouveredFins(self.Fins)
+        elif self.FinsType == 'HerringboneFins':
+            HerringboneFins(self.Fins)
+        elif self.FinsType == 'PlainFins':
+            PlainFins(self.Fins)
+        
         self.mdot_ha=self.Fins.mdot_ha #[kg_ha/s]
         self.mdot_da=self.Fins.mdot_da #[kg_da/s]
         
@@ -380,6 +395,7 @@ if __name__=='__main__':
                 'mdot_r':  0.0708,
                 'psat_r':  PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
                 'Fins': FinsTubes,
+                'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
                 'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
                 'Verbosity': 0
         }
