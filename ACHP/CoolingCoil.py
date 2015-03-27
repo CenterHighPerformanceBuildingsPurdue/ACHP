@@ -106,6 +106,7 @@ class CoolingCoilClass():
         DWS.Tin_a=self.Tin_a
         DWS.RHin_a=self.Fins.Air.RH
         DWS.Fins=self.Fins
+        DWS.FinsType=self.FinsType              #Added to pass FinsType to DryWetSegment
     
         DWS.Tin_r=self.Tin_g
         DWS.A_r=self.A_g_wetted

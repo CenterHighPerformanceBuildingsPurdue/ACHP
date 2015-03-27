@@ -109,7 +109,15 @@ def DryWetSegment(DWS):
             # Ratio of specific heats [-]
             DWS.Fins.Air.cs_cp=c_s/cp_da
             DWS.Fins.WetDry='Wet'
-            WavyLouveredFins(DWS.Fins)
+            
+            #Compute the fin efficiency based on the user choice of FinsType
+            if DWS.FinsType == 'WavyLouveredFins':
+                WavyLouveredFins(DWS.Fins)
+            elif DWS.FinsType == 'HerringboneFins':
+                HerringboneFins(DWS.Fins)
+            elif DWS.FinsType == 'PlainFins':
+                PlainFins(DWS.Fins)
+            
             eta_a_wet=DWS.Fins.eta_a_wet
             UA_o=eta_a_wet*h_a*A_a
             Ntu_o=eta_a_wet*h_a*A_a/(mdot_da*cp_da)
@@ -205,7 +213,13 @@ def DryWetSegment(DWS):
                 # Ratio of specific heats [-]
                 DWS.Fins.Air.cs_cp=c_s/cp_da
                 # Find new, effective fin efficiency since cs/cp is changed from wetting
-                WavyLouveredFins(DWS.Fins)
+                # Based on the user choice of FinsType
+                if DWS.FinsType == 'WavyLouveredFins':
+                    WavyLouveredFins(DWS.Fins)
+                elif DWS.FinsType == 'HerringboneFins':
+                    HerringboneFins(DWS.Fins)
+                elif DWS.FinsType == 'PlainFins':
+                    PlainFins(DWS.Fins)
                 # Effective humid air mass flow ratio
                 m_star=mdot_da/(mdot_r*(cp_r/c_s))
                 #compute the new Ntu_owet

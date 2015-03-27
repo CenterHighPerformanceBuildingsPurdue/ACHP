@@ -257,6 +257,7 @@ class EvaporatorClass():
     
         # Store temporary values to be passed to DryWetSegment
         DWS.Fins=self.Fins
+        DWS.FinsType = self.FinsType                                            #Added to pass FinsType to DryWetSegment
         DWS.A_a=self.Fins.A_a*w_2phase
         DWS.cp_da=self.Fins.cp_da
         DWS.eta_a=self.Fins.eta_a
@@ -319,6 +320,7 @@ class EvaporatorClass():
         DWS.mdot_da=self.mdot_da*w_superheat
         DWS.pin_a=self.Fins.Air.p
         DWS.Fins=self.Fins
+        DWS.FinsType = self.FinsType           #Added to pass FinsType to DryWetSegment
     
         # Inputs on the air side to two phase region are inlet air again
         DWS.Tin_a=self.Tin_a
