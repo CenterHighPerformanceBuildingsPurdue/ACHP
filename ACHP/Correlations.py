@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI #,UseSaturationLUT ,T_hp, IsFluidType
+from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -28,7 +28,7 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     #UseSaturationLUT(1)
     #h/=1000  #convert J/kg to kJ/kg since CoolProp uses kJ/kg >>> modification: CoolProp 5.x uses J/kg
     
-    if 'INCOMP' in Ref: #IsFluidType(Ref,'Brine')==1
+    if IsFluidType(Ref,'Brine')==1:
         #It is subcooled
         # Use a guess of 10 degrees below max temp
         #Tguess=PropsSI('M','T',0,'P',0, Ref)-10
