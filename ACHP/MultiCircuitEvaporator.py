@@ -279,6 +279,7 @@ if __name__=='__main__':
             'mdot_r': 0.0708,
             'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
             'Fins': FinsTubes,
+            'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
             'Verbosity': 0
     }
@@ -296,6 +297,7 @@ if __name__=='__main__':
             'Vdot_ha_coeffs':[0.2,0.2,0.2,0.2,0.2],  #airside flow distribution
             'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
             'Fins': FinsTubes,
+            'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
             'Verbosity':0,
             'TestName':'MCE-0014',  #this and the two next lines can be used to specify exact test conditions
