@@ -647,10 +647,10 @@ def Bertsch_MC(x,Ref,G,Dh,q,L,Tbubble,Tdew):
     g=9.81
 
     if Ref=='R290':
-        sig=55.28*(1-Tdew/369.818)**(1.258)/1. #/1000.
+        sig=55.28*(1-Tdew/369.818)**(1.258)/1000.
     elif Ref=='R410A':
         ## From Okada 1999 "Surface Tension of HFC Refrigerant Mixtures"
-        sig=62.38*(1-Tdew/344.56)**(1.246)/1. #/1000.
+        sig=62.38*(1-Tdew/344.56)**(1.246)/1000.
     
     k_L=PropsSI('L','T',Tbubble,'Q',0,Ref)#*1000
     k_G=PropsSI('L','T',Tdew,'Q',1,Ref)#*1000
