@@ -379,7 +379,7 @@ def HerringboneFins(Inputs):
     #additional parameters needed
     k_fin = Inputs.Fins.k_fin
     Nbank = Inputs.Tubes.Nbank              #Number of banks
-    secTheta=sqrt(X_f*X_f + P_d*P_d) / X_f  #secTheta
+    #secTheta=sqrt(X_f*X_f + P_d*P_d) / X_f  #secTheta : already calculated, no need to re-calculate it
     #Wetted Area of a single fin [m^2]
     A_1fin = 2.0 * (Height * P_L * (Nbank+1) * secTheta  - Ntubes_bank*Nbank * pi*D_o*D_o/4) #assuming that fin extends 1/2 pt in front/after last tube in bundle
     # Total wetted area of the fins [m^2]
@@ -515,7 +515,7 @@ def PlainFins(Inputs):
     #pressure drop
     F1=-0.764+0.739*P_t/P_L+0.177*F_p/D_c-0.00758/N
     F2=-15.689+64.021/log(Re_Dc)
-    F3=1.696-15.695*log(Re_Dc)
+    F3=1.696-15.695/log(Re_Dc)          #CORRECTION: division instead of multiplication >> bug solved!
     f=0.0267*pow(Re_Dc,F1)*pow(P_t/P_L,F2)*pow(F_p/D_c,F3)
     
     
@@ -572,7 +572,6 @@ def PlainFins(Inputs):
     Inputs.dP_a=DeltaP_air
     Inputs.Re=Re_Dc
     
-    print "Warning! The PlainFins seem to be buggy, better use HerringboneFins with small waveiness"
     
     
     
