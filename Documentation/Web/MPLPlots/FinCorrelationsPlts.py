@@ -29,7 +29,7 @@ FinsTubes.Fins.k_fin=237
 FinsTubes.Air.Vdot_ha=0.5663
 FinsTubes.Air.Tmean=299.8
 FinsTubes.Air.Tdb=299.8
-FinsTubes.Air.p=101.325
+FinsTubes.Air.p=101325
 FinsTubes.Air.RH=0.51
 FinsTubes.Air.RHmean=0.51
 FinsTubes.Air.FanPower=438
@@ -84,7 +84,7 @@ def plot_dp():
     pylab.plot(V_dots_ha,DP_wavy,label="Herringbone fins")
     pylab.plot(V_dots_ha,DP_louvered,'--',label="Wavy-louvered fins")
     pylab.plot(V_dots_ha,DP_plain,':',label="Plain fins")
-    pylab.gca().set_ylim(0,200)
+    pylab.gca().set_ylim(0,40)
     leg=pylab.legend(loc=pos, fancybox=True)
     leg.get_frame().set_alpha(0.5)
     pylab.gca().set_yscale(scl)
