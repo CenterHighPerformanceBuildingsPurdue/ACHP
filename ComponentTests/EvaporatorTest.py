@@ -35,6 +35,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
         'hin_r': PropsSI('H','T',282,'Q',0.15,'R410A'), #*1000 #[J/kg]
         'Verbosity': 0
         }

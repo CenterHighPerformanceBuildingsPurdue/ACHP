@@ -1,5 +1,5 @@
 from __future__ import division
-from CoolProp.CoolProp import PropsSI, FluidsList #,IsFluidType
+from CoolProp.CoolProp import PropsSI, IsFluidType
 from Correlations import f_h_1phase_Tube,TrhoPhase_ph
 from math import log,pi,exp
 
@@ -40,7 +40,7 @@ class LineSetClass():
          ]
     
     def Calculate(self):
-        if not 'INCOMP' in self.Ref: #IsFluidType(self.Ref,'Brine'):
+        if not IsFluidType(self.Ref,'Brine'):
             #Figure out the inlet state
             self.Tbubble=PropsSI('T','P',self.pin,'Q',0.0,self.Ref)
             self.Tdew=PropsSI('T','P',self.pin,'Q',1.0,self.Ref)

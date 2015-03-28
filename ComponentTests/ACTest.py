@@ -64,6 +64,7 @@ Cycle.Condenser.Fins.Air.RH=0.51
 Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=260
 
+Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Condenser.Ref=Cycle.Ref
 Cycle.Condenser.Verbosity=0
 
@@ -93,6 +94,7 @@ Cycle.Evaporator.Fins.Air.RH=0.5
 Cycle.Evaporator.Fins.Air.RHmean=0.5
 Cycle.Evaporator.Fins.Air.FanPower=438
 
+Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Evaporator.Ref=Cycle.Ref
 Cycle.Evaporator.Verbosity=0
 Cycle.Evaporator.DT_sh=5

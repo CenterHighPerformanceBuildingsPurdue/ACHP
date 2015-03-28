@@ -65,6 +65,7 @@ Cycle.Condenser.Fins.Air.RH=0.51
 Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=438
 
+Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Condenser.Ref=Cycle.Ref
 Cycle.Condenser.Verbosity=0
 

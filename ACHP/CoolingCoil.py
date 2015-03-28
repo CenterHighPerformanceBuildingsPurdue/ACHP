@@ -2,7 +2,7 @@ from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi
 from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube
-from FinCorrelations import WavyLouveredFins,FinInputs
+from FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
 from matplotlib import docstring
 from BaseDoc import BaseDocClass
 from DryWetSegment import DWSVals, DryWetSegment
@@ -79,7 +79,12 @@ class CoolingCoilClass():
         self.A_g_wetted=self.Ncircuits*pi*self.ID*self.Lcircuit
         
         # Evaluate the air-side heat transfer and pressure drop
-        WavyLouveredFins(self.Fins)
+        if self.FinsType == 'WavyLouveredFins':
+            WavyLouveredFins(self.Fins)
+        elif self.FinsType == 'HerringboneFins':
+            HerringboneFins(self.Fins)
+        elif self.FinsType == 'PlainFins':
+            PlainFins(self.Fins)
         
     def Calculate(self):
         """
@@ -101,6 +106,7 @@ class CoolingCoilClass():
         DWS.Tin_a=self.Tin_a
         DWS.RHin_a=self.Fins.Air.RH
         DWS.Fins=self.Fins
+        DWS.FinsType=self.FinsType              #Added to pass FinsType to DryWetSegment
     
         DWS.Tin_r=self.Tin_g
         DWS.A_r=self.A_g_wetted
@@ -166,6 +172,7 @@ def TestCase():
     FinsTubes.Air.FanPower=438
         
     CC.Fins = FinsTubes
+    CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     CC.Ref_g = 'Water'
     CC.mdot_g = 0.15
     CC.Tin_g = 278

@@ -1,5 +1,5 @@
 from __future__ import division
-from CoolProp.CoolProp import PropsSI #, IsFluidType,Help,Phase
+from CoolProp.CoolProp import PropsSI, IsFluidType #,Help,Phase
 
 from Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
 from math import pi,exp,log,sqrt,tan,cos,sin
@@ -185,14 +185,14 @@ class PHEHXClass():
         self.hout_c=EnthalpyList_c[1]
         
         #Find the phase boundaries that exist, and add them to lists
-        if 'INCOMP' in self.Ref_h:#IsFluidType(self.Ref_h,'Brine'):
+        if IsFluidType(self.Ref_h,'Brine'):
             hsatL_h=1e9
             hsatV_h=1e9
         else:
             hsatL_h=PropsSI('H','T',self.Tbubble_h,'D',self.rhosatL_h,self.Ref_h) #*1000
             hsatV_h=PropsSI('H','T',self.Tdew_h,'D',self.rhosatV_h,self.Ref_h) #*1000
         
-        if 'INCOMP' in self.Ref_c:#IsFluidType(self.Ref_c,'Brine'):
+        if IsFluidType(self.Ref_c,'Brine'):
             hsatL_c=1e9
             hsatV_c=1e9
         else:
@@ -361,7 +361,7 @@ class PHEHXClass():
         self.Tout_h,self.rhoout_h=TrhoPhase_ph(self.Ref_h,self.pin_h,self.hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
         self.Tout_c,self.rhoout_c=TrhoPhase_ph(self.Ref_c,self.pin_c,self.hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'INCOMP' in self.Ref_c:#IsFluidType(self.Ref_c,'Brine'):
+        if IsFluidType(self.Ref_c,'Brine'):
             self.sout_c=PropsSI('S','T',self.Tout_c,'P',self.pin_c,self.Ref_c) #*1000
             self.DT_sc_c=1e9
         else:
@@ -375,7 +375,7 @@ class PHEHXClass():
             else:
                 self.DT_sc_c=self.Tbubble_c-self.Tout_c
         
-        if 'INCOMP' in self.Ref_h:#IsFluidType(self.Ref_h,'Brine'):
+        if IsFluidType(self.Ref_h,'Brine'):
             self.sout_h=PropsSI('S','T',self.Tout_h,'P',self.pin_h,self.Ref_h) #*1000
             self.DT_sc_h=1e9
         else:
@@ -592,7 +592,7 @@ class PHEHXClass():
             self.NgapsHot=self.Nplates-1-self.NgapsCold
         
         #Saturation temperatures for cold fluid
-        if 'INCOMP' in self.Ref_c: #IsFluidType(self.Ref_c,'Brine'):
+        if IsFluidType(self.Ref_c,'Brine'):
             self.rhosatL_c=1
             self.rhosatV_c=1
             self.Tbubble_c = None
@@ -606,7 +606,7 @@ class PHEHXClass():
             self.rhosatV_c=PropsSI('D','T',self.Tdew_c,'Q',1,self.Ref_c)
         
         
-        if 'INCOMP' in self.Ref_h: #IsFluidType(self.Ref_h,'Brine'):
+        if IsFluidType(self.Ref_h,'Brine'):
             self.Tbubble_h=None
             self.Tdew_h=None
             self.Tsat_h=None
@@ -624,12 +624,12 @@ class PHEHXClass():
         self.Tin_h,self.rhoin_h=TrhoPhase_ph(self.Ref_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
         self.Tin_c,self.rhoin_c=TrhoPhase_ph(self.Ref_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'INCOMP' in self.Ref_c:#IsFluidType(self.Ref_c,'Brine'):
+        if IsFluidType(self.Ref_c,'Brine'):
             self.sin_c=PropsSI('S','T',self.Tin_c,'P',self.pin_c,self.Ref_c) #*1000
         else:
             self.sin_c=PropsSI('S','T',self.Tin_c,'D',self.rhoin_c,self.Ref_c) #*1000
             
-        if 'INCOMP' in self.Ref_h:#IsFluidType(self.Ref_h,'Brine'):
+        if IsFluidType(self.Ref_h,'Brine'):
             self.sin_h=PropsSI('S','T',self.Tin_h,'P',self.pin_h,self.Ref_h) #*1000
         else:
             self.sin_h=PropsSI('S','T',self.Tin_h,'D',self.rhoin_h,self.Ref_h) #*1000
