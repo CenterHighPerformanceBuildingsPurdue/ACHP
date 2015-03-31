@@ -2,7 +2,7 @@ from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import log,exp
 #from CoolProp.HumidAirProp import HAPropsSI,cair_sat #,UseVirialCorrelations,UseIsothermCompressCorrelation,UseIdealGasEnthalpyCorrelations
 from CoolProp.CoolProp import HAPropsSI, cair_sat #HAPropsSI and cair_sat are updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp
-from FinCorrelations import WavyLouveredFins
+from FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
 
 #Turn on virial correlations for air and water for speed in Humid Air routines
 #UseVirialCorrelations(1)
@@ -24,7 +24,7 @@ def DryWetSegment(DWS):
     """
     
     #List of required parameters
-    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','mdot_r','Fins']
+    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','mdot_r','Fins','FinsType']
     
     #Check that all the parameters are included, raise exception otherwise
     for param in RequiredParameters:
