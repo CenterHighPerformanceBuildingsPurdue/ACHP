@@ -89,7 +89,7 @@ def DryWetSegment(DWS):
                 T_ac=Tin_a #temp at onset of wetted wall
                 h_ac=hin_a #enthalpy at onset of wetted surface
             else:
-                # Partially wet and dry
+                # Partially wet and dry (i.e T_so_b<Tdp<T_so_a)
 
                 # Air temperature at the interface between wet and dry surface
                 # Based on equating heat fluxes at the wall which is at dew point UA_i*(Tw-Ti)=UA_o*(To-Tw)
@@ -103,7 +103,7 @@ def DryWetSegment(DWS):
                 # Dry heat transfer
                 Q_dry=mdot_da*cp_da*(Tin_a-T_ac)
 
-            # Saturation specific heat at mean water temp
+            # Saturation specific heat at mean water temp (c_s : partial derivative dh_sat/dT @ Tsat_r)
             c_s=cair_sat(Tin_r)*1000  #[J/kg-K]
             # Find new, effective fin efficiency since cs/cp is changed from wetting
             # Ratio of specific heats [-]
@@ -245,7 +245,7 @@ def DryWetSegment(DWS):
                 # Water outlet saturated surface enthalpy [J/kg_da]
                 h_s_w_o=HAPropsSI('H','T',Tout_r, 'P',pin_a, 'R', 1.0)#*1000 #[J/kg_da]
                 #Local UA* and c_s
-                UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)*1000/2.0)/h_r/A_r)
+                UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)/2.0)*1000/h_r/A_r)
                 # Wet-analysis surface temperature [K]
                 Tin_s = Tout_r + UA_star/h_r/A_r*(hin_a-h_s_w_o)
                 # Wet-analysis saturation enthalpy [J/kg_da]
