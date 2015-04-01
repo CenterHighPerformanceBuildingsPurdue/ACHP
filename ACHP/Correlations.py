@@ -52,14 +52,14 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
         if h>hsatV:
             #It's superheated
             cp=PropsSI('C','T',Tdew,'D',rhosatV,Ref)
-            Tguess=Tdew+(h-hsatV)/cp
+            #Tguess=Tdew+(h-hsatV)/cp
             T=PropsSI('T','H',h,'P',p,Ref)   #T_hp(Ref,h,p,Tguess)
             rho=PropsSI('D','T',T,'P',p,Ref)
             return T,rho,'Superheated'
         elif h<hsatL:
             # It's subcooled
             cp=PropsSI('C','T',Tbubble,'D',rhosatL,Ref)
-            Tguess=Tbubble-(hsatL-h)/cp
+            #Tguess=Tbubble-(hsatL-h)/cp
             T=PropsSI('T','H',h,'P',p, Ref)  #T_hp(Ref,h,p,Tguess)
             rho=PropsSI('D','T',T,'P',p,Ref)
             return T,rho,'Subcooled'
@@ -371,6 +371,7 @@ def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
     else:
         #Use Simpson's rule to carry out numerical integration to get average
         return simps(h,x)/(x_max-x_min)
+
 def LongoCondensation(x_avg,G,dh,Ref,TsatL,TsatV):
     rho_L = PropsSI('D', 'T', TsatL, 'Q', 0, Ref) #kg/m^3
     rho_V = PropsSI('D', 'T', TsatV, 'Q', 1, Ref) #kg/m^3
@@ -672,6 +673,8 @@ def Bertsch_MC(x,Ref,G,Dh,q,L,Tbubble,Tdew):
     Co=sqrt(sig/(g*(rho_L-rho_G)*Dh**2))
     h_TP=h_nb*(1-x)+h_conv_tp*(1.0+80.0*(x**2-x**6)*exp(-0.6*Co))
     return h_TP
+
+
 if __name__=='__main__':
     DP_vals_acc=[]
     DP_vals_fric=[]
