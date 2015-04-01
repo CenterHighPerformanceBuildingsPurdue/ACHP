@@ -159,10 +159,22 @@ def DryWetSegment(DWS):
         C_star = Cmin / Cmax
         # Ntu overall [-]
         Ntu_dry = UA / Cmin
+        
+        if Ntu_dry<0.0000001:
+            print "warning:  NTU_dry in dry wet segment was negative. forced it to positive value of 0.001!"
+            Ntu_dry=0.0000001
 
         # Counterflow effectiveness [-]
-        epsilon_dry = ((1 - exp(-Ntu_dry * (1 - C_star))) / 
-            (1 - C_star * exp(-Ntu_dry * (1 - C_star))))
+        #epsilon_dry = ((1 - exp(-Ntu_dry * (1 - C_star))) / 
+        #   (1 - C_star * exp(-Ntu_dry * (1 - C_star))))
+        
+        #Crossflow effectiveness (e.g. see Incropera - Fundamentals of Heat and Mass Transfer, 2007, p. 662)
+        if (cp_r * mdot_r)<(cp_da * mdot_da):
+            epsilon_dry= 1-exp(-C_star**(-1)*(1-exp(-C_star*(Ntu_dry))))
+            #Cross flow, single phase, cmax is airside, which is unmixed
+        else:
+            epsilon_dry=(1/C_star)*(1-exp(-C_star*(1-exp(-Ntu_dry))))
+            #Cross flow, single phase, cmax is refrigerant side, which is mixed
 
         # Dry heat transfer [W]
         Q_dry = epsilon_dry*Cmin*(Tin_a-Tin_r)
@@ -372,8 +384,8 @@ def DryWetSegment(DWS):
           
 
     DWS.f_dry=f_dry
-    #DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a/1.0)    ##hout_a/1000.0 is updated by removing /1000.0
-    #DWS.RHout_a=HAPropsSI('R','T',Tout_a,'P',101325,'W',DWS.omega_out)
+    DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a/1.0)    ##hout_a/1000.0 is updated by removing /1000.0
+    DWS.RHout_a=HAPropsSI('R','T',Tout_a,'P',101325,'W',DWS.omega_out)
     DWS.Tout_a=Tout_a
     DWS.Q=Q
     DWS.Q_sensible=Q_sensible
