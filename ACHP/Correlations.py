@@ -446,7 +446,7 @@ def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     f = 8 * ((8/Re)**12.0 + 1 / (A + B)**(1.5))**(1/12)
 
     # Heat Transfer coefficient of Gnielinski
-    Nu = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(0.66666)-1)) #[-]
+    Nu = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) #[-]
     h = k*Nu/Dh #W/m^2-K
     return (f, h, Re)
 
