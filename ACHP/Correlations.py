@@ -101,7 +101,7 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
     """
     Accelerational pressure drop
     
-    From -dpdz|A=G^2*d[x^2v_g/alpha+(1-x)^2*v_f/(1-alpha)^2]/dz
+    From -dpdz|A=G^2*d[x^2v_g/alpha+(1-x)^2*v_f/(1-alpha)]/dz
     
     Integrating over z from 0 to L where x=x_1 at z=0 and x=x_2 at z=L
     
