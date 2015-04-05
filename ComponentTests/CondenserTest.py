@@ -43,6 +43,9 @@ Cond=CondenserClass(**params)
 Cond.Calculate()
 
 print 'Heat transfer rate in condenser is', Cond.Q,'W'
-print 'Fraction of circuit length in subcooled section is',Cond.w_subcool
-print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
+print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
+print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
 print 'Fraction of circuit length in superheated section is',Cond.w_superheat
+print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 
