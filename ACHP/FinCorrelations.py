@@ -611,5 +611,5 @@ if __name__=='__main__':
     print "Herringbone Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a) #print some of the results
     PlainFins(FinsTubes) 
     print "Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a) #print some of the results
-    print "a graph for the fin correlations can be found here: "+r"\achp\trunk\Documentation\Web\MPLPlots"
+    print "a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots"
     
