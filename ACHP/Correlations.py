@@ -72,6 +72,10 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
             return T,rho,'TwoPhase'
 
 def TwoPhaseDensity(Ref,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
+    """
+    function to obtain the average density in the two-phase region
+    """
+    
     rhog=PropsSI('D', 'T', Tdew, 'Q', 1, Ref)
     rhof=PropsSI('D', 'T', Tbubble, 'Q', 0, Ref)
 
@@ -275,9 +279,7 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
 
 def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
     """
-    Returns the average pressure gradient between qualities of x_min and x_max.
-    
-    To obtain the pressure gradient for a given value of x, pass it in as x_min and x_max
+    Returns the average heat transfer coefficient between qualities of x_min and x_max.
     
     Required parameters:
     * x_min : The minimum quality for the range [-]
