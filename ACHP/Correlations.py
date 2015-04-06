@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
+from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -130,6 +130,7 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
                 raise ValueError("slipModel must be either 'Zivi' or 'Homogeneous'")
             alpha=1/(1+S*rhoV/rhoL*(1-x)/x)
             return x**2/rhoV/alpha+(1-x)**2/rhoL/(1-alpha)
+    
     return G**2*(f(x_min,rhosatL,rhosatV)-f(x_max,rhosatL,rhosatV))
         
 def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=None):
