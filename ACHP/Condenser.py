@@ -42,6 +42,7 @@ class CondenserClass():
             ('Fin waviness xf','m',self.Fins.Fins.xf),
             ('Fin thickness','m',self.Fins.Fins.t),
             ('Fin Conductivity','W/m-K',self.Fins.Fins.k_fin),
+            ('Fins Type','-',self.FinsType),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
             ('Q Two-Phase','W',self.Q_2phase),

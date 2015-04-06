@@ -47,6 +47,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
                                         ('Fin waviness xf'+' '+str(i),'m',self.Evaps[i].Fins.Fins.xf),
                                         ('Fin thickness'+' '+str(i),'m',self.Evaps[i].Fins.Fins.t),
                                         ('Fin Conductivity'+' '+str(i),'W/m-K',self.Evaps[i].Fins.Fins.k_fin),
+                                        ('Fins Type',+' '+str(i),'-',self.Evaps[i].FinsType),
                                         ('Refrigerant flowrate'+' '+str(i),'kg/s',self.Evaps[i].mdot_r),
                                         ('Q Total'+' '+str(i),'W',self.Evaps[i].Q),
                                         ('Q Superheat'+' '+str(i),'W',self.Evaps[i].Q_superheat),
