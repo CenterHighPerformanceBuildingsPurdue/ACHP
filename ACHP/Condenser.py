@@ -242,7 +242,7 @@ class CondenserClass():
         # Frictional pressure drop component
         DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.Ref,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         #Accelerational pressure drop component    
-        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)
+        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
     
