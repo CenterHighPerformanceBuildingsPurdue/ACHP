@@ -47,7 +47,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
                                         ('Fin waviness xf'+' '+str(i),'m',self.Evaps[i].Fins.Fins.xf),
                                         ('Fin thickness'+' '+str(i),'m',self.Evaps[i].Fins.Fins.t),
                                         ('Fin Conductivity'+' '+str(i),'W/m-K',self.Evaps[i].Fins.Fins.k_fin),
-                                        ('Fins Type',+' '+str(i),'-',self.Evaps[i].FinsType),
+                                        ('Fins Type'+' '+str(i),'-',self.Evaps[i].FinsType),
                                         ('Refrigerant flowrate'+' '+str(i),'kg/s',self.Evaps[i].mdot_r),
                                         ('Q Total'+' '+str(i),'W',self.Evaps[i].Q),
                                         ('Q Superheat'+' '+str(i),'W',self.Evaps[i].Q_superheat),
@@ -123,7 +123,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
                     if len(self.mdot_r_coeffs)!=Ncircuits:
                         raise AttributeError("Size of array mdot_r_coeffs: "+str(len(self.mdot_r_coeffs))+" does not equal Ncircuits: "+str(Ncircuits))
                     elif abs(np.sum(self.mdot_r_coeffs)-1)>=100*np.finfo(float).eps:
-                        raise AttributeError("mdot_r_coeffs must sum to 1.0.  Sum *100000is: "+str(100000*np.sum(self.mdot_r_coeffs)))
+                        raise AttributeError("mdot_r_coeffs must sum to 1.0.  Sum *100000 is: "+str(100000*np.sum(self.mdot_r_coeffs)))
                     else:
                         # A vector of weighting factors multiplying the total mass flow rate is provided with the right length
                         for i in range(Ncircuits):
@@ -166,7 +166,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
                     if len(self.Vdot_ha_coeffs)!=Ncircuits:
                         raise AttributeError("Size of array Vdot_ha_coeffs: "+str(len(self.Vdot_ha_coeffs))+" does not equal Ncircuits: "+str(Ncircuits))
                     elif abs(np.sum(self.Vdot_ha_coeffs)-1)>=10*np.finfo(float).eps:
-                        raise AttributeError("Vdot_ha_coeffs does not sum to 1.0!")                        
+                        raise AttributeError("Vdot_ha_coeffs does not sum to 1.0! Sum is: "+str(np.sum(self.Vdot_ha_coeffs)))                        
                     else:                        
                         # A vector of factors multiplying the total volume flow rate is provided
                         for i in range(Ncircuits):
@@ -236,6 +236,10 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         if self.hout_r>hsatV_out:
             self.Tout_r=newton(lambda T: PropsSI('H','T',T,'P',Pout_r,self.Ref)-self.hout_r,PropsSI('T','P',Pout_r,'Q',1.0,self.Ref))  #self.hout_r/1000 is updated by removing /1000 #saturated temperature at outlet quality
         else:
+            for i in range(Ncircuits):
+                if self.Evaps[i].DT_sh_calc < 0:
+                    print 'WARNING! Superheat is not attained in circuit number:', i+1
+
             xout_r=((self.hout_r-hsatL_out)/(hsatV_out-hsatL_out))
             self.Tout_r=PropsSI('T','P',Pout_r,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
         self.Capacity=np.sum([self.Evaps[i].Q for i in range(Ncircuits)])-self.Fins.Air.FanPower
@@ -248,6 +252,8 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         self.Fins.Air.Vdot_ha=float(self.Fins.Air.Vdot_ha[-1])
         if self.Verbosity>0:
             print chr(127), #progress bar
+
+
 if __name__=='__main__':
     #This code runs if this file is run by itself, but otherwise doesn't run
     FinsTubes=FinInputs()
@@ -289,7 +295,7 @@ if __name__=='__main__':
     Evap.Update(**kwargs)
     Evap.Calculate()
     print 'Q=' + str(Evap.Q) + ' W'
-        
+    
     Tdew=282.0
     kwargs={'Ref': 'R410A',
             'mdot_r':  0.0708,
@@ -310,18 +316,18 @@ if __name__=='__main__':
     MCE.Update(**kwargs)
     MCE.Calculate()
     print MCE.OutputList()
-    Write2CSV(MCE,open('Evaporator_MCE.csv','w'),append=False)
-    """
+    #Write2CSV(MCE,open('Evaporator_MCE.csv','w'),append=False)
+    """    
     print 'Q='+str(MCE.Q)+' W'
     print MCE.hin_r*MCE.mdot_r[-1]
     print np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)])
     h=np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
     p=MCE.psat_r*(1+0*h)
     
-    # plott maldistribution
+    # plot maldistribution
     Ph('R410A')
-    pylab.plot(h/1000,p,'o')
-    pylab.plot(MCE.hout_r/1000,MCE.psat_r,'o')
+    pylab.plot(h/1000,p/1000,'o')
+    pylab.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o')
     pylab.show()
     print [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,MCE.Evaps[-1].Ref) #*1000
     print [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))]

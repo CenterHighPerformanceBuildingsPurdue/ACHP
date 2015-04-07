@@ -80,7 +80,7 @@ class EvaporatorClass():
             ('Mass Flow rate humid Air','kg/s',self.Fins.mdot_ha),
             ('Pressure Drop Air-side','Pa',self.Fins.dP_a),
             ('Sensible Heat Ratio','-',self.SHR),
-            ('Bend Temperature profile',self.Tbends)
+            ('Bend Temperature profile','K',self.Tbends)
         ]
         for i in range(0,len(Output_List_default)):                             #append default parameters to output list
             Output_List.append(Output_List_default[i])
@@ -227,17 +227,18 @@ class EvaporatorClass():
             self.sout_r=ssatV*xout_r+(1-xout_r)*ssatL
         
         #Outlet superheat an temperature (in case of two phase)
-        if existsSuperheat:
+        if existsSuperheat==True:
             self.DT_sh_calc=self.Tout_r-self.Tdew_r
         else:
-            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref)) #*1000
+            print 'WARNING! Superheat is not attained, properties are interpolated and effective superheat is used'
+            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref)) #*1000 #Effective superheat
             self.Tout_r=PropsSI('T','P',self.psat_r+self.DP_r/1.0,'Q',xout_r,self.Ref) #self.DP_r/1000.0 is updated by removing /1000.0 #saturated temperature at outlet quality
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat
         self.UA_r=self.hmean_r*self.A_r_wetted
         self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
         
         #Build a vector of temperatures at each point where there is a phase transition along the averaged circuit
-        if existsSuperheat:
+        if existsSuperheat==True:
             #Insert the shoulder point
             Tv=[self.Tin_r,self.Tdew_r,self.Tout_r]
             x=[0,self.w_2phase,1]

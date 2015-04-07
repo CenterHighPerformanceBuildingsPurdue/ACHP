@@ -39,6 +39,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
@@ -51,6 +52,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
@@ -65,9 +67,10 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'mdot_r_coeffs': [0.3,0.2,0.1,0.2,0.2],
-        'mdot_r_coeffs': [0.4,0.2,0.1,0.2,0.1],
+        'mdot_v_coeffs': [0.4,0.2,0.1,0.2,0.1],
         'Vdot_ha_coeffs': [0.3,0.2,0.2,0.2,0.1],
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
