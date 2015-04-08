@@ -16,9 +16,9 @@ machine_eps=np.finfo(np.float).eps
 
 def Phase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV):
     """
-    Convenience function to return just the Phase rather than densities and phase
+    Convenience function to return just the Phase without temperature or density
     """
-    (rhoL,rhoV,Phase)=TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV)
+    (T,rho,Phase)=TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV)
     return Phase
 
 def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
