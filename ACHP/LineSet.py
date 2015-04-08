@@ -77,7 +77,7 @@ class LineSetClass():
         self.Q=self.mdot*cp*(self.Tout-self.Tin)
         self.hout=self.hin+self.Q/self.mdot
         
-        #Pressure drop calculations for superheated refrigerant
+        #Pressure drop calculations for single phase refrigerant
         v=1./rho
         G=self.mdot/(pi*self.ID**2/4.0)
         #Pressure gradient using Darcy friction factor
