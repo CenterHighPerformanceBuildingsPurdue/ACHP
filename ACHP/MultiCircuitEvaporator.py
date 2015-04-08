@@ -236,10 +236,6 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         if self.hout_r>hsatV_out:
             self.Tout_r=newton(lambda T: PropsSI('H','T',T,'P',Pout_r,self.Ref)-self.hout_r,PropsSI('T','P',Pout_r,'Q',1.0,self.Ref))  #self.hout_r/1000 is updated by removing /1000 #saturated temperature at outlet quality
         else:
-            for i in range(Ncircuits):
-                if self.Evaps[i].DT_sh_calc < 0:
-                    print 'WARNING! Superheat is not attained in circuit number:', i+1
-
             xout_r=((self.hout_r-hsatL_out)/(hsatV_out-hsatL_out))
             self.Tout_r=PropsSI('T','P',Pout_r,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
         self.Capacity=np.sum([self.Evaps[i].Q for i in range(Ncircuits)])-self.Fins.Air.FanPower

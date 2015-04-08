@@ -146,7 +146,6 @@ class CondenserClass():
             self.hout_r=PropsSI('H','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
             self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
         else:
-            print 'WARNING! Subcooled is not attained, properties are interpolated and effective subcooling is used'
             self.Tout_r=self.xout_2phase*self.Tdew+(1-self.xout_2phase)*self.Tbubble
             self.hout_r=PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
             self.sout_r=PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
