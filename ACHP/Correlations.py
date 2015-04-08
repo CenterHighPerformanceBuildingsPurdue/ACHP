@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
+from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -52,14 +52,14 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
         if h>hsatV:
             #It's superheated
             cp=PropsSI('C','T',Tdew,'D',rhosatV,Ref)
-            Tguess=Tdew+(h-hsatV)/cp
+            #Tguess=Tdew+(h-hsatV)/cp
             T=PropsSI('T','H',h,'P',p,Ref)   #T_hp(Ref,h,p,Tguess)
             rho=PropsSI('D','T',T,'P',p,Ref)
             return T,rho,'Superheated'
         elif h<hsatL:
             # It's subcooled
             cp=PropsSI('C','T',Tbubble,'D',rhosatL,Ref)
-            Tguess=Tbubble-(hsatL-h)/cp
+            #Tguess=Tbubble-(hsatL-h)/cp
             T=PropsSI('T','H',h,'P',p, Ref)  #T_hp(Ref,h,p,Tguess)
             rho=PropsSI('D','T',T,'P',p,Ref)
             return T,rho,'Subcooled'
@@ -72,6 +72,10 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
             return T,rho,'TwoPhase'
 
 def TwoPhaseDensity(Ref,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
+    """
+    function to obtain the average density in the two-phase region
+    """
+    
     rhog=PropsSI('D', 'T', Tdew, 'Q', 1, Ref)
     rhof=PropsSI('D', 'T', Tbubble, 'Q', 0, Ref)
 
@@ -101,7 +105,7 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
     """
     Accelerational pressure drop
     
-    From -dpdz|A=G^2*d[x^2v_g/alpha+(1-x)^2*v_f/(1-alpha)^2]/dz
+    From -dpdz|A=G^2*d[x^2v_g/alpha+(1-x)^2*v_f/(1-alpha)]/dz
     
     Integrating over z from 0 to L where x=x_1 at z=0 and x=x_2 at z=L
     
@@ -130,6 +134,7 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
                 raise ValueError("slipModel must be either 'Zivi' or 'Homogeneous'")
             alpha=1/(1+S*rhoV/rhoL*(1-x)/x)
             return x**2/rhoV/alpha+(1-x)**2/rhoL/(1-alpha)
+    
     return G**2*(f(x_min,rhosatL,rhosatV)-f(x_max,rhosatL,rhosatV))
         
 def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=None):
@@ -274,9 +279,7 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
 
 def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
     """
-    Returns the average pressure gradient between qualities of x_min and x_max.
-    
-    To obtain the pressure gradient for a given value of x, pass it in as x_min and x_max
+    Returns the average heat transfer coefficient between qualities of x_min and x_max.
     
     Required parameters:
     * x_min : The minimum quality for the range [-]
@@ -371,6 +374,7 @@ def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
     else:
         #Use Simpson's rule to carry out numerical integration to get average
         return simps(h,x)/(x_max-x_min)
+
 def LongoCondensation(x_avg,G,dh,Ref,TsatL,TsatV):
     rho_L = PropsSI('D', 'T', TsatL, 'Q', 0, Ref) #kg/m^3
     rho_V = PropsSI('D', 'T', TsatV, 'Q', 1, Ref) #kg/m^3
@@ -445,7 +449,7 @@ def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     f = 8 * ((8/Re)**12.0 + 1 / (A + B)**(1.5))**(1/12)
 
     # Heat Transfer coefficient of Gnielinski
-    Nu = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(0.66666)-1)) #[-]
+    Nu = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) #[-]
     h = k*Nu/Dh #W/m^2-K
     return (f, h, Re)
 
@@ -672,6 +676,8 @@ def Bertsch_MC(x,Ref,G,Dh,q,L,Tbubble,Tdew):
     Co=sqrt(sig/(g*(rho_L-rho_G)*Dh**2))
     h_TP=h_nb*(1-x)+h_conv_tp*(1.0+80.0*(x**2-x**6)*exp(-0.6*Co))
     return h_TP
+
+
 if __name__=='__main__':
     DP_vals_acc=[]
     DP_vals_fric=[]

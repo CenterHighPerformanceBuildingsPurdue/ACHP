@@ -42,6 +42,7 @@ class CondenserClass():
             ('Fin waviness xf','m',self.Fins.Fins.xf),
             ('Fin thickness','m',self.Fins.Fins.t),
             ('Fin Conductivity','W/m-K',self.Fins.Fins.k_fin),
+            ('Fins Type','-',self.FinsType),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
             ('Q Two-Phase','W',self.Q_2phase),
@@ -242,7 +243,7 @@ class CondenserClass():
         # Frictional pressure drop component
         DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.Ref,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         #Accelerational pressure drop component    
-        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)
+        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
     
@@ -321,10 +322,10 @@ class CondenserClass():
         
 def SampleCondenser(T=41.37):
     Fins=FinInputs()
-    Fins.Tubes.NTubes_per_bank=41       #number of tubes per bank=row
-    Fins.Tubes.Nbank=1                  #number of banks/rows
-    Fins.Tubes.Ncircuits=5              #number of banks/rows
-    Fins.Tubes.Ltube=2.286
+    Fins.Tubes.NTubes_per_bank=41       #number of tubes per bank or row
+    Fins.Tubes.Nbank=1                  #number of banks or rows
+    Fins.Tubes.Ncircuits=5              #number of circuits
+    Fins.Tubes.Ltube=2.286              #one tube length
     Fins.Tubes.OD=0.007
     Fins.Tubes.ID=0.0063904
     Fins.Tubes.Pl=0.0191                #distance between center of tubes in flow direction                                                
@@ -363,6 +364,9 @@ if __name__=='__main__':
     print Cond.OutputList()
     
     print 'Heat transfer rate in condenser is', Cond.Q,'W'
-    print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 
-    print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+    print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
+    print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
+    print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
     print 'Fraction of circuit length in superheated section is',Cond.w_superheat
+    print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+    print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 

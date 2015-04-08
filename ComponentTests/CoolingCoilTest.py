@@ -35,6 +35,7 @@ FinsTubes.Air.FanPower=438          #fan power in Watts
 # 1. Create an empty instance of the class, then set parameters CC=CoolingCoilClass()
 CC=CoolingCoilClass()
 CC.Fins = FinsTubes
+CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 CC.Ref_g = 'Water'
 CC.mdot_g = 0.15
 CC.Tin_g = 278
@@ -48,6 +49,7 @@ print "Cooling Coil SHR: " + str(CC.SHR) + " "
 
 # 2. Build a dictionary of values, then use that to initialize the class
 kwds={'Fins':FinsTubes,
+      'FinsType': 'WavyLouveredFins',   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
       'Ref_g': 'Water',
       'mdot_g': 0.15,
       'Tin_g': 278,

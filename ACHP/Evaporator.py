@@ -53,12 +53,16 @@ class EvaporatorClass():
             ('Fin waviness xf','m',self.Fins.Fins.xf),
             ('Fin thickness','m',self.Fins.Fins.t),
             ('Fin Conductivity','W/m-K',self.Fins.Fins.k_fin),
+            ('Fins Type','-',self.FinsType),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
             ('Q Two-Phase','W',self.Q_2phase),
             ('Inlet ref. temp','K',self.Tin_r),
             ('Outlet ref. temp','K',self.Tout_r),
             ('Outlet air temp','K',self.Tout_a),
+            ('Evaporator P_sat in','Pa',self.psat_r),
+            ('Evaporator inlet quality','-',self.xin_r),
+            ('Evaporator ref. flowrate','kg/s',self.mdot_r),
             ('Pressure Drop Total','Pa',self.DP_r),
             ('Pressure Drop Superheat','Pa',self.DP_r_superheat),
             ('Pressure Drop Two-Phase','Pa',self.DP_r_2phase),
@@ -75,7 +79,8 @@ class EvaporatorClass():
             ('Mass Flow rate dry Air','kg/s',self.Fins.mdot_da),
             ('Mass Flow rate humid Air','kg/s',self.Fins.mdot_ha),
             ('Pressure Drop Air-side','Pa',self.Fins.dP_a),
-            ('Sensible Heat Ratio','-',self.SHR)
+            ('Sensible Heat Ratio','-',self.SHR),
+            ('Bend Temperature profile','K',self.Tbends)
         ]
         for i in range(0,len(Output_List_default)):                             #append default parameters to output list
             Output_List.append(Output_List_default[i])
@@ -225,7 +230,7 @@ class EvaporatorClass():
         if existsSuperheat:
             self.DT_sh_calc=self.Tout_r-self.Tdew_r
         else:
-            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref)) #*1000
+            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref)) #*1000 #Effective superheat
             self.Tout_r=PropsSI('T','P',self.psat_r+self.DP_r/1.0,'Q',xout_r,self.Ref) #self.DP_r/1000.0 is updated by removing /1000.0 #saturated temperature at outlet quality
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat
         self.UA_r=self.hmean_r*self.A_r_wetted
@@ -284,7 +289,7 @@ class EvaporatorClass():
             raise ValueError('Q_target in Evaporator must be positive')
         
         # Average Refrigerant heat transfer coefficient
-        DWS.h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.ID,self.Tsat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+        DWS.h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
         
         #Run the DryWetSegment to carry out the heat and mass transfer analysis
         DryWetSegment(DWS)
@@ -301,7 +306,7 @@ class EvaporatorClass():
         #Frictional pressure drop component
         DP_frict=LMPressureGradientAvg(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.ID,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
         #Accelerational pressure drop component    
-        DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.Tbubble_r,self.Tdew_r)
+        DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
         self.DP_r_2phase=DP_frict+DP_accel;
         
         if self.Verbosity>7:
@@ -346,7 +351,7 @@ class EvaporatorClass():
         rho_superheat=PropsSI('D','T',(DWS.Tout_r+self.Tdew_r)/2.0, 'P', self.psat_r, self.Ref)
         self.Charge_superheat = w_superheat * self.V_r * rho_superheat
         
-        #Pressure drop calculations for subcooled refrigerant
+        #Pressure drop calculations for superheated refrigerant
         v_r=1/rho_superheat
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2*self.ID)  #Pressure gradient

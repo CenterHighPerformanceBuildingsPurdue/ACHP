@@ -26,7 +26,7 @@ class CoolingCoilClass():
         return [
             ('Volumetric flow rate','m^3/s',self.Fins.Air.Vdot_ha),
             ('Inlet Dry bulb temp','K',self.Tin_a),
-            ('Inlet Air pressure','kPa',self.Fins.Air.p),
+            ('Inlet Air pressure','Pa',self.Fins.Air.p),
             ('Inlet Air Relative Humidity','-',self.Fins.Air.RH),
             ('Tubes per bank','-',self.Fins.Tubes.NTubes_per_bank),
             ('Number of banks','-',self.Fins.Tubes.Nbank),
@@ -41,6 +41,7 @@ class CoolingCoilClass():
             ('Fin waviness xf','m',self.Fins.Fins.xf),
             ('Fin thickness','m',self.Fins.Fins.t),
             ('Fin Conductivity','W/m-K',self.Fins.Fins.k_fin),
+            ('Fins Type','-',self.FinsType),
             ('Q Total','W',self.Q),
             ('Mean HTC glycol','W/m^2-K',self.h_g),
             ('Reynolds # glycol','-',self.Re_g),

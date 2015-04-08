@@ -27,10 +27,19 @@ def unitconvert(value,function):
 """##### Temperature ####################################"""
 def F2K(T_F):
     """Convert temperature in Fahrenheit to Kelvin"""
-    return 5/9*(T_F+459.67)
+    return 5./9.*(T_F+459.67)
+def F2C(T_F):
+    """Convert temperature in Fahrenheit to Celsius"""
+    return 5./9.*(T_F-32.0)
+def DeltaF2K(T_F):
+    """Convert temperature in Fahrenheit to Celsius"""
+    return 5./9.*(T_F)
 def C2K(T_C):
     """Convert temperature in Celsius to Kelvin"""
     return T_C+273.15
+def C2F(T_C):
+    """Convert temperature in Celsius to Fahrenheit"""
+    return T_C*9.0/5.0+32.0
 def K2C(T_C):
     """Convert temperature in Kelvin to Celsius"""
     return T_C-273.15
@@ -45,6 +54,9 @@ def lbm2kgs(lbm):
 def kgh2kgs(kgh):
     """Convert kilograms per hour to kilogramms per second"""
     return kgh/3600.0 
+def lbm2gs(lbm):
+    """Convert pound per minute to kilogramms per second"""
+    return 0.007559873*lbm*1000.0 #0.45359237 [kg/lbm]/60 [s/h]
 
 """##### Volumetric flow ####################################"""
 def cfm2cms(cfm):
@@ -66,9 +78,18 @@ def J2kJ(J):
 def BTUh2W(btuh):
     """convert Btu/h to W"""
     return btuh*0.2928104
+def W2BTUh(W):
+    """convert Btu/h to W"""
+    return W/0.2928104
 def kW2W(kW):
     """convert kW to W"""
     return kW*1000.0
+def W2kW(kW):
+    """convert kW to W"""
+    return kW/1000.0
+def HP2W(HP):
+    """convert HP to kW"""
+    return HP*745.699872
 
 """##### Pressure     ####################################"""
 def kPa2Pa(kPa):
@@ -79,7 +100,10 @@ def MPa2kPa(MPa):
     return MPa*1000.0
 def MPa2Pa(MPa):
     """convert MPa to Pa"""
-    return MPa*1000000
+    return MPa*1000000.0
+def psi2kPa(Psi):
+    """convert PSI to kPa"""
+    return Psi*6.894757
 
 """##### Length ####################################"""
 def in2m(inch):
@@ -88,6 +112,12 @@ def in2m(inch):
 def ft2m(ft):
     "convert feet to meters"
     return ft*0.3048
+def mm2m(mm):
+    "convert millimeters to meters"
+    return mm/1000.0
+def cm2m(cm):
+    "convert centimeters to meters"
+    return cm/100.0
 
 """##### Area ####################################"""
 def sqin2sqm(sqInch):
@@ -96,6 +126,11 @@ def sqin2sqm(sqInch):
 def sqm2sqin(sqM):
     "convert sqare inches to square meters"
     return sqM/0.00064516
+
+"""##### Mass ####################################"""
+def kg2g(kg):
+    """convert kg to g"""
+    return kg*1000.
 
 """##### Composed properties ####################################"""
 def ipK2siK(ipKValue):
@@ -110,11 +145,11 @@ if __name__=='__main__':
     #This runs if you run this file directly, shows usage
     x=1 #this is the input value for all the examples below
     print 'Conversion results for input value',x
-    print ' * Temperature conversions:','  F2K',F2K(x),'  C2K',C2K(x),'  K2C',K2C(x)
+    print ' * Temperature conversions:','  F2K',F2K(x),'  F2C',F2C(x),'  C2K',C2K(x),'  C2F',C2F(x),'  K2C',K2C(x)
     print ' * Massflow conversions:','  lbh2kgs',lbh2kgs(x),'  lbm2kgs',lbm2kgs(x),'  kgh2kgs',kgh2kgs(x)
     print ' * Volumetric flow conversions:', '  cfm2cms',cfm2cms(x), 'cms2cfm(x)', cms2cfm(x)
     print ' * Energy conversions:',  '  kJ2J',kJ2J(x),'  J2kJ',J2kJ(x)
-    print ' * Power conversions','  BTUh2W',BTUh2W(x),'  kW2W',kW2W(x)
+    print ' * Power conversions','  BTUh2W',BTUh2W(x),'  kW2W',kW2W(x), 'W2BTUh',W2BTUh(x)
     print ' * Pressure conversions', '  kPa2Pa',kPa2Pa(x),'  MPa2kPa',MPa2kPa(x),'  MPa2Pa',MPa2Pa(x)
     print ' * Length conversions', '  in2m',in2m(x),'  ft2m',ft2m(x)
     print ' * Area conversions', '  sqin2sqm',sqin2sqm(x), 'sqm2sqin', sqm2sqin(x)

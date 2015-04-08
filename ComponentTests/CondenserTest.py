@@ -9,10 +9,10 @@ from Condenser import CondenserClass
 from FinCorrelations import FinInputs
 
 Fins=FinInputs()
-Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank=row
-Fins.Tubes.Nbank=1              #number of banks/rows
-Fins.Tubes.Ncircuits=5          #number of banks/rows
-Fins.Tubes.Ltube=2.286
+Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank or row
+Fins.Tubes.Nbank=1              #number of banks or rows
+Fins.Tubes.Ncircuits=5          #number of circuits
+Fins.Tubes.Ltube=2.286          #one tube length 
 Fins.Tubes.OD=0.007
 Fins.Tubes.ID=0.0063904
 Fins.Tubes.Pl=0.0191            #distance between center of tubes in flow direction 
@@ -43,6 +43,9 @@ Cond=CondenserClass(**params)
 Cond.Calculate()
 
 print 'Heat transfer rate in condenser is', Cond.Q,'W'
-print 'Fraction of circuit length in subcooled section is',Cond.w_subcool
-print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
+print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
+print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
 print 'Fraction of circuit length in superheated section is',Cond.w_superheat
+print 'Fraction of circuit length in twophase section is',Cond.w_2phase
+print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 

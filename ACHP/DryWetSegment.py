@@ -2,7 +2,7 @@ from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import log,exp
 #from CoolProp.HumidAirProp import HAPropsSI,cair_sat #,UseVirialCorrelations,UseIsothermCompressCorrelation,UseIdealGasEnthalpyCorrelations
 from CoolProp.CoolProp import HAPropsSI, cair_sat #HAPropsSI and cair_sat are updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp
-from FinCorrelations import WavyLouveredFins
+from FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
 
 #Turn on virial correlations for air and water for speed in Humid Air routines
 #UseVirialCorrelations(1)
@@ -24,7 +24,7 @@ def DryWetSegment(DWS):
     """
     
     #List of required parameters
-    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','mdot_r','Fins']
+    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','mdot_r','Fins','FinsType']
     
     #Check that all the parameters are included, raise exception otherwise
     for param in RequiredParameters:
@@ -89,7 +89,7 @@ def DryWetSegment(DWS):
                 T_ac=Tin_a #temp at onset of wetted wall
                 h_ac=hin_a #enthalpy at onset of wetted surface
             else:
-                # Partially wet and dry
+                # Partially wet and dry (i.e T_so_b<Tdp<T_so_a)
 
                 # Air temperature at the interface between wet and dry surface
                 # Based on equating heat fluxes at the wall which is at dew point UA_i*(Tw-Ti)=UA_o*(To-Tw)
@@ -103,7 +103,7 @@ def DryWetSegment(DWS):
                 # Dry heat transfer
                 Q_dry=mdot_da*cp_da*(Tin_a-T_ac)
 
-            # Saturation specific heat at mean water temp
+            # Saturation specific heat at mean water temp (c_s : partial derivative dh_sat/dT @ Tsat_r)
             c_s=cair_sat(Tin_r)*1000  #[J/kg-K]
             # Find new, effective fin efficiency since cs/cp is changed from wetting
             # Ratio of specific heats [-]
@@ -159,10 +159,22 @@ def DryWetSegment(DWS):
         C_star = Cmin / Cmax
         # Ntu overall [-]
         Ntu_dry = UA / Cmin
+        
+        if Ntu_dry<0.0000001:
+            print "warning:  NTU_dry in dry wet segment was negative. forced it to positive value of 0.001!"
+            Ntu_dry=0.0000001
 
         # Counterflow effectiveness [-]
-        epsilon_dry = ((1 - exp(-Ntu_dry * (1 - C_star))) / 
-            (1 - C_star * exp(-Ntu_dry * (1 - C_star))))
+        #epsilon_dry = ((1 - exp(-Ntu_dry * (1 - C_star))) / 
+        #   (1 - C_star * exp(-Ntu_dry * (1 - C_star))))
+        
+        #Crossflow effectiveness (e.g. see Incropera - Fundamentals of Heat and Mass Transfer, 2007, p. 662)
+        if (cp_r * mdot_r)<(cp_da * mdot_da):
+            epsilon_dry= 1-exp(-C_star**(-1)*(1-exp(-C_star*(Ntu_dry))))
+            #Cross flow, single phase, cmax is airside, which is unmixed
+        else:
+            epsilon_dry=(1/C_star)*(1-exp(-C_star*(1-exp(-Ntu_dry))))
+            #Cross flow, single phase, cmax is refrigerant side, which is mixed
 
         # Dry heat transfer [W]
         Q_dry = epsilon_dry*Cmin*(Tin_a-Tin_r)
@@ -245,7 +257,7 @@ def DryWetSegment(DWS):
                 # Water outlet saturated surface enthalpy [J/kg_da]
                 h_s_w_o=HAPropsSI('H','T',Tout_r, 'P',pin_a, 'R', 1.0)#*1000 #[J/kg_da]
                 #Local UA* and c_s
-                UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)*1000/2.0)/h_r/A_r)
+                UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)/2.0)*1000/h_r/A_r)
                 # Wet-analysis surface temperature [K]
                 Tin_s = Tout_r + UA_star/h_r/A_r*(hin_a-h_s_w_o)
                 # Wet-analysis saturation enthalpy [J/kg_da]
