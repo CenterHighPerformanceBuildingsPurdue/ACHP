@@ -86,3 +86,36 @@ class LineSetClass():
         
         #Charge in Line set [kg]
         self.Charge=pi*self.ID**2/4.0*self.L*rho
+
+        
+if __name__=='__main__':
+    
+    kwargs={
+            'L':7.6,
+            'k_tube':0.19,
+            't_insul':0.02,
+            'k_insul':0.036,
+            'T_air':297,
+            'Ref': 'R410A',
+            'h_air':0.0000000001,
+            'pin': 500000,           #Pressure of the fluid at the inlet i.e 500kPa
+            'hin': PropsSI('H','P',500000,'T',PropsSI('T','P',500000,'Q',0,'R410A')-10,'R410A'),    #Enthalpy of the fluid at the inlet i.e subcooled 10K below bubble
+            'mdot': 0.03             #fluid mass flow rate
+            }
+    
+
+    LineSetSupply = LineSetClass(**kwargs)
+    LineSetSupply.OD=0.009525
+    LineSetSupply.ID=0.007986
+    LineSetSupply.Update(**kwargs)
+    LineSetSupply.Calculate()
+    
+
+    LineSetReturn = LineSetClass(**kwargs)
+    LineSetReturn.OD=0.01905
+    LineSetReturn.ID=0.017526
+    LineSetReturn.Calculate()    
+    LineSetReturn.Update(**kwargs)
+
+    print LineSetSupply.OutputList()
+    print LineSetReturn.OutputList()

@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
+from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
