@@ -2,6 +2,13 @@
 \usepackage[]{amsmath,amssymb}
 \usepackage{longtable}             % tables longer than one page - used for nomenclature
 \usepackage{graphicx}    % needed for including graphics e.g. EPS, PS\begin{document}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}
 
 \begin{document}
 
@@ -24,5 +31,9 @@ of e.g. an increase of charge.
 
 
 \subsection{Backend}
-The current circuitry complexity assumption is neglected. It is wished to include the effect of different circuitry configuration on the performance of heat exchanger.
+\begin{itemize}
+\item The current circuitry complexity assumption is neglected. It is wished to include the effect of different circuitry configuration on the performance of heat exchanger.
+\item The assumption of laminar flow and internal roughness of zero is used for the calculation of friction factor in the single phase flow (\href{https://github.com/bo3mrh/ACHP-1/blob/master/ACHP/Correlations.py#L477}{Refrence}). Therefore, it is desired to create a library with all different materials and their corresponding roughness, and the user have the option to pick the material for each component as an input. Otherwise, the default material, for example Copper, will be selected.
+\end{itemize}
+
 \end{document}
