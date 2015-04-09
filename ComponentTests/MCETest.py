@@ -8,6 +8,7 @@ from FinCorrelations import FinInputs
 from Evaporator import EvaporatorClass
 from MultiCircuitEvaporator import MultiCircuitEvaporatorClass
 from CoolProp.CoolProp import PropsSI
+import numpy as np
 
 FinsTubes=FinInputs()
 
@@ -39,6 +40,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
@@ -51,6 +53,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
@@ -65,10 +68,28 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'mdot_r_coeffs': [0.3,0.2,0.1,0.2,0.2],
-        'mdot_r_coeffs': [0.4,0.2,0.1,0.2,0.1],
+        'mdot_v_coeffs': [0.4,0.2,0.1,0.2,0.1],
         'Vdot_ha_coeffs': [0.3,0.2,0.2,0.2,0.1],
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
+        'Verbosity':0
+        }
+MCE=MultiCircuitEvaporatorClass(**kwargs)
+MCE.Calculate()
+print 'MCE Q='+str(MCE.Q)+' W w/ mal-distribution'
+
+
+#Another way to express air maldirtribution for the last example, 
+#using a vector of Vdot_ha and m_dot_r instead of vector of coefficients
+FinsTubes.Air.Vdot_ha=0.5663*np.array([0.3,0.2,0.2,0.2,0.1])
+kwargs={'Ref': 'R410A',
+        'mdot_r': 0.0708*np.array([0.3,0.2,0.1,0.2,0.2]),
+        'mdot_v_coeffs': [0.4,0.2,0.1,0.2,0.1],
+        'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
+        'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+        'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'),
         'Verbosity':0
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)

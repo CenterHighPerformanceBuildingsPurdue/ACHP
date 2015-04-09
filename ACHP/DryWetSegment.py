@@ -384,8 +384,8 @@ def DryWetSegment(DWS):
           
 
     DWS.f_dry=f_dry
-    DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a/1.0)    ##hout_a/1000.0 is updated by removing /1000.0
-    DWS.RHout_a=HAPropsSI('R','T',Tout_a,'P',101325,'W',DWS.omega_out)
+    #DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a/1.0)    ##hout_a/1000.0 is updated by removing /1000.0
+    #DWS.RHout_a=HAPropsSI('R','T',Tout_a,'P',101325,'W',DWS.omega_out)
     DWS.Tout_a=Tout_a
     DWS.Q=Q
     DWS.Q_sensible=Q_sensible

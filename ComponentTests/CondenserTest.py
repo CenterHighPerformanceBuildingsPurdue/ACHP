@@ -9,10 +9,10 @@ from Condenser import CondenserClass
 from FinCorrelations import FinInputs
 
 Fins=FinInputs()
-Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank=row
-Fins.Tubes.Nbank=1              #number of banks/rows
-Fins.Tubes.Ncircuits=5          #number of banks/rows
-Fins.Tubes.Ltube=2.286
+Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank or row
+Fins.Tubes.Nbank=1              #number of banks or rows
+Fins.Tubes.Ncircuits=5          #number of circuits
+Fins.Tubes.Ltube=2.286          #one tube length 
 Fins.Tubes.OD=0.007
 Fins.Tubes.ID=0.0063904
 Fins.Tubes.Pl=0.0191            #distance between center of tubes in flow direction 
