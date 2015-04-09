@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
+from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -16,9 +16,9 @@ machine_eps=np.finfo(np.float).eps
 
 def Phase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV):
     """
-    Convenience function to return just the Phase rather than densities and phase
+    Convenience function to return just the Phase without temperature or density
     """
-    (rhoL,rhoV,Phase)=TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV)
+    (T,rho,Phase)=TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV)
     return Phase
 
 def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
