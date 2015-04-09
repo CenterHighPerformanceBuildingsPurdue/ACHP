@@ -107,7 +107,6 @@ if __name__=='__main__':
     LineSetSupply = LineSetClass(**kwargs)
     LineSetSupply.OD=0.009525
     LineSetSupply.ID=0.007986
-    LineSetSupply.Update(**kwargs)
     LineSetSupply.Calculate()
     
 
@@ -115,7 +114,6 @@ if __name__=='__main__':
     LineSetReturn.OD=0.01905
     LineSetReturn.ID=0.017526
     LineSetReturn.Calculate()    
-    LineSetReturn.Update(**kwargs)
 
     print LineSetSupply.OutputList()
     print LineSetReturn.OutputList()
