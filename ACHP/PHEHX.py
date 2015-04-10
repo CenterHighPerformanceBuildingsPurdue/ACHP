@@ -686,7 +686,7 @@ class PHEHXClass():
         self.A_c_wetted=ColdPlateOutputs['Ap']*(self.Nplates-2)
         self.V_c=ColdPlateOutputs['Vchannel']*self.NgapsCold
         self.A_c_flow=ColdPlateOutputs['Aflow']*self.NgapsCold
-        self.Dh_c=HotPlateOutputs['Dh']
+        self.Dh_c=ColdPlateOutputs['Dh']
         
         #Figure out the limiting rate of heat transfer
         self.Qmax=self.DetermineHTBounds()
@@ -700,7 +700,7 @@ class PHEHXClass():
             
             EnthalpyList_c,EnthalpyList_h=self.BuildEnthalpyLists(Q)
                 
-#            #Plot temperature v. h profiles
+#            #Plot temperature versus enthalpy profiles
 #            for i in range(len(EnthalpyList_c)-1):
 #                hc=np.linspace(EnthalpyList_c[i],EnthalpyList_c[i+1])
 #                Tc=np.zeros_like(hc)
@@ -717,7 +717,7 @@ class PHEHXClass():
 #            pylab.show()
                 
 #            Ph(self.Ref_h)
-#            pylab.plot(np.array(EnthalpyList_h)/1000,self.pin_h*np.ones_like(EnthalpyList_h))
+#            pylab.plot(np.array(EnthalpyList_h)/1000,self.pin_h/1000*np.ones_like(EnthalpyList_h))
 #            pylab.show()
             
             I_h=0
@@ -749,8 +749,8 @@ class PHEHXClass():
                 
                 # Figure out what combination of phases you have:
                 # -------------------------------------------------
-                # Hot stream is either single phase or condensing
-                # Cold stream is either single phase or evaporating
+                # Hot stream is either single phase or condensing (two phase)
+                # Cold stream is either single phase or evaporating (two phase)
                 
                 #Use midpoint enthalpies to figure out the phase in the cell
                 Phase_h=Phase_ph(self.Ref_h,self.pin_h,(hin_h+hout_h)/2,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
@@ -909,7 +909,8 @@ def SWEPVariedmdot():
         }
         PHE=PHEHXClass(**params)
         PHE.Calculate()
-        print PHE.Q,',',PHE.h_subcooled_h,',',-PHE.DP_h                         #-PHE.DP_h/1000 is updated by removing /1000
+        print PHE.Q,',',PHE.h_subcooled_h,',',-PHE.DP_h/1000
+
 def SamplePHEHX():
     
 #    TT=[]
@@ -984,7 +985,7 @@ def SamplePHEHX():
         QQ.append(PHE.h_2phase_c)#PHE.Q/PHE.Qmax)
         Q1.append(PHE.q_flux)#w_2phase_c)#PHE.Q/PHE.Qmax)
 #        print PHE.Q/PHE.Qmax,PHE.Q
-        print PHE.Q,',',PHE.h_subcooled_h,',',-PHE.DP_h #-PHE.DP_h is updated by removing /1000
+        print PHE.Q,',',PHE.h_subcooled_h,',',-PHE.DP_h/1000
         print PHE.OutputList()
     print TT
     print QQ
