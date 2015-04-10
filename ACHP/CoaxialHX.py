@@ -37,8 +37,8 @@ class CoaxialHXClass():
         return [
             ('Length of tube','m',self.L),
             ('Annulus wetted OD','m',self.ID_o),
-            ('Annulus wetted ID','m',self.OD_i),
-            ('Tube wetted OD','m',self.ID_i),
+            ('Tube wetted OD/Annulus wetted ID','m',self.OD_i),
+            ('Tube wetted ID','m',self.ID_i),
             ('Outlet Superheat','K',self.Tin_r-self.Tdew_r),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
@@ -90,7 +90,7 @@ class CoaxialHXClass():
         self.xin_r=(self.hin_r-hsatL)/(hsatV-hsatL)
         
         #Change in enthalpy through two-phase region [J/kg]
-        self.h_fg=(PropsSI('H','T',self.Tdew_r,'Q',1.0,self.Ref_r)-PropsSI('H','T',self.Tbubble_r,'Q',0.0,self.Ref_r))*1. #*1000.
+        self.h_fg=hsatV - hsatL
         self.Tin_r=self.xin_r*self.Tdew_r+(1-self.xin_r)*self.Tbubble_r
         #Inlet entropy
         ssatL=PropsSI('S','T',self.Tbubble_r,'Q',0,self.Ref_r) #*1000
@@ -184,8 +184,11 @@ class CoaxialHXClass():
         Cmin=min(C)
         Cr=Cmin/max(C)
         Ntu_superheat=UA_superheat/Cmin
+        
+        #for Cr<1 and pure counter flow (Incropera. Table 11.3)
         epsilon_superheat = ((1 - exp(-Ntu_superheat * (1 - Cr))) / 
             (1 - Cr * exp(-Ntu_superheat * (1 - Cr))))
+        
         self.Q_superheat=epsilon_superheat*Cmin*(self.Tin_g-self.Tdew_r)
         
         self.Tout_r=self.Tdew_r+self.Q_superheat/(self.mdot_r*cp_r_superheat)
@@ -215,16 +218,18 @@ class CoaxialHXClass():
         UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted))
         C_g=self.cp_g*self.mdot_g
         Ntu_2phase=UA_2phase/(C_g)
+        
+        #for Cr=0 and counter flow in two-phase:
         epsilon_2phase=1-exp(-Ntu_2phase)
         Q_2phase_eNTU=epsilon_2phase*C_g*(self.T_g_x-self.Tsat_r)
         
         rho_average=TwoPhaseDensity(self.Ref_r,self.xin_r,xout_2phase,self.Tdew_r,self.Tbubble_r,slipModel='Zivi')
         self.Charge_r_2phase = rho_average * w_2phase * self.V_r     
         
-        # Frictionalprssure drop component
+        # Frictional prssure drop component
         DP_frict=LMPressureGradientAvg(self.xin_r,xout_2phase,self.Ref_r,self.G_r,self.Dh_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
         # Accelerational prssure drop component
-        DP_accel=AccelPressureDrop(self.xin_r,xout_2phase,self.Ref_r,self.G_r,self.Tbubble_r,self.Tdew_r)
+        DP_accel=AccelPressureDrop(self.xin_r,xout_2phase,self.Ref_r,self.G_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
         self.DP_r_2phase=DP_frict+DP_accel
         
         if self.Verbosity>4:
@@ -242,15 +247,15 @@ if __name__=='__main__':
         pdew_cond=PropsSI('P','T',Tdew_cond,'Q',1.0,'R290')
         h=PropsSI('H','T',Tdew_cond-7,'P',pdew_cond,'R290') #*1000
         params={
-                'ID_i':0.0278,
-                'OD_i':0.03415,
-                'ID_o':0.045,
+                'ID_i':0.0278,      #inner tube, Internal Diameter (ID)
+                'OD_i':0.03415,     #inner tube, Outter Diameter (OD)
+                'ID_o':0.045,       #outer tube (annulus), Internal Diameter (ID)
                 'L':50,
                 'mdot_r':0.040,
                 'mdot_g':0.38,
                 'hin_r':h,
                 'pin_r':PropsSI('P','T',Tdew_evap,'Q',1.0,'R290'),
-                'pin_g':300000, #changed from 300 to 300000
+                'pin_g':300000,     #pin_g in Pa
                 'Tin_g':290.52,
                 'Ref_r':'R290',
                 'Ref_g':'Water',
@@ -264,5 +269,3 @@ if __name__=='__main__':
         Q1.append(IHX.h_r_superheat)
                   
         print IHX.Q
-    
-    

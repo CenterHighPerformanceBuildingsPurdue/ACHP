@@ -422,7 +422,8 @@ def f_h_1phase_Tube(mdot,ID,T, p,Fluid,Phase='Single'):
 
 def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     """
-    
+    This function return the friction factor, heat transfer coefficient, 
+    and reynold's number for single phase fluid inside annular pipe
     """
     if Phase =="SatVap":
         mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
