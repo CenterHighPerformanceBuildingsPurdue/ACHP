@@ -533,7 +533,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         Ref = Inputs['Ref']
         T = Inputs['T']
         p = Inputs['p']
-        mdot_gap = Inputs['mdot_gap']
+        mdot_gap = Inputs['mdot_gap']           #mass flow rate per channel
     
     
     X=2*pi*PlateAmplitude/PlateWavelength
@@ -556,7 +556,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     else:
         #Also calculate the thermodynamics and pressure drop
         
-        #"Glycol" properties
+        #Single phase Fluid properties
         rho_g=PropsSI('D','T',T,'P',p,Ref)
         eta_g=PropsSI('V','T',T,'P',p,Ref)
         cp_g=PropsSI('C','T',T,'P',p,Ref)#*1000
@@ -604,16 +604,16 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         # There are quite a lot of things that might be useful to have access to
         # in outer functions, so pack up parameters into a dictionary
         Outputs={
-             'Dh':dh,
-             'h':h,
-             'Ap':Ap,
-             'DELTAP':DELTAP,
-             'Re': Re_g,
-             'U': w_g,
-             'k': k_g,
-             'cp': cp_g,
-             'Vchannel':Vchannel,
-             'Aflow':2*PlateAmplitude*Bp
+             'Dh':dh,                       #Hydraulic diamter [m]
+             'h':h,                         #Heat transfer coeffcient [W/m^2-K]
+             'Ap':Ap,                       #Area of one plate [m^2]
+             'DELTAP':DELTAP,               #Pressure drop [Pa]
+             'Re': Re_g,                    #Reynold number
+             'U': w_g,                      #Velocity of fluid in channel [m/s]
+             'k': k_g,                      #Thermal conductivity of fluid [W/m-K]
+             'cp': cp_g,                    #Specific heat of fluid [J/kg-K]
+             'Vchannel':Vchannel,           #Volume of one channel [m^3]
+             'Aflow':2*PlateAmplitude*Bp    #Area of flow [m^2]
         }
         return Outputs
 
