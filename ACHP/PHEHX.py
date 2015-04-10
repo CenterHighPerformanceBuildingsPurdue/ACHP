@@ -157,13 +157,18 @@ class PHEHXClass():
         
     def PlateHTDP(self,Ref,T,p,mdot_gap):
         """
-        For single phase fluids, inputs in K, kPa, outputs in W/m^2-K, J/kg-K
+        This function calls mainly the heat transfer and pressure drop 
+        for single phase fluids in PHE. 
+        Inputs: T [K] and p [Pa]
+        Outputs: h [W/m^2-K] and cp [J/kg-K]
+        Note: There are several other output. Check "PHE_1phase_hdP" function
+        for more details.
         """
         Inputs={
             'Ref':Ref,
             'T':T,
             'p':p,
-            'mdot_gap' : mdot_gap,
+            'mdot_gap' : mdot_gap,                  #mass flow rate per channel
             'PlateAmplitude': self.PlateAmplitude,
             'PlateWavelength' : self.PlateWavelength,
             'InclinationAngle': self.InclinationAngle,
@@ -383,19 +388,26 @@ class PHEHXClass():
             hsatL=PropsSI('H','T',self.Tbubble_h,'Q',0,self.Ref_h) #*1000
             cpsatL=PropsSI('C','T',self.Tbubble_h,'Q',0,self.Ref_h) #*1000
             if self.hout_h>hsatL:
-                #Outlet is at some quality on cold side
+                #Outlet is at some quality on hot side
                 self.DT_sc_h=-(self.hout_h-hsatL)/cpsatL
             else:
                 self.DT_sc_h=self.Tbubble_h-self.Tout_h
         
     def eNTU_CounterFlow(self,Cr,Ntu):
+        """
+        This function returns the effectiveness for counter flow fluids
+        """
         return ((1 - exp(-Ntu * (1 - Cr))) / 
             (1 - Cr * exp(-Ntu * (1 - Cr))))
     
     def _OnePhaseH_OnePhaseC_Qimposed(self,Inputs):
         """
-        Single phase on both sides
-        Inputs is a dict of parameters
+        Single phase on both sides (hot and cold)
+        Inputs: dictionary of parameters
+        Outputs: dictionary of parameters,
+        but mainly w, pressure drop and heat transfer coefficient 
+        This function calculate the fraction of heat exchanger 
+        that would be required for given thermal duty "w" and DP and h 
         """
         
         #Calculate the mean temperature
@@ -452,15 +464,20 @@ class PHEHXClass():
 
     def _OnePhaseH_TwoPhaseC_Qimposed(self,Inputs):
         """
-        The hot stream is all single phase, and the cold stream is evaporating
+        The hot stream is single phase, and the cold stream is evaporating (two phase)
+        Inputs: dictionary of parameters
+        Outputs: dictionary of parameters, 
+        but mainly w, pressure drop and heat transfer coefficient 
+        This function calculate the fraction of heat exchanger 
+        that would be required for given thermal duty "w" and DP and h
         """
         
-        #Calculate the mean temperature for the single-phase fluid
+        #Calculate the mean temperature for the hot single-phase fluid
         h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.Ref_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
         #Mole mass of refrigerant for Cooper correlation
-        M=PropsSI('M','T',0,'P',0,self.Ref_c)
+        M=PropsSI('M',self.Ref_c)
         #Reduced pressure for Cooper Correlation
         pstar=Inputs['pin_c']/PropsSI(self.Ref_c,'pcrit') #PropsSI('E','T',0,'P',0,self.Ref_c)
         change=999
@@ -503,7 +520,7 @@ class PHEHXClass():
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
         DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.Ref_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.Ref_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c)
+        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.Ref_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c)*w*self.Lp
         
         #Pack outputs
         Outputs={
@@ -522,7 +539,12 @@ class PHEHXClass():
     
     def _TwoPhaseH_OnePhaseC_Qimposed(self,Inputs):
         """
-        Hot stream is condensing, cold stream is single phase  
+        Hot stream is condensing (two phase), cold stream is single phase
+        Inputs: dictionary of parameters
+        Outputs: dictionary of parameters, 
+        but mainly w, pressure drop and heat transfer coefficient 
+        This function calculate the fraction of heat exchanger 
+        that would be required for given thermal duty "w" and DP and h
         """
         
         h_h_2phase=LongoCondensation((Inputs['xout_h']+Inputs['xin_h'])/2,self.mdot_h/self.A_h_flow,self.Dh_h,self.Ref_h,self.Tbubble_h,self.Tdew_h);
@@ -551,9 +573,9 @@ class PHEHXClass():
         Charge_h = w * self.V_h * rho_h
         
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
-        DP_frict_h=LMPressureGradientAvg(Inputs['xin_h'],Inputs['xout_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
+        DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_h=-AccelPressureDrop(Inputs['xin_h'],Inputs['xout_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)
+        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
         
         #Pack outputs
         Outputs={
