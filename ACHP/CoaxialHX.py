@@ -248,7 +248,7 @@ if __name__=='__main__':
         h=PropsSI('H','T',Tdew_cond-7,'P',pdew_cond,'R290') #*1000
         params={
                 'ID_i':0.0278,      #inner tube, Internal Diameter (ID)
-                'OD_i':0.03415,     #inner tube, Outter Diameter (OD)
+                'OD_i':0.03415,     #inner tube, Outer Diameter (OD)
                 'ID_o':0.045,       #outer tube (annulus), Internal Diameter (ID)
                 'L':50,
                 'mdot_r':0.040,
