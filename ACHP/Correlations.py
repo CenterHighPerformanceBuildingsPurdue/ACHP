@@ -422,7 +422,8 @@ def f_h_1phase_Tube(mdot,ID,T, p,Fluid,Phase='Single'):
 
 def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     """
-    
+    This function return the friction factor, heat transfer coefficient, 
+    and reynold's number for single phase fluid inside annular pipe
     """
     if Phase =="SatVap":
         mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
@@ -492,6 +493,8 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     Based on the single-phase pressure drop and heat transfer correlations
     in VDI Heat Atlas Chapter N6: Pressure Drop and Heat Transfer in Plate Heat 
     Exchangers by Holger Martin DOI: 10.1007/978-3-540-77877-6_66 Springer Verlag
+    Outputs: for JustGeo=False >> Ap, Vchannel, Aflow, Dh, PHI
+             for JustGeop=True >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
     ::
         =============================        
         ||   __               __    ||
@@ -533,7 +536,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         Ref = Inputs['Ref']
         T = Inputs['T']
         p = Inputs['p']
-        mdot_gap = Inputs['mdot_gap']
+        mdot_gap = Inputs['mdot_gap']           #mass flow rate per channel
     
     
     X=2*pi*PlateAmplitude/PlateWavelength
@@ -556,7 +559,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     else:
         #Also calculate the thermodynamics and pressure drop
         
-        #"Glycol" properties
+        #Single phase Fluid properties
         rho_g=PropsSI('D','T',T,'P',p,Ref)
         eta_g=PropsSI('V','T',T,'P',p,Ref)
         cp_g=PropsSI('C','T',T,'P',p,Ref)#*1000
@@ -604,16 +607,16 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         # There are quite a lot of things that might be useful to have access to
         # in outer functions, so pack up parameters into a dictionary
         Outputs={
-             'Dh':dh,
-             'h':h,
-             'Ap':Ap,
-             'DELTAP':DELTAP,
-             'Re': Re_g,
-             'U': w_g,
-             'k': k_g,
-             'cp': cp_g,
-             'Vchannel':Vchannel,
-             'Aflow':2*PlateAmplitude*Bp
+             'Dh':dh,                       #Hydraulic diamter [m]
+             'h':h,                         #Heat transfer coeffcient [W/m^2-K]
+             'Ap':Ap,                       #Area of one plate [m^2]
+             'DELTAP':DELTAP,               #Pressure drop [Pa]
+             'Re': Re_g,                    #Reynold number
+             'U': w_g,                      #Velocity of fluid in channel [m/s]
+             'k': k_g,                      #Thermal conductivity of fluid [W/m-K]
+             'cp': cp_g,                    #Specific heat of fluid [J/kg-K]
+             'Vchannel':Vchannel,           #Volume of one channel [m^3]
+             'Aflow':2*PlateAmplitude*Bp    #Area of flow [m^2]
         }
         return Outputs
 
