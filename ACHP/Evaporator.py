@@ -132,11 +132,6 @@ class EvaporatorClass():
         #Average mass flux of refrigerant in circuit
         self.G_r = self.mdot_r/(self.Ncircuits*pi*self.ID**2/4.0) #[kg/m^2-s]
         
-        """
-        Tsat() is a relatively slow function since it does a Dekker solve
-        over the full two-phase region.  So store the value in order to cut
-        down on computational work. 
-        """
         ## Bubble and dew temperatures (same for fluids without glide) 
         self.Tbubble_r=PropsSI('T','P',self.psat_r,'Q',0,self.Ref)
         self.Tdew_r=PropsSI('T','P',self.psat_r,'Q',1,self.Ref)
