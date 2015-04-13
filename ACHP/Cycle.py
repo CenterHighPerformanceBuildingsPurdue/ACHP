@@ -12,7 +12,7 @@ from Pump import PumpClass # Secondary loop pump class
 from scipy.optimize import brentq, fsolve,newton 
 #^^ fsolve - roots (multiple variables); brent - root of one variable fct
 
-from CoolProp.CoolProp import PropsSI, FluidsList #refrigerant properties #,IsFluidType is replaced with FluidsList
+from CoolProp.CoolProp import PropsSI #refrigerant properties
 from CoolProp.Plots import Ph
 from FinCorrelations import FinInputs     #fin correlations
 import numpy as np                  #NumPy is fundamental scientific package
@@ -116,6 +116,7 @@ class SecondaryCycleClass():
         self.Tbubble_evap=PropsSI('T','P',psat_evap,'Q',0,self.Ref)
         self.Tbubble_cond=PropsSI('T','P',psat_cond,'Q',0,self.Ref)
         
+        #Cycle solver for 'AC' mode
         if self.Mode=='AC':
             
             params={               #dictionary -> key:value, e.g. 'key':2345,
@@ -213,7 +214,7 @@ class SecondaryCycleClass():
             
 #            ## Plot a p-h plot
 #            Ph(self.Ref,hbounds=(100,500))
-#            pylab.plot([self.Compressor.hin_r/1000,self.Compressor.hout_r/1000,self.Condenser.hout_r/1000,self.PHEIHX.hin_c/1000,self.Compressor.hin_r/1000],[psat_evap,psat_cond,psat_cond,psat_evap,psat_evap])
+#            pylab.plot([self.Compressor.hin_r/1000,self.Compressor.hout_r/1000,self.Condenser.hout_r/1000,self.PHEIHX.hin_c/1000,self.Compressor.hin_r/1000],[psat_evap/1000,psat_cond/1000,psat_cond/1000,psat_evap/1000,psat_evap/1000])
 #            pylab.show()
             
             resid=np.zeros((3))
@@ -242,6 +243,8 @@ class SecondaryCycleClass():
             self.Power=self.Compressor.W+self.Pump.W+self.CoolingCoil.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
             self.DP_high_Model=self.Condenser.DP_r #[Pa]
             self.DP_low_Model=self.IHX.DP_r #[Pa]
+        
+        #Cycle solver for 'HP' mode
         elif self.Mode=='HP':
             if psat_evap+self.DP_low<0:
                 raise ValueError('Compressor inlet pressure less than zero ['+str(psat_evap+self.DP_low)+' Pa] - is low side pressure drop too high?')
@@ -373,11 +376,11 @@ class SecondaryCycleClass():
             
         def PrintDPs():
             print 'DP_LP :: Input:',self.DP_low,'Pa / Model calc:',self.DP_low_Model,'Pa' #self.DP_low_Model/1000 is updated by removing /1000
-            print 'DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa' #self.DP_high_Model/1000 is updated by remocing /1000    
+            print 'DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa' #self.DP_high_Model/1000 is updated by removing /1000    
         
         #Some variables need to be initialized
-        self.DP_low=0 #The actual low-side pressure drop to be used in kPa
-        self.DP_high=0 #The actual low-side pressure drop to be used in kPa
+        self.DP_low=0 #The actual low-side pressure drop to be used in Pa
+        self.DP_high=0 #The actual low-side pressure drop to be used in Pa
         self.OBJ_SL_counter=0
         
         #Run the preconditioner to get guess values for the temperatures
@@ -517,6 +520,7 @@ class DXCycleClass():
         #If the user doesn't include the Mode, fail
         assert hasattr(self,'Mode')
         
+        #Cycle Solver in 'AC' model
         if self.Mode=='AC':
             if not hasattr(self.Compressor,'mdot_r') or self.Compressor.mdot_r<0.00001:
                 # The first run of model, run the compressor just so you can get a preliminary value 
@@ -548,7 +552,7 @@ class DXCycleClass():
             self.Compressor.Update(**params)
             self.Compressor.Calculate()
             if self.Verbosity>1:
-                print 'Comp DP H L',self.DP_low,self.DP_high
+                print 'Comp DP L H',self.DP_low,self.DP_high
             
             params={
                 'mdot_r': self.Compressor.mdot_r,
@@ -600,10 +604,11 @@ class DXCycleClass():
             self.SHR=self.Evaporator.SHR
             self.DT_sc=self.Condenser.DT_sc
         
+        #Cycle Solver in 'HP' model
         elif self.Mode=='HP':            
             params={               #dictionary -> key:value, e.g. 'key':2345,
-                'pin_r': psat_evap-self.DP_low*1,   
-                'pout_r': psat_cond+self.DP_high*1,
+                'pin_r': psat_evap-self.DP_low,   
+                'pout_r': psat_cond+self.DP_high,
                 'Tin_r': Tdew_evap+self.Evaporator.DT_sh,
                 'Ref':  self.Ref
             }
@@ -735,4 +740,3 @@ class DXCycleClass():
             print 'UA_a_evap',self.Evaporator.UA_a
             print 'UA_r_cond',self.Condenser.UA_r
             print 'UA_a_cond',self.Condenser.UA_a
-    
