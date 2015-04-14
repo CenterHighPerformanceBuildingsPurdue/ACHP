@@ -615,8 +615,8 @@ class PHEHXClass():
         
         #Saturation temperatures for cold fluid
         if IsFluidType(self.Ref_c,'Brine'):
-            self.rhosatL_c=1
-            self.rhosatV_c=1
+            self.rhosatL_c= None #Update: changed from 1 to None
+            self.rhosatV_c= None #Update: changed from 1 to None
             self.Tbubble_c = None
             self.Tdew_c = None
             self.Tsat_c = None
