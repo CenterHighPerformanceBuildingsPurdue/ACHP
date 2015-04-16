@@ -70,7 +70,7 @@ and assuming the gradient to be constant over the length L because averaged prop
 
     \Delta p=\frac{-fvG^2L}{2D}
 
-The Gnielinski correlation, good for smooth tubes and 0.5 < Pr < 2000 and 3000 < :math:`\mathrm{Re}_D` < :math:`5x10^6`, gives the single-phase heat transfer coefficient as
+The Gnielinski correlation, good for smooth tubes and 0.5 < Pr < 2000 and 3000 < :math:`\mathrm{Re}_D` < 5x10\ :sup:`6`\, gives the single-phase heat transfer coefficient as
 
 .. math::
     :label: eqFC8
@@ -179,32 +179,42 @@ The Lockhart-Martinelli two-phase pressure drop gradient is based on the followi
         -\left(\dfrac{dp}{dz}\right)_{f,2\phi}=\left\lbrace \begin{array}{lcr} -\left(\dfrac{dp}{dz}\right)_g\phi_g & & -\left(\dfrac{dp}{dz}\right)_g\phi_g> -\left(\dfrac{dp}{dz}\right)_f\phi_f \\ -\left(\dfrac{dp}{dz}\right)_f\phi_f & & -\left(\dfrac{dp}{dz}\right)_g\phi_g< -\left(\dfrac{dp}{dz}\right)_f\phi_f\end{array} \right.
         
     
-        
+#. Lockhart-Martinelli Void fraction
+
+	.. math::
+		:label: eqFC21
+		
+		\epsilon = 1-\frac{X}{X^2+20X+1}
 
 #. Average pressure drop gradient
 
-#. Frictional pressure drop
+	.. math::
+		:label:eqFC22
+		
+		\overline{\Delta p_{f,2\phi}}=\dfrac{\int_{x_1}^{x_2} -\left(\dfrac{dp}{dz}\right)_{f,2\phi}dx}{x_2-x_1}
+
+#. Frictional pressure drop: using Simpson's rule to solve the integration
 
 *Accelerational pressure drop*
 
 From the consideration of two-phase flow analysis, the accelerational presssure drop can be obtained.  It is caused by the change in velocity of the vapor and liquid phases due to phase change, which in boiling creates vapor and accelerates the vapor, or in the case of condensation, reduces the vapor velocity, resulting in a pressure increase.
 
 .. math::
-    :label: eqFC21
+    :label: eqFC23
     
     -\left( \frac{\partial p}{\partial z}\right)_A=G^2\frac{d}{dz}\left[\frac{x^2v_g}{\epsilon}+\frac{(1-x)^2v_f}{1-\epsilon}\right]
     
 where :math:`\epsilon` is the refrigerant vapor void fraction (typically the symbol :math:`\alpha` is used for void fraction, but here we are using that for heat transfer coefficient). Integrating over the length where the quality goes from :math:`x_1` to :math:`x_2` yields
     
 .. math::
-    :label: eqFC22
+    :label: eqFC24
     
     \Delta p_A=\int_{0}^{L}\left[-\left( \frac{\partial p}{\partial z}\right)_A dz\right]
     
 .. math::
-    :label: eqFC23
+    :label: eqFC25
 
-    \Delta p_A=L\left[\left(\frac{x_2^2v_g}{\epsilon_2}+\frac{(1-x_2)^2v_f}{1-\epsilon_2}\right) -\left(\frac{x_1^2v_g}{\epsilon_1}+\frac{(1-x_1)^2v_f}{1-\epsilon_1} \right) \right]
+    \Delta p_A=G^2L\left[\left(\frac{x_2^2v_g}{\epsilon_2}+\frac{(1-x_2)^2v_f}{1-\epsilon_2}\right) -\left(\frac{x_1^2v_g}{\epsilon_1}+\frac{(1-x_1)^2v_f}{1-\epsilon_1} \right) \right]
         
 where :math:`\Delta p_A` is positive if the pressure is dropping.  If the quality in the term 
 
@@ -223,21 +233,21 @@ is 0 or 1, one part is zero and the other is an indeterminate form of 0/0.  One 
 
 The liquid-only heat transfer coefficient is given by
     .. math::
-        :label: eqFC24
+        :label: eqFC26
         
         \alpha_L = 0.023 \left(\frac{GD}{\mu_f} \right)^{0.8} \mathrm{Pr}_f^{0.4} \frac{k_f}{D}
 
 And the overall heat transfer coefficient for a given quality :math:`x` is given by
 
     .. math::
-        :label: eqFC25
+        :label: eqFC27
         
         \alpha_{2\phi}(x)=\alpha_L \left((1 - x)^{0.8} + \frac{3.8  x^{0.76}  (1 - x)^{0.04}}{(p^*)^{0.38}} \right)
 
 where :math:`p^*=p_{sat}/p_{crit}`.  The average condensation heat transfer coefficient between a quality of :math:`x_1` and :math:`x_2` is given by 
 
     .. math::
-        :label: eqFC26
+        :label: eqFC28
         
         \overline{\alpha_{2\phi}}=\dfrac{\int_{x_1}^{x_2} [\alpha_{2\phi}(x)dx]}{x_2-x_1}
 
@@ -252,28 +262,28 @@ This correlation is used to model the heat transfer coefficient for boiling flui
 The non-dimensional groups of interest are the convection number
 
 .. math::
-    :label: eqFC27
+    :label: eqFC29
 
     \mathrm{Co} = \left(\frac{1}{x} - 1\right)^{0.8} \sqrt{\frac{\rho_g}{\rho_f}}
 
 the Froude number
 
 .. math::
-    :label: eqFC28
+    :label: eqFC30
     
     \mathrm{Fr}_l = \frac{G^2}{\rho_f^2gD}
 
 and the boiling number
 
 .. math::
-    :label: eqFC29
+    :label: eqFC31
     
     \mathrm{Bo} = \frac{q"}{Gh_{fg}}
 
 The pure-liquid heat transfer coefficient is given by
 
 .. math::
-    :label: eqFC30
+    :label: eqFC32
     
     \alpha_l = 0.023 \left(\frac{G (1 - x)  D}{ \mu_f}\right)^{0.8} \mathrm{Pr}_f^{0.4} \frac{k_f}{D}
 
@@ -282,7 +292,7 @@ If Bo > 0.0011 then F = 14.7, otherwise F = 15.43
 If :math:`\mathrm{Fr}_l \geq 0.04` then N = Co, else :math:`N = 0.38\mathrm{Fr}_l^{-0.3}Co`
 
 .. math::
-    :label: eqFC31
+    :label: eqFC33
     
     \psi_{cb} = \frac{1.8}{N^{0.8}}
 
@@ -290,7 +300,7 @@ If :math:`\mathrm{Fr}_l \geq 0.04` then N = Co, else :math:`N = 0.38\mathrm{Fr}_
 If N is between 0.1 and 1.0 inclusive
 
 .. math::
-    :label: eqFC32
+    :label: eqFC34
     
     \psi_{bs} = F \sqrt{\mathrm{Bo}} \exp(2.74 N^{-0.1})
     
@@ -300,7 +310,7 @@ If N is between 0.1 and 1.0 inclusive
 If N<0.1
 
 .. math::
-    :label: eqFC33
+    :label: eqFC35
     
     \psi_{bs} = F \sqrt{\mathrm{Bo}} \exp(2.47 N^{-0.15})
 
@@ -309,14 +319,14 @@ If N<0.1
 If N is *very* small in magnitude, :math:`\exp(2.47 N^{-0.15})` blows up to infinity, so to correct, at high vapor quality, the value for the heat transfer coefficient between quality of 0.999 and 1.0 is linearly interpolated to give better behavior at very high vapor quality (which yields very small values of N).  The pure vapor (x=1) heat transfer coefficient is given by
 
 .. math::
-    :label: eqFC34
+    :label: eqFC36
     
     \alpha_g = 0.023 \left(\frac{G D}{ \mu_g}\right)^{0.8} \mathrm{Pr}_g^{0.4} \frac{k_g}{D}
 
 If N > 1.0 and Bo > 0.00003
 
 .. math::
-    :label: eqFC35
+    :label: eqFC37
     
     \psi_{nb} = 230 \sqrt{\mathrm{Bo}}
     
@@ -325,21 +335,21 @@ If N > 1.0 and Bo > 0.00003
 If N > 1.0 and Bo < 0.00003
 
 .. math::
-    :label: eqFC36
+    :label: eqFC38
     
     \psi_{nb} = 1.0 + 46.0 \sqrt{\mathrm{Bo}}
 
     \psi = \max(\psi_{nb},\psi_{cb}) 
 
 .. math::
-    :label: eqFC37
+    :label: eqFC39
     
     \alpha_{2\phi}(x)=\psi \alpha_l
     
 The average evaporation heat transfer coefficient between a quality of :math:`x_1` and :math:`x_2` is given by 
 
 .. math::
-    :label: eqFC38
+    :label: eqFC40
     
     \overline{\alpha_{2\phi}}=\frac{\int_{x_1}^{x_2} [\alpha_{2\phi}(x)dx]}{x_2-x_1}
 
@@ -352,21 +362,21 @@ where the integral is evaluated numerically.  A sample plot of the heat transfer
 Using the Zivi slip flow model, the slip ratio is equal to
 
 .. math::
-    :label: eqFC39
+    :label: eqFC41
 
     S=\left(\frac{v_g}{v_f}\right)^{1/3}
 
 which yields the void fraction for a given quality of 
 
 .. math::
-    :label: eqFC40
+    :label: eqFC42
     
     \epsilon=\frac{1}{1+\frac{\rho_g}{\rho_f}S\left(\frac{1-x}{x}\right)}
 
 and the average void fraction between qualities of :math:`x_1` and :math:`x_2` can be given by
 
 .. math::
-    :label: eqFC41
+    :label: eqFC43
     
     \overline{\epsilon}=-{{C_{\epsilon}\,\left(\log \left({{\left({x_2}-1\right)\,C_{\epsilon}-{x_2}
      }\over{\left({x_1}-1\right)\,C_{\epsilon}-{x_1}}}\right)+
@@ -377,21 +387,21 @@ and the average void fraction between qualities of :math:`x_1` and :math:`x_2` c
 where the term :math:`C_{\epsilon}` is given by
 
 .. math::
-    :label: eqFC41b
+    :label: eqFC43b
 
     C_{\epsilon}=\frac{\rho_g}{\rho_f}S
 
 which yields the average density in the two-phase portion of
 
 .. math::
-    :label: eqFC42
+    :label: eqFC44
     
     \overline{\rho}=\rho_g\overline{\epsilon}+\rho_f(1-\overline{\epsilon})
 
 Thus the total mass contained in the two-phase section is equal to
 
 .. math::
-    :label: eqFC43
+    :label: eqFC45
     
     m=\bar{\rho}V
     

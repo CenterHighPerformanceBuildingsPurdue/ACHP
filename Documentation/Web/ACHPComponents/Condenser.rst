@@ -114,7 +114,7 @@ In either configuration of the two-phase section (solving for outlet quality or 
 .. math::
     :label: eqCond5
     
-    \varepsilon_{two-phase}=1-\exp\left(\frac{\mathrm{UA}_{overall}}{\dot m_{a,total}c_{p,a}}\right)
+    \varepsilon_{two-phase}=1-\exp\left(\frac{-\mathrm{UA}_{overall}}{\dot m_{a,total}c_{p,a}}\right)
     
 where the value of :math:`\mathrm{UA}_{overall}` is given by
 

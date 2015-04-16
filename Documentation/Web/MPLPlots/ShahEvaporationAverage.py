@@ -1,17 +1,17 @@
 
-from CoolProp.CoolProp import Props
+from CoolProp.CoolProp import PropsSI
 import pylab,numpy as np
 
 import sys
 sys.path.append('../../..')
-from PyACHP.Correlations import ShahEvaporation_Average
+from ACHP.Correlations import ShahEvaporation_Average
 
 x=np.linspace(0,1,1000)
 h=np.zeros_like(x)
 TsatL,TsatV=300.,300.
-p=Props('P','T',TsatL,'Q',0,'R134a')
+p=PropsSI('P','T',TsatL,'Q',0,'R134a')
 for i in range(len(x)):
-    h[i]=ShahEvaporation_Average(x[i],x[i],'R134a',300,0.01,200,p,TsatL,TsatV)
+    h[i]=ShahEvaporation_Average(x[i],x[i],'R134a',300,0.01,p,200,TsatL,TsatV)
     
 havg=np.trapz(h,x=x)
 pylab.figure(figsize=(7,5))

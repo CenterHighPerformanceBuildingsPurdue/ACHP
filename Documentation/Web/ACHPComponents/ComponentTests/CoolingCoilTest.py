@@ -19,20 +19,21 @@ FinsTubes.Fins.k_fin=237
 
 FinsTubes.Air.Vdot_ha=0.5663
 FinsTubes.Air.Tmean=299.8
-FinsTubes.Air.Tdb=299.8
-FinsTubes.Air.p=101.325
+FinsTubes.Air.Tdb= 299.8
+FinsTubes.Air.p=101325              #Air pressure in Pa
 FinsTubes.Air.RH=0.51
 FinsTubes.Air.RHmean=0.51
-FinsTubes.Air.FanPower=438
-    
+FinsTubes.Air.FanPower=438          #fan power in Watts
+
 # Here are two equivalent methods for setting parameters
-# 1. Create an empty instance of the class, then set parameters
+# 1. Create an empty instance of the class, then set parameters CC=CoolingCoilClass()
 CC=CoolingCoilClass()
 CC.Fins = FinsTubes
+CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 CC.Ref_g = 'Water'
 CC.mdot_g = 0.15
 CC.Tin_g = 278
-CC.pin_g = 300
+CC.pin_g = 300000                   #Refrigerant vapor pressure in Pa
 CC.Verbosity = 3
 CC.Calculate()
 
@@ -42,10 +43,11 @@ print "Cooling Coil SHR: " + str(CC.SHR) + " "
 
 # 2. Build a dictionary of values, then use that to initialize the class
 kwds={'Fins':FinsTubes,
+      'FinsType': 'WavyLouveredFins',   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
       'Ref_g': 'Water',
       'mdot_g': 0.15,
       'Tin_g': 278,
-      'pin_g':300,
+      'pin_g': 300000,               #Refrigerant vapor pressure in Pa
       'Verbosity':3}
 CC2=CoolingCoilClass(**kwds)
 CC2.Calculate()

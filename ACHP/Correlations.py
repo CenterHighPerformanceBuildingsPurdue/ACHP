@@ -594,7 +594,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         
         #Constants for Nu correlation
         c_q=0.122
-        q=0.39#q=0.374
+        q=0.374#q=0.39
         #Nusselt number [-]
         Nu=c_q*Pr_g**(1/3)*(eta_g/eta_g_w)**(1/6)*(2*Hg*sin(2*phi))**(q)
         

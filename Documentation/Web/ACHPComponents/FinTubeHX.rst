@@ -193,9 +193,9 @@ Wavy-Louvered fins from Wang,Tsai,Lu [#WangTsaiLu]_:
     .. math::
         :label: eqAC22
             
-        f_{a,total}=0.264(0.105+0.708\exp(-\mathrm{Re}_D/225.0))\mathrm{Re}_D^{-0.637}\left(\frac{A_{a,total}}{A_{tube}}\right)^{0.263}\left(\frac{p_f}{D}\right)^{-0.317}   (\mathrm{Re}_D>1000)
+        f_{a,total}=0.264(0.105+0.708\exp(-\mathrm{Re}_D/225.0))\mathrm{Re}_D^{-0.637}\left(\frac{A_{a,total}}{A_{tube}}\right)^{0.263}\left(\frac{p_f}{D}\right)^{-0.317}   (\mathrm{Re}_D<1000)
 
-        f_{a,total}=0.768(0.0494+0.142\exp(-\mathrm{Re}_D/1180.0))\left(\frac{A_{a,total}}{A_{tube}}\right)^{0.0195}\left(\frac{p_f}{D}\right)^{-0.121}   (\mathrm{Re}_D\leq1000)
+        f_{a,total}=0.768(0.0494+0.142\exp(-\mathrm{Re}_D/1180.0))\left(\frac{A_{a,total}}{A_{tube}}\right)^{0.0195}\left(\frac{p_f}{D}\right)^{-0.121}   (\mathrm{Re}_D\geq1000)
         
 The air mass flux through the heat exchanger can be defined by
 
@@ -269,7 +269,7 @@ And the :math:`m` factor is given by
     
 :math:`c_s/c_p` is the correction for heat/mass transfer for a wetted surface.  If the fins are dry, this parameter is set to unity, which yields the standard definition for the parameter :math:`m` for a fin
 
-Fin efficiency based on analysis by Hong and Webb [#HongWebb]_ for wet and dry fins with staggered fins
+Fin efficiency based on analysis by Hong & Webb [#HongWebb]_ and Perrotin & CLODIC [#PerrotinClodic]_ for wet and dry fins with staggered fins
 
 .. math::
     :label: eqAC29a
@@ -299,6 +299,8 @@ Once the finned surface efficiency (:math:`\eta_f`) is known, the overall surfac
 .. only:: html
 
     .. rubric:: References
+
+.. [#PerrotinClodic] Thomas Perrotin, Denis Clodic, 2006, "Fin Efficiency Calculation in Enhanced Fin-and-Tube Heat Exchangers in Dry Conditions", *International Congress of Refrigeration*
 
 .. [#HongWebb] Kwang Taek Hong and Ralph L. Webb, 1996, "Calculation of Fin Efficiency for Wet and Dry Fins" *HVAC&R Research*,v. 2 `Link to File <http://www.tandfonline.com/doi/abs/10.1080/10789669.1996.10391331>`_
 
@@ -355,7 +357,7 @@ Variable                         Description
 :math:`x_f`                      Half-wavelength of fin wave [m]
 :math:`X_D`                      Diagonal distance in fin efficiency equation [m]
 :math:`X_T`                      Transverse distance in fin efficiency equation [m]
-:math:`\alpha_a`                 Air-side mean heat transfer coefficient [W/m\ :sup:`2`\ /K
+:math:`\alpha_a`                 Air-side mean heat transfer coefficient [W/m\ :sup:`2`\ /K ]
 :math:`\rho_{ha}`                Density of air [kg/m\ :sup:`3`\ ]
 :math:`\phi`                     Surface efficiency parameter [-]
 :math:`\eta_a`                   Overall finned surface efficiency [-]

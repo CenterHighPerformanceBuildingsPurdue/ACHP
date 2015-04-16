@@ -52,7 +52,7 @@ def DXPreconditioner(Cycle,epsilon=0.96):
         #Evaporator is bounded by saturated air at the refrigerant temperature.
         h_ai=HAPropsSI('H','T',Cycle.Evaporator.Fins.Air.Tdb, 'P',101325, 'R', Cycle.Evaporator.Fins.Air.RH) #*1000 #[J/kg_da]
         h_s_w_o=HAPropsSI('H','T',Tevap, 'P',101325, 'R', 1.0) #*1000 #[J/kg_da]
-        Qevap_wet=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(h_ai-h_s_w_o)*1005
+        Qevap_wet=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(h_ai-h_s_w_o)
         
         #Coil is either fully-wet, fully-dry or partially wet, partially dry
         if T_so_a>Tdewpoint and T_so_b>Tdewpoint:
@@ -123,7 +123,7 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
             #Evaporator is bounded by saturated air at the refrigerant temperature.
             h_ai= HAPropsSI('H','T',CC.Fins.Air.Tdb,'P',101325,'R',CC.Fins.Air.RH)      #Updated from HumAir_Single(CC.Fins.Air.Tdb, 101325, 'RH', CC.Fins.Air.RH,'Enthalpy')
             h_s_w_o=HAPropsSI('H','T',Tin_CC,'P',101325,'R',1.0)                        #Updated from HumAir_Single(Tin_CC, 101325, 'RH', 1.0,'Enthalpy')
-            Qcoolingcoil_wet=epsilon*CC.Fins.Air.Vdot_ha*rho_air*(h_ai-h_s_w_o)*1005
+            Qcoolingcoil_wet=epsilon*CC.Fins.Air.Vdot_ha*rho_air*(h_ai-h_s_w_o)
             
             #Coil is either fully-wet, fully-dry or partially wet, partially dry
             if T_so_a>Tdewpoint and T_so_b>Tdewpoint:

@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import Props
+from CoolProp.CoolProp import PropsSI
 import numpy as np
 import pylab as pylab
 from math import pi
@@ -15,19 +15,19 @@ Q=200 #W/m^s
 L=1 #length of tube
 m_dot=(G_r*pi*D**2)/4.0
 Ref="R134a"
-psat_r=702.8 #kPa
-print Props('R134a','pcrit')
-Tdew_r=Props('T','P',psat_r,'Q',1.0,Ref)
-Tbubble_r=Props('T','P',psat_r,'Q',0.0,Ref) #same value as above for pure fluids
+psat_r=702800 #Pa
+print PropsSI('R134a','pcrit')
+Tdew_r=PropsSI('T','P',psat_r,'Q',1.0,Ref)
+Tbubble_r=PropsSI('T','P',psat_r,'Q',0.0,Ref) #same value as above for pure fluids
 print Tdew_r,Tbubble_r
-print Props('H','P',702.8,'Q',1.0,Ref)
-print Props('D','T',Tbubble_r,'Q',0.0,Ref)
-h_fg=Props('H','T',Tdew_r,'Q',1.0,Ref)-Props('H','T',Tbubble_r,'Q',0.0,Ref)
+print PropsSI('H','P',702800,'Q',1.0,Ref)
+print PropsSI('D','T',Tbubble_r,'Q',0.0,Ref)
+h_fg=PropsSI('H','T',Tdew_r,'Q',1.0,Ref)-PropsSI('H','T',Tbubble_r,'Q',0.0,Ref)
 print "h_fg",h_fg
-v_f=1/Props('D','P',psat_r,'Q',0.0,Ref)  #liquid density
-v_g=1/Props('D','P',psat_r,'Q',1.0,Ref)  #gas density
+v_f=1/PropsSI('D','P',psat_r,'Q',0.0,Ref)  #liquid density
+v_g=1/PropsSI('D','P',psat_r,'Q',1.0,Ref)  #gas density
 v_fg=v_g-v_f #difference between the two of them
-DELTA_x=(Q/1000)*D*pi*L/(h_fg*m_dot)  #change of quality in section
+DELTA_x=Q*D*pi*L/(h_fg*m_dot)  #change of quality in section
 
 #generate data
 x=np.linspace(0,1,1000)
@@ -42,9 +42,9 @@ for i in range(len(x)):
         x_in=1.0-DELTA_x
         x_out=1.0
     #accelerational pressure drop using ACHP
-    dp_acc_zivi[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Zivi')
+    dp_acc_zivi[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Zivi')*L
     #accelerational pressure drop using homogeneous equilibrium model:
-    dp_acc_hom[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Homogeneous')
+    dp_acc_hom[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Homogeneous')*L
     #frictional pressure drop using Lockhart-Martinelli
     C=None
     satTransport=None
@@ -53,7 +53,7 @@ for i in range(len(x)):
 
 def plot(LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):
     pylab.figure(figsize=(7,5))
-    pylab.text(txtx,txty,'%s\nG=%0.1f kg/m$^2$\nD=%0.3f, L=%0.3f m\nq\"=%0.1f W/m$^2$\np=%0.1f kPa' %(Ref,G_r,D,L,Q,psat_r))
+    pylab.text(txtx,txty,'%s\nG=%0.1f kg/m$^2$\nD=%0.3f, L=%0.3f m\nq\"=%0.1f W/m$^2$\np=%0.1f Pa' %(Ref,G_r,D,L,Q,psat_r))
     if LM: pylab.plot(x,dp_lm,label="Frictional: Lockhart-Martinelli")
     if Zivi: pylab.plot(x,dp_acc_zivi,label="Accelerational: Zivi")
     if Hom: pylab.plot(x,dp_acc_hom,'--',label="Accelerational: HEM")

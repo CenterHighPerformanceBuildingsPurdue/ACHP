@@ -31,10 +31,12 @@ for i in range(nR):
 pylab.plot(np.r_[0,0],np.r_[1,2],'k')
 pylab.plot(np.r_[1,1],np.r_[1+offset,2],'k')
 pylab.text(0.5,2,'Longitudinal\nSpacing\n$p_l$',ha='center',va='center')
+pylab.gca().add_patch(FancyArrowPatch((0,1.8),(1,1.8),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
 
 pylab.plot(np.r_[-0.5,0],np.r_[1,1],'k')
 pylab.plot(np.r_[-0.5,0],np.r_[0,0],'k')
-pylab.text(-0.5,0.5,'Transverse\nSpacing\n$p_t$',ha='center',va='center')
+pylab.text(-0.6,0.5,'Transverse\nSpacing\n$p_t$',ha='center',va='center')
+pylab.gca().add_patch(FancyArrowPatch((-0.3,0),(-0.3,1),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
 
 #Airflow arrow
 pylab.gca().add_patch(FancyArrowPatch((1.75,0.5),(3,0.5),arrowstyle='-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))

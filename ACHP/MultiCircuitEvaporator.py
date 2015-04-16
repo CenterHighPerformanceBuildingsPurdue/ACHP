@@ -234,7 +234,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         hsatV_out=PropsSI('H','P',Pout_r,'Q',1.0,self.Ref) #*1000
         hsatL_out=PropsSI('H','P',Pout_r,'Q',0.0,self.Ref) #*1000
         if self.hout_r>hsatV_out:
-            self.Tout_r=newton(lambda T: PropsSI('H','T',T,'P',Pout_r,self.Ref)-self.hout_r,PropsSI('T','P',Pout_r,'Q',1.0,self.Ref))  #self.hout_r/1000 is updated by removing /1000 #saturated temperature at outlet quality
+            self.Tout_r= PropsSI('T','H',self.hout_r,'P',Pout_r,self.Ref) #superheated temperature at outlet
         else:
             xout_r=((self.hout_r-hsatL_out)/(hsatV_out-hsatL_out))
             self.Tout_r=PropsSI('T','P',Pout_r,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
