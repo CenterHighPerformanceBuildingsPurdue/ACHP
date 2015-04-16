@@ -55,8 +55,8 @@ pylab.plot(np.r_[x1,x2,x3,x4,x1[0]],np.r_[y1,y2,y3,y4,y1[0]],'k')
 #Length labels
 pylab.gca().add_patch(FancyArrowPatch((wE/2.0+0.08,-w/2.0*sin(phi)),(wE/2.0+0.08,1),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
 pylab.text(wE/2.0+0.1,y0E,'$L$',ha='left',va='center',size=20)
-pylab.gca().add_patch(FancyArrowPatch((-w/2.0,y0E+hE/2.0+0.06),(w/2.0,y0E+hE/2.0+0.06),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
-pylab.text(0,y0E+hE/2.0+0.08,'$B$',ha='center',va='bottom',size=20)
+pylab.gca().add_patch(FancyArrowPatch((0,y0E+hE/2.0+0.06),(w/2.0,y0E+hE/2.0+0.06),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
+pylab.text(w/4.0,y0E+hE/2.0+0.08,'$B$',ha='center',va='bottom',size=20)
 
 pylab.gca().add_patch(FancyArrowPatch((-wE/2.0-0.08,portsxy[2][1]),(-wE/2.0-0.08,portsxy[3][1]),arrowstyle='<|-|>',fc='k',ec='k',mutation_scale=20,lw=0.8))
 pylab.text(-wE/2.0-0.1,y0E,'$L_p$',ha='right',va='center',size=20)

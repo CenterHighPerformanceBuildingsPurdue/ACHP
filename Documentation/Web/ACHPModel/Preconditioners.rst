@@ -39,7 +39,7 @@ The heat transfer rate in the condenser can therefore be given by the value
 
 .. math::
 
-    \dot Q_{cond}=\varepsilon_{HX}\frac{\dot V_{ha,cond}}{\rho_{ha}}c_{p,a}(T_{i,a,cond}-T_{cond})
+    \dot Q_{cond}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cond} c_{p,a}(T_{i,a,cond}-T_{cond})
     
 The condenser heat transfer rate based on the imposed subcooling can also be given by
 
@@ -56,7 +56,7 @@ As usual, the evaporator is the most complicated component due to the possibilit
 
 .. math::
 
-    \dot Q_{evap,dry}=\varepsilon_{HX}\frac{\dot V_{ha,evap}}{\rho_{ha}}c_{p,a}(T_{i,a,evap}-T_{evap})
+    \dot Q_{evap,dry}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,evap} c_{p,a}(T_{i,a,evap}-T_{evap})
     
 Then using the dry evaporator heat transfer analysis it is possible to determine the surface temperature.  The :math:`\mathrm{UA}` values can be obtained from
 
@@ -88,7 +88,7 @@ If both :math:`T_{s,a,o}` and :math:`T_{s,a,i}` are above the dewpoint temperatu
 
 .. math::
 
-    \dot Q_{evap,wet}=\varepsilon_{HX}\frac{\dot V_{ha,evap}}{\rho_{ha}}(h_{a,i}-h_{a,s,evap})
+    \dot Q_{evap,wet}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,evap}(h_{a,i}-h_{a,s,evap})
 
 where :math:`h_{a,s,evap}` is the saturated air enthalpy at :math:`T_{evap}` and :math:`h_{a,i}` is the enthalpy of the inlet air to the evaporator.
 
@@ -105,7 +105,7 @@ The residuals to driven to zero are therefore an overall energy balance over the
 
 .. math::
 
-    \vec{\Delta}(T_{evap},T_{cond})=\left[ \begin{array}{c} \dot Q_{evap}+\dot W_{comp}+\dot Q_{cond} \\ \dot Q_{cond}-\dot Q_{cond,\Delta h} \end{array}  \right]
+    \vec{\Delta}(T_{evap},T_{cond})=\left[ \begin{array}{c} \dot Q_{evap}+\dot W_{comp}+\dot Q_{cond} \\ \dot Q_{cond}+\dot Q_{cond,\Delta h} \end{array}  \right]
     
 and a two-dimensional solver can be used to drive the norm of :math:`\vec{\Delta}` to sufficiently close to zero by altering :math:`T_{evap}` and :math:`T_{cond}`.
 
@@ -129,7 +129,7 @@ The cooling coil is first considered to be fully dry, yielding the heat transfer
 
 .. math::
 
-    \dot Q_{cc,dry}=\varepsilon_{HX}\frac{\dot V_{ha,cc}}{\rho_{ha}}c_{p,a}(T_{a,i,cc}-T_{g,i,cc})
+    \dot Q_{cc,dry}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cc} c_{p,a}(T_{a,i,cc}-T_{g,i,cc})
     
 Then using the dry cooling coil heat transfer analysis it is possible to determine the surface temperature.  The :math:`\mathrm{UA}` values can be obtained from
 
@@ -163,7 +163,7 @@ If both :math:`T_{s,a,o}` and :math:`T_{s,a,i}` are above the dewpoint temperatu
 
 .. math::
 
-    \dot Q_{cc,wet}=\varepsilon_{HX}\frac{\dot V_{ha,cc}}{\rho_{ha}}(h_{a,i}-h_{a,s,cc})
+    \dot Q_{cc,wet}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cc}(h_{a,i}-h_{a,s,cc})
 
 where :math:`h_{a,s,cc}` is the saturated air enthalpy at :math:`T_{g,i}` and :math:`h_{a,i}` is the enthalpy of the inlet air to the cooling coil.
 
@@ -196,7 +196,7 @@ The residuals to driven to zero are therefore an overall energy balance over the
 
 .. math::
 
-    \vec{\Delta}(T_{evap},T_{cond},T_{g,i,cc})=\left[ \begin{array}{c} \dot Q_{IHX}+\dot W_{comp}+\dot Q_{cond} \\ \dot Q_{cond}-\dot Q_{cond,\Delta h} \\ \dot Q_{cc}- \dot Q_{IHX} \end{array}  \right]
+    \vec{\Delta}(T_{evap},T_{cond},T_{g,i,cc})=\left[ \begin{array}{c} \dot Q_{IHX}+\dot W_{comp}+\dot Q_{cond} \\ \dot Q_{cond}+\dot Q_{cond,\Delta h} \\ \dot Q_{cc}- \dot Q_{IHX} \end{array}  \right]
     
 and a three-dimensional solver can be used to drive the norm of :math:`\vec{\Delta}` to sufficiently close to zero by altering :math:`T_{evap}`, :math:`T_{cond}`, and :math:`T_{g,i,cc}`.
 
@@ -235,7 +235,7 @@ Variable                         Description
 :math:`T_{s,a,o}`                Surface temperature of air at air outlet [K]
 :math:`\Delta T_{sh}`            Compressor suction superheat [K]
 :math:`\Delta T_{sc}`            Condenser outlet subcooling [K]
-:math:`p_{cond}`                 Condenser pressure [kPa (abs)]
+:math:`p_{cond}`                 Condenser pressure [Pa (abs)]
 :math:`\dot m_g`                 Mass flow rate of glycol [kg/s]
 :math:`\dot m_r`                 Mass flow rate of refrigerant [kg/s]
 :math:`\dot m_{a,total}`         Mass flow rate of dry air through evaporator [kg\ :subscript:`da`\ /s]
@@ -251,8 +251,8 @@ Variable                         Description
 :math:`\mathrm{UA}_a`            Air-side :math:`\mathrm{UA}` value [W/K]
 :math:`\mathrm{UA}_g`            Glycol-side :math:`\mathrm{UA}` value [W/K]
 :math:`\mathrm{UA}_r`            Refrigerant-side :math:`\mathrm{UA}` value [W/K]
-:math:`\dot V_{ha,cond}`         Volumetric flow rate of humid air in condenser [m\ :sup:`3`\ /kg\ :sub:`da`\ ]
-:math:`\dot V_{ha,evap}`         Volumetric flow rate of humid air in evaporator [m\ :sup:`3`\ /kg\ :sub:`da`\ ]
-:math:`\dot V_{ha,cc}`           Volumetric flow rate of humid air in cooling coil [m\ :sup:`3`\ /kg\ :sub:`da`\ ]
+:math:`\dot V_{ha,cond}`         Volumetric flow rate of humid air in condenser [m\ :sup:`3`\ /s ]
+:math:`\dot V_{ha,evap}`         Volumetric flow rate of humid air in evaporator [m\ :sup:`3`\ /s ]
+:math:`\dot V_{ha,cc}`           Volumetric flow rate of humid air in cooling coil [m\ :sup:`3`\ /s ]
 :math:`\dot W_{comp}`            Electrical power of compressor [W]
 ===============================  ===================================================

@@ -66,17 +66,19 @@ To conduct the competely dry analysis, a simple :math:`\varepsilon-\mathrm{Ntu}`
 .. math::
     :label: eq-C_min
 
-    C_{min} = min(\dot{m}_a c_{p,a}, \dot{m}_r c_{p,r})
+    C_{min} = \min[\dot{m}_a c_{p,a}, \dot{m}_r c_{p,r}]
 
+    C_{max} = \max[\dot{m}_a c_{p,a}, \dot{m}_r c_{p,r}]
+    
 .. math::
     :label: eq-C_ratio
 
-    C_{ratio} = \frac{C_{min}}{max(\dot{m}_a c_{p,a},\dot{m}_r c_{p,r})} 
+    C_{ratio} = \frac{C_{min}}{C_{max}}
 
 .. math::
     :label: eq-Q_adry
 
-    \dot{Q} = \dot{m}_a c_{p,a} (T_{a,in} - T_{a,out}) 
+    \dot{Q} = \dot{m}_a c_{p,a} (T_{a,in} - T_{a,out})
 
 These equations can be solved analytically for the heat exchanger performance. After solving the heat exchanger, one may find the temperature on the surface of the heat exchanger at the air outlet by Equation :eq:`Ts_dry`.
 

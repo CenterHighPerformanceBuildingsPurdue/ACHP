@@ -2,7 +2,8 @@
 Multi-Circuited Evaporator
 ==========================
 
-In an evaporator, there is always the possibility that the distribution of refrigerant or air may be unequal between the circuits, which usually results in lower evaporator performance.  In the case of equal distribution between circuits, the analysis of the :ref:`Evaporator` can be used, otherwise the multi-circuited evaporator is needed.  The multi-circuited evaporator (MCE) analyzed as being a set of evaporators, each comprising one circuit, that are then each fed fed some (not necessarily even) distribution of refrigerant and air.
+In an evaporator, there is always the possibility that the distribution of refrigerant or air may be unequal between the circuits, which usually results in lower evaporator performance.  In the case of equal distribution between circuits, the analysis of the :ref:`Evaporator` can be used, otherwise the multi-circuited evaporator is needed.  The multi-circuited evaporator (MCE) analyzed as being a set of evaporators, each comprising one circuit, that are then each fed some (not necessarily even) distribution of refrigerant and air.
+The tubes per banks are distributed among the different circuits. If the tubes per bank is divisible by number of circuits, all the circuits will have the same number of tubes. Otherwise, the circuits are ordered from fewer to more if not evenly distributed.
 
 Mathematical Description
 ------------------------

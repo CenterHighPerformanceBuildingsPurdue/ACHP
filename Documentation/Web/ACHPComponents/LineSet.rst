@@ -50,23 +50,29 @@ and the outlet temperature from
     
     T_o=T_{\infty}+(T_i-T_{\infty})\exp\left(-\frac{UA}{\dot m_r c_{p,r}}\right)
     
+heat transfer 
+
+.. math::
+    :label: eqLS6
     
+    Q=\dot m_r c_{p,r} (T_o-T_i)
+        
 .. plot:: MPLPlots/LineSetCrossSection.py
 
 Based on the concentric geometry, the heat transfer network terms are given by
 
 .. math::
-    :label: eqLS6
+    :label: eqLS7
     
     R_{tube}=\frac{\ln(D_o/D_i)}{2\pi L k_{tube}}
     
 .. math::
-    :label: eqLS7
+    :label: eqLS8
     
     R_{insul}=\frac{\ln[(D_o+2t_{insul})/D_o]}{2\pi L k_{insul}}
     
 .. math::
-    :label: eqLS8
+    :label: eqLS9
     
     \mathrm{UA}_i=h_i\pi D_i L
     
@@ -75,7 +81,7 @@ Based on the concentric geometry, the heat transfer network terms are given by
 and the overall heat conductance is given by
 
 .. math::
-    :label: eqLS9
+    :label: eqLS10
     
     \mathrm{UA}=\frac{1}{\mathrm{UA}_i^{-1}+R_{tube}+R_{insul}+\mathrm{UA}_o^{-1}}
 

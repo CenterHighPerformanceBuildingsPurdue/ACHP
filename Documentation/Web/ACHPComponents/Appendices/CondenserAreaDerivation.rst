@@ -12,6 +12,8 @@ For this derivation, the inlet temperatures of both streams are known, and the o
     :label: eqCAD1
 
     \mathrm{UA} =w\dfrac{1}{  (\eta_a \alpha_a A_{a,total})^{-1} + (\alpha_{r} A_{r,total})^{-1}}=w\mathrm{UA}_{overall}\\
+    
+    C_{min} = \min[\dot{m}_r c_{p,r}, w \dot{m}_{a,total} c_{p,a}]
 
 Minimum capacitance rate on air side
 ====================================
@@ -115,17 +117,17 @@ Energy balance yields
 .. math::
     :label: eqCAD17
     
-    \dot m_rc_{p,r}(T_{r,i}-T_{r,o})=\varepsilon C_{min} (T_{a,i}-T_{r,i})
+    \dot m_rc_{p,r}(T_{r,i}-T_{r,o})=\varepsilon C_{min} (T_{r,i}-T_{a,i})
  
 .. math::
     :label: eqCAD18
     
-    \dot m_rc_{p,r}(T_{r,i}-T_{r,o})=\varepsilon\dot m_rc_{p,r} (T_{a,i}-T_{r,i})
+    \dot m_rc_{p,r}(T_{r,i}-T_{r,o})=\varepsilon\dot m_rc_{p,r} (T_{r,i}-T_{a,i})
  
 .. math::
     :label: eqCAD19
     
-    \varepsilon=\frac{(T_{r,i}-T_{r,o})}{(T_{a,i}-T_{r,o})}
+    \varepsilon=\frac{(T_{r,i}-T_{r,o})}{(T_{r,i}-T_{a,i})}
  
 Right-hand-side is also equal to :math:`\Psi` from above.  Effectiveness with :math:`C_{min}` mixed (ref.) and :math:`C_{max}` unmixed (air) yields
 

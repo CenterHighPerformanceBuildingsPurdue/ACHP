@@ -1,4 +1,5 @@
 import pylab,numpy as np
+from matplotlib.patches import FancyArrowPatch
 
 fig=pylab.figure(figsize=(8,4))
 
@@ -28,6 +29,7 @@ pylab.plot(5,0.5,'ko')
 pylab.plot(5,-0.5,'ko')
 pylab.text(5.05,0.5,'$T_{a,o}$',ha='left',va='center')
 pylab.text(5.05,-0.5,'$T_{g,i}$',ha='left',va='center')
+pylab.gca().add_patch(FancyArrowPatch((1,0.5),(0.5,0.5),arrowstyle='<|-',fc='k',ec='k',mutation_scale=20,lw=0.8))
 
 #Wet line
 pylab.plot(np.r_[3,5],np.r_[0.01,0.01],'b',lw=4)
@@ -40,6 +42,7 @@ pylab.text(5.05,0,'$T_{o,s}$',ha='left',va='center')
 
 pylab.text(4,-1.1,'Wet Part',ha='center',va='top')
 pylab.text(1.5,-1.1,'Dry Part',ha='center',va='top')
+pylab.gca().add_patch(FancyArrowPatch((4,-0.5),(4.5,-0.5),arrowstyle='<|-',fc='k',ec='k',mutation_scale=20,lw=0.8))
 
 pylab.gca().set_xlim(-0.1,5.1)
 pylab.gca().axis('equal')
