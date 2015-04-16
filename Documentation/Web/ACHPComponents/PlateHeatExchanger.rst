@@ -153,19 +153,24 @@ The Hagen number is defined by
     
     \mathrm{Hg}=\frac{\zeta\mathrm{Re}^2}{2}=\frac{\rho\Delta pd_h^3}{\eta^2L_p}
 
-which gives the value for the pressure drop.
-
-The Nusselt number is obtained from
+which gives the value for the pressure drop
 
 .. math::
     :label: eqPHE16
     
-    \mathrm{Nu}=c_q\mathrm{Pr}^{1/3}(\eta/\eta_w)^{1/6} [2 \mathrm{Hg} \sin(2\phi)]^{q}
+    \Delta p=\mathrm{Hg} \frac{\eta^2 L_p}{\rho d_h^3}
+
+The Nusselt number is obtained from
+
+.. math::
+    :label: eqPHE17
+    
+    \mathrm{Nu}=c_q\mathrm{Pr}^{1/3}(\eta/\eta_w)^{1/6} [2 \mathrm{Hg} \sin(2\varphi)]^{q}
     
 where the recommended values of the constants :math:`c_q` and :math:`q` from Martin are 0.122 and 0.374 respectively.  Finally the overall heat transfer coefficient is obtained from
 
 .. math::
-    :label: eqPHE17
+    :label: eqPHE18
     
     \alpha=\frac{k\mathrm{Nu}}{d_h}
 
@@ -179,20 +184,20 @@ It seems like the most accepted view, though is open to debate, is that the flow
 In spite of these shortcomings, the pool boiling correlation of Cooper [#Cooper]_ was used.  This yields a simple form of the solution for the heat transfer coefficient.  The heat transfer coefficient is obtained from
 
 .. math::
-    :label: eqPHE18
+    :label: eqPHE19
     
-    \alpha=55 (p^*)^{0.12-0.2 \log_{10}(R_p)}(-\log_{10}(p^*))^{-0.55} (q")^{0.67} M^{-0.5}
+    \alpha=K 55 (p^*)^{0.12-0.2 \log_{10}(R_p)}(-\log_{10}(p^*))^{-0.55} (q")^{0.67} M^{-0.5}
 
 where
 
 .. math::
-    :label: eqPHE19
+    :label: eqPHE20
     
     p^*=p/p_{crit}
     
     q"=\dot Q/A
     
-and :math:`M` is the molar mass (kg/kmol) of the fluid and :math:`R_p` is the relative roughness of the surface.
+and :math:`M` is the molar mass (kg/kmol) of the fluid and :math:`R_p` is the relative roughness of the surface and K is set to unity. However, Claesson [#Claesson]_ suggested a correction of 1.5.
 
 In order to calculate the pressure drop in evaporating flow in the PHE channel, the frictional pressure drop is calculated using the Lockhart-Martinelli two-phase pressure drop correlation from section :ref:`Lockhart-Martinelli<Lockhart-Martinelli>` with the value of the parameter C of 4.67 as recommended by Claesson [#Claesson]_.  The accelerational pressure change is given from the same section.
 
@@ -203,21 +208,21 @@ The available models for condensing flow in PHE share many of the shortcomings o
 Longo has conducted studies [#Longo2004]_ [#Longo2010]_ [#Longo2010b]_ that looked at condensation in PHE, and from these studies it can be seen that at low equivalent Reynolds number (:math:`\mathrm{Re}_{eq}<1750`), the j-factor is nominally constant at a value of 60, and above that, it is linear with equivalent Reynolds number, so the j-factor can be given by
 
 .. math::
-    :label: eqPHE20
+    :label: eqPHE21
     
     j=\left\lbrace \begin{array}{cc} 60 & \mathrm{Re}_{eq}<1750 \\ \frac{75-60}{3000-1750}(\mathrm{Re}_{eq}-1750)+60 & \mathrm{Re}_{eq}\geq 1750 \end{array} \right.
     
 where the equivalent Reynolds number is defined by
 
 .. math::
-    :label: eqPHE21
+    :label: eqPHE22
     
     \mathrm{Re}_{eq}=\frac{G\left[(1-\overline x)+\overline x \sqrt{\frac{\rho_L}{\rho_V}}\right] d_h}{\eta_L}
 
 which finally yields the heat transfer coefficient
 
 .. math::
-    :label: eqPHE22
+    :label: eqPHE23
     
     \alpha=\frac{jk\mathrm{Pr}^{1/3}}{d_h}
     
@@ -232,10 +237,10 @@ With the set of required correlations defined, it is now possible to analyze the
 Bounds on Heat Transfer Rate
 ----------------------------
 
-Since the PHE is pure counterflow, the coldest possible temperature that the hot stream can achieve is the inlet temperature of the cold stream, and similarly, the hottest temperature that the cold stream can achieve is the inlet temperature of the cold stream.  The inlet enthalpies of the hot stream :math:`h_{h,i}` and the cold stream :math:`h_{c,i}` allow to calculate a preliminary value for the upper bound on the heat transfer rate:
+Since the PHE is pure counterflow, the coldest possible temperature that the hot stream can achieve is the inlet temperature of the cold stream, and similarly, the hottest temperature that the cold stream can achieve is the inlet temperature of the hot stream.  The inlet enthalpies of the hot stream :math:`h_{h,i}` and the cold stream :math:`h_{c,i}` allow to calculate a preliminary value for the upper bound on the heat transfer rate:
 
 .. math::
-    :label: eqPHE23
+    :label: eqPHE24
     
     \dot Q_{max,h}=\dot m_h [h_{h,i}-h(T=T_{c,i},p=p_{h,i},Ref_h)]
     
@@ -264,21 +269,21 @@ Thus, a new maximum heat transfer rate :math:`\dot Q_{max}` can be determined th
 In this case, the water is limiting the heat transfer rate, and the maximum heat transfer rate can be given by taking the water all the way to the dew temperature of the refrigerant, and using the known heat transfer rate in cell 3.  The cold-stream pinch enthalpy is given by
 
 .. math::
-    :label: eqPHE24
+    :label: eqPHE25
     
     h_{pinch}=h(T=T_{dew,h},p=p_c,Ref_c)
 
 Since the inlet enthalpy and outlet enthalpy (saturated vapor) of the hot refrigerant are known in cell 3, the heat transfer rate in cell 3 is known from
 
 .. math::
-    :label: eqPHE25
+    :label: eqPHE26
     
     \dot Q_{cell 3}= \dot m_{h}(h_{h,i}-h(T=T_{dew,h},x=1,Ref_h))
     
 and the new limiting heat transfer rate can be given by
 
 .. math::
-    :label: eqPHE26
+    :label: eqPHE27
     
     \dot Q_{max}= \dot m_c(h_{pinch}-h_{c,i})+\dot Q_{cell 3}
 
@@ -293,7 +298,7 @@ The discussion that follows here assumes that the heat transfer rate :math:`\dot
 For a given :math:`\dot Q`, the outlet enthalpies are known, which begins the process of buiding enthalpy vectors for both streams.  The outlet enthalpies for each stream are given by
 
 .. math::
-    :label: eqPHE27
+    :label: eqPHE28
     
     h_{h,o}=h_{h,i}-\dot Q/\dot m_h
     
@@ -302,7 +307,7 @@ For a given :math:`\dot Q`, the outlet enthalpies are known, which begins the pr
 which yields the initial enthalpy vectors (ordered from low to high enthalpy) of 
 
 .. math::
-    :label: eqPHE28
+    :label: eqPHE29
     
     \vec h_h = [h_{h,o} , h_{h,i}]
 
@@ -311,28 +316,28 @@ which yields the initial enthalpy vectors (ordered from low to high enthalpy) of
 To these enthalpy vectors are now added any phase transitions that exist; a phase transition exists if its corresponding saturation enthalpy is between the inlet and outlet enthalpies of the fluid.  With each phase transition enthalpy comes a partner enthalpy of the other stream.  This set of enthalpy vectors then define the enthalpies of both streams at each cell edge.  For instance, in the case shown in Figure :ref:`Evaporator<PHEQmaxEvapcells>`, there is one phase transition where the refrigerant transitions between two-phase and superheated vapor.  The enthalpy of the cold stream at the transition point is given by
 
 .. math::
-    :label: eqPHE29
+    :label: eqPHE30
     
     h_{PT}=h(T=T_{dew,c},x=1,\mathrm{Ref}_c)
     
 and the enthalpy of the hot stream at the phase transition :math:`h_{PT}^*` can be obtained by an energy balance over cell 2, which yields
 
 .. math::
-    :label: eqPHE30
+    :label: eqPHE31
     
     \dot m _h (h_{h,i}-h_{PT})=\dot m_c (h_{c,o}-h_{PT}^*)
     
 or
 
 .. math::
-    :label: eqPHE31
+    :label: eqPHE32
     
     h_{PT}^*=h_{c,o}-\frac{\dot m _h (h_{h,i}-h_{PT})}{\dot m_c}
     
 and now the enthalpy vectors are given by the values
 
 .. math::
-    :label: eqPHE32
+    :label: eqPHE33
     
     \vec h_h = [h_{h,o} , h_{PT}, h_{h,i}]
 
@@ -342,10 +347,10 @@ If there are multiple phase transitions on each side, the same method is applied
 
 For a given value of :math:`\dot Q`, each of the enthalpy vectors has the same length of :math:`N_{cell}+1`, which then form the enthalpy boundaries for the :math:`N_{cell}` cells.
 
-In each cell, first the phase of each fluid must be determined.  Each fluid will have the same phase throughout the entire cell (that was the whole point in the first place!).  The average enthalpy of each fluid in the cell can be used to determine the phase of the each fluid in the cell.  Our goal now is to determine how much of the physical length of the heat exchanger is required to obtain the given duty in each cell.  The required physical heat exchanger length of the cell :math:`w` can be given by
+In each cell, first the phase of each fluid must be determined.  Each fluid will have the same phase throughout the entire cell (that was the whole point in the first place!).  The average enthalpy of each fluid in the cell can be used to determine the phase of each fluid in the cell.  Our goal now is to determine how much of the physical length of the heat exchanger is required to obtain the given duty in each cell.  The required physical heat exchanger length of the cell :math:`w` can be given by
 
 .. math::
-    :label: eqPHE33
+    :label: eqPHE34
     
     L_i=w_iL
 
@@ -354,35 +359,35 @@ where all the :math:`w_i` parameters must sum to unity (1.0).
 In a given cell, the heat transfer rate is known because this is how the enthalpy vectors have been constructed.  The heat transfer rate in the cell can be given by
 
 .. math::
-    :label: eqPHE34
+    :label: eqPHE35
     
     \dot Q_i=\dot m_r (\vec h_{h,i+1}- \vec h_{h,i})
 
 So long as at least one of the fluids in the cell is single-phase, the effectiveness in the cell can be defined by
 
 .. math::
-    :label: eqPHE35
+    :label: eqPHE36
     
     \varepsilon=\frac{\dot Q_{i}}{C_{min}(T_{h,i,cell}-T_{c,i,cell})}
     
 where :math:`T_{h,i,cell}` and :math:`T_{c,i,cell}` are the hot fluid and cold fluid inlet temperatures to the cell.  The minimum capacitance rate :math:`C_{min}` is by definition on the single-phase-fluid side.  In the single-phase/two-phase cell case, the minimum capacitance rate is given by
 
 .. math::
-    :label: eqPHE36
+    :label: eqPHE37
     
     C_{min}=\dot m_{\mathrm{single-phase}}c_{p,\mathrm{single-phase}}
     
 and since the flow is pure counter-flow, the |Ntu| can be obtained directly from 
 
 .. math::
-    :label: eqPHE37
+    :label: eqPHE38
     
-    \mathrm{Ntu}=\frac{\varepsilon}{1-\varepsilon} \qquad (C_r=0)
+    \mathrm{Ntu}=-\ln(1-\varepsilon) \qquad (C_r=0)
     
 If both fluids are single phase, the minimum capacitance rate can be obtained from
 
 .. math::
-    :label: eqPHE38
+    :label: eqPHE39
     
     C_{min}=\min[\dot m_h c_{p,h},\dot m_c c_{p,c}]
     
@@ -393,28 +398,28 @@ If both fluids are single phase, the minimum capacitance rate can be obtained fr
 which yields the |Ntu| for the single-phase/single-phase cell with pure counterflow of 
 
 .. math::
-    :label: eqPHE39
+    :label: eqPHE40
     
-    \mathrm{Ntu}=\frac{1}{C_r-1}\ln\left(\frac{\varepsilon-1}{\varepsilon C_{r}-1} \right) \qquad (C_r>0)
+    \mathrm{Ntu}=\frac{1}{C_r-1}\ln\left(\frac{\varepsilon-1}{\varepsilon C_{r}-1} \right) \qquad (C_r<1)
 
 and the required heat conductance can be obtained from
 
 .. math::
-    :label: eqPHE40
+    :label: eqPHE41
     
     \mathrm{UA}_{req}=\mathrm{Ntu} C_{min}
     
 The actual heat transfer conductance in the call can be given by
 
 .. math::
-    :label: eqPHE41
+    :label: eqPHE42
     
-    \mathrm{UA}_{actual}=\frac{1}{\alpha cA_c}+\frac{t}{kA}+\frac{1}{\alpha_h A_h}
+    \mathrm{UA}_{actual}=\frac{1}{\alpha_c A_c}+\frac{t}{kA}+\frac{1}{\alpha_h A_h}
     
 where the areas are based on the total wetted area of the heat exchanger and local heat transfer coefficients (:math:`\alpha_h,\alpha_c`) for the cell are employed.  The fraction of the heat exchanger that would be required for the given thermal duty in the cell can be obtained from 
 
 .. math::
-    :label: eqPHE42
+    :label: eqPHE43
     
     w_i=\frac{\mathrm{UA}_{req}}{\mathrm{UA}_{actual}}
 
@@ -423,7 +428,7 @@ Determination of Thermal Duty
 Finally, the heat transfer rate in the PHE is obtained through iterative methods.  The value of :math:`\dot Q` is known to be between zero and :math:`\dot Q_{max}`, and the residual to be driven to zero by a numerical solver is
 
 .. math::
-    :label: eqPHE43
+    :label: eqPHE44
     
     \Delta=1-\sum_i [w_i] 
     

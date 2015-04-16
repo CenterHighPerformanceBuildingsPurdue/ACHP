@@ -104,6 +104,10 @@ where :math:`C_{min}` is the minimum capacitance rate, given by
     
     C_{min}=\min[\dot m_a c_{p,a}, \dot m_w c_{p,w}]
     
+    C_{max}=\max[\dot m_a c_{p,a}, \dot m_w c_{p,w}]
+    
+    C_r=\frac{C_{min}}{C_{max}}
+    
 Thus with :math:`\mathrm{Ntu}` known, the effectiveness can be obtained based on the geometry of the heat exchanger, shown here
 
 * Counterflow: 
@@ -189,7 +193,7 @@ which yields the fully-dry heat transfer rate of
 .. math::
     :label: eqWDHE17
     
-    \dot Q_{dry}=\varepsilon_{dry}c_{p,a}(T_{a,i}-T_{sat,r})
+    \dot Q_{dry}=\varepsilon_{dry}\dot m_{a,two-phase}c_{p,a}(T_{a,i}-T_{sat,r})
     
 which allows to calculate the inlet and outlet surface temperatures from
 
@@ -361,12 +365,12 @@ The air in the wet section interacts with a surface that has an effective surfac
     
     h_{a,s,s,e}=h_{a,x}-\frac{h_{a,x}-h_{a,o}}{1-\exp[-(1-f_{dry})\mathrm{Ntu}_o]}
     
-which is obtained by considering just the effectiveness of humid-air mass transfer with a fixed-enthalpy :math:`h_{a,s,s,e}` saturated surface.  Which yields an effective surface temperature :math:`T_{s,e}` obtained iteratively from 
+which is obtained by considering just the effectiveness of humid-air mass transfer with a fixed-enthalpy :math:`h_{a,s,s,e}` saturated surface.  Which yields an effective surface temperature :math:`T_{s,e}` 
 
 .. math::
     :label: eqWDHE36
     
-    h_{a,s,s,e}=h_{air}(T=T_{s,e},\phi=1)
+    T_{s,e}=T_{air}(h=h_{a,s,s,e},\phi=1)
     
 This yields the air outlet temperature of
 

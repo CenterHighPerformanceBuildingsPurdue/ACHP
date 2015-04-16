@@ -59,11 +59,12 @@ Cycle.Condenser.Fins.Fins.k_fin=237   #Thermal conductivity of fin material
 Cycle.Condenser.Fins.Air.Vdot_ha=1.7934 #rated volumetric flowrate
 Cycle.Condenser.Fins.Air.Tmean=308.15   
 Cycle.Condenser.Fins.Air.Tdb=308.15     #Dry Bulb Temperature
-Cycle.Condenser.Fins.Air.p=101.325      #Air pressure
+Cycle.Condenser.Fins.Air.p=101325       #Air pressure
 Cycle.Condenser.Fins.Air.RH=0.51        #Relative Humidity
 Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=260
 
+Cycle.Condenser.FinsType = 'WavyLouveredFins' #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Condenser.Ref=Cycle.Ref
 Cycle.Condenser.Verbosity=0
     
@@ -88,7 +89,7 @@ Cycle.CoolingCoil.Fins.Fins.k_fin=237
 Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.56319
 Cycle.CoolingCoil.Fins.Air.Tmean=297.039
 Cycle.CoolingCoil.Fins.Air.Tdb=297.039
-Cycle.CoolingCoil.Fins.Air.p=101.325
+Cycle.CoolingCoil.Fins.Air.p=101325
 Cycle.CoolingCoil.Fins.Air.RH=0.5
 Cycle.CoolingCoil.Fins.Air.RHmean=0.5
 Cycle.CoolingCoil.Fins.Air.FanPower=438
@@ -97,7 +98,8 @@ params={
     'Ref_g': Cycle.SecLoopFluid,
     'pin_g': 200,
     'Verbosity':0,
-    'mdot_g':0.38
+    'mdot_g':0.38,
+    'FinsType':'WavyLouveredFins' #WavyLouveredFins, HerringboneFins, PlainFins
 }
 Cycle.CoolingCoil.Update(**params)
 
@@ -114,7 +116,7 @@ params={
 Cycle.CoaxialIHX.Update(**params)
 
 params={
-    'pin_h':300,
+    'pin_h':300000,
     'Ref_h':Cycle.SecLoopFluid,
     'Ref_c':Cycle.Ref,
     
@@ -136,7 +138,7 @@ Cycle.PHEIHX.Update(**params)
 params={
     'eta':0.5,  #Pump+motor efficiency
     'mdot_g':0.38, #Flow Rate kg/s
-    'pin_g':300,
+    'pin_g':300000,
     'Ref_g':Cycle.SecLoopFluid,
     'Verbosity':0,
     }
@@ -149,7 +151,7 @@ params={
     'k_insul':0.036,
     'T_air':297,
     'Ref': Cycle.SecLoopFluid,
-    'pin': 300,
+    'pin': 300000,
     'h_air':0.0000000001,
 }
 
