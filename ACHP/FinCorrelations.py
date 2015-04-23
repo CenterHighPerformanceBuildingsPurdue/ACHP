@@ -1,6 +1,6 @@
 #from CoolProp.HumidAirProp import HAPropsSI #UseVirialCorrelation,UseIdealGasEnthalpyCorrelations,UseIsothermCompressCorrelation
 from CoolProp.CoolProp import HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp 
-from math import sqrt,pi,log,tanh,exp,cos,log
+from math import sqrt,pi,tanh,exp,cos,log
 from ACHPTools import ValidateFields
 #Turn on virial correlations for air and water for speed in Humid Air routines
 #UseVirialCorrelations(1)
