@@ -339,4 +339,4 @@ if __name__=='__main__':
     
     print LouversFinsTubes  #just print our inputs
     MultiLouveredMicroFins(LouversFinsTubes)  #calculate
-    print "Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)
+    print "Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)+" Pa"
