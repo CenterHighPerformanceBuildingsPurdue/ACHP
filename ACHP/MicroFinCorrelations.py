@@ -203,11 +203,11 @@ def MultiLouveredMicroFins(Inputs):
     #Air passages
     Npg = Ntubes_bank - 1 #sometime there are no tubes on the edges of HX, so >>> Npg = Ntubes_bank + 1
     #Height of heat exchanger (core width)
-    L1 = Npg * b + (Npg+1) * Ht
+    L1 = Npg * b + Ntubes_bank * Ht
     #Total number of fins (per bank)
     nf = L3/pf * Npg
     #Primary area =  Tube outside surface area - Fin base area (per bank)
-    Ap = (2*(L2 - Ht) + pi * Ht)*L3 *(Npg+1) - 2*delta*L2*nf
+    Ap = (2*(L2 - Ht) + pi * Ht)*L3 *Ntubes_bank - 2*delta*L2*nf
     #Total number of louvers (per bank)
     nlouv = (Lf/lp - 1)*nf
     #Total fin area = Fin area + Louver edge area (per bank)
@@ -326,10 +326,10 @@ if __name__=='__main__':
     LouversFinsTubes.Fins.k_fin=117                #Fin thermal conductivity
     
     LouversFinsTubes.Air.Vdot_ha=1.05              #Air volume flow rate in m^3/s
-    LouversFinsTubes.Air.Tdb=298
+    LouversFinsTubes.Air.Tdb=298                   #Air inlet temperature, K
     LouversFinsTubes.Air.p=100000                  #Air pressure in Pa
-    LouversFinsTubes.Air.RH=0.5
-    LouversFinsTubes.Air.FanPower=438
+    LouversFinsTubes.Air.RH=0.5                    #Air relative humidity
+    LouversFinsTubes.Air.FanPower=327.36           #Fan power, Watts
     
     LouversFinsTubes.Louvers.Lalpha=20             #Louver angle, in degree
     LouversFinsTubes.Louvers.lp=0.001              #Louver pitch
