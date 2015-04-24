@@ -61,7 +61,7 @@ class FinInputs():
             ('RH',float,0,1),
             ('Tdb',float,-80+273.15,200+273.15),
             ('FanPower',float,0,4000),
-            ('p',float,10,10000000),                                            #0.01,10000 updated to 10,10000000
+            ('p',float,10,10000000),
             ('Vdot_ha',float,0.001,10)
         ]
         optFields=['RHmean','Tmean']
@@ -79,13 +79,14 @@ class FinInputs():
         ValidateFields(d,reqFields,optFields)
         
         reqFields=[
-            ('NTubes_per_bank',float,0.1,100),
-            ('Ncircuits',float,1,100),
+            ('NTubes',float,0.1,100),
             ('Nbank',float,1,50),
+            ('Npass',float,1,50),
             ('Ltube',float,0.001,10),
             ('Td',float,0.0001,1),
             ('Ht',float,0.0001,1),
-            ('b',float,0.0001,1)
+            ('b',float,0.0001,1),
+            ('tw',float,0.00001,0.01)
         ]
         optFields=None
         d=dict(self.Tubes.__dict__) #The current values
@@ -159,7 +160,7 @@ def MultiLouveredMicroFins(Inputs):
     k_fin =       Inputs.Fins.k_fin             #Thermal conductivity
     FPI =         Inputs.Fins.FPI               #Fin per inch (fin density)
     
-    Ntubes_bank = Inputs.Tubes.NTubes_per_bank  #tubes per bank
+    Ntubes =      Inputs.Tubes.NTubes           #Number of tubes
     Nbank =       Inputs.Tubes.Nbank            #Number of banks
     L3 =          Inputs.Tubes.Ltube            #length of a single tube    
     L2 =          Inputs.Tubes.Td               #Tube outside width (depth)
@@ -201,13 +202,13 @@ def MultiLouveredMicroFins(Inputs):
     lh = lp * sin(Lalpha*pi/180)
     
     #Air passages
-    Npg = Ntubes_bank - 1 #sometime there are no tubes on the edges of HX, so >>> Npg = Ntubes_bank + 1
+    Npg = Ntubes - 1 #sometime there are no tubes on the edges of HX, so >>> Npg = Ntubes_bank + 1
     #Height of heat exchanger (core width)
-    L1 = Npg * b + Ntubes_bank * Ht
+    L1 = Npg * b + Ntubes * Ht
     #Total number of fins (per bank)
     nf = L3/pf * Npg
     #Primary area =  Tube outside surface area - Fin base area (per bank)
-    Ap = (2*(L2 - Ht) + pi * Ht)*L3 *Ntubes_bank - 2*delta*L2*nf
+    Ap = (2*(L2 - Ht) + pi * Ht)*L3 *Ntubes - 2*delta*L2*nf
     #Total number of louvers (per bank)
     nlouv = (Lf/lp - 1)*nf
     #Total fin area = Fin area + Louver edge area (per bank)
@@ -259,12 +260,14 @@ def MultiLouveredMicroFins(Inputs):
     
     
     #Heat transfer
-    #Colburn j-Factor
+    #Colburn j-Factor based on Chang & Wang, "A Generalized Heat Transfer 
+    #Correlation for Louver Fin Geometry." Int. J . Heat Mass Transfer , 40 (1997): 553–544.
     j = pow(Re2,-0.49) * pow((Lalpha/90.0),0.27) * pow(pf/lp,-0.14) * pow(b/lp,-0.29) * pow(Lf/lp,-0.23) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.28) * pow(delta/lp,-0.05)
     #Air-side mean heat transfer coefficient
     h_a = j * G2 * cp_ha / pow(Pr,2.0/3.0)
     
-    #Air-side pressure drop correlations
+    #Air-side pressure drop correlations based on Chang, "A Generalized Friction 
+    #Correlation for Louver Fin Geometry." Int. J . Heat Mass Transfer , 43, 2237–2243.
     if (Re2<150):
         fa = 14.39 * Re2**(-0.805*pf/b) * pow(log(1 + pf/lp),3.04)
         fb = pow(log((delta/pf)**0.48 + 0.9),-1.453) * pow(Dh2/lp,-3.01) * pow(log(0.5*Re2),-3.01)
@@ -312,14 +315,15 @@ if __name__=='__main__':
     
     LouversFinsTubes=FinInputs()
     
-    LouversFinsTubes.Tubes.NTubes_per_bank=61.354  #Number of tubes per bank
-    LouversFinsTubes.Tubes.Ncircuits=61.354        #Number of circuits is the same of tubes per bank
+    LouversFinsTubes.Tubes.NTubes=61.354           #Number of tubes
     LouversFinsTubes.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
+    LouversFinsTubes.Tubes.Npass=3                 #Number of passes
     LouversFinsTubes.Tubes.Ltube=0.30213           #length of a single tube
     LouversFinsTubes.Tubes.Td=0.0333               #Tube outside width (depth)
     LouversFinsTubes.Tubes.Ht= 0.002               #Tube outside height (major diameter)
     LouversFinsTubes.Tubes.b=0.00635               #Tube spacing     
-    
+    LouversFinsTubes.Tubes.tw=0.0003               #Tube wall thickness     
+
     LouversFinsTubes.Fins.FPI=11.0998              #Fin per inch
     LouversFinsTubes.Fins.Lf=0.0333                #Fin length
     LouversFinsTubes.Fins.t=0.000152               #Fin thickness
@@ -328,7 +332,7 @@ if __name__=='__main__':
     LouversFinsTubes.Air.Vdot_ha=1.05              #Air volume flow rate in m^3/s
     LouversFinsTubes.Air.Tdb=298                   #Air inlet temperature, K
     LouversFinsTubes.Air.p=100000                  #Air pressure in Pa
-    LouversFinsTubes.Air.RH=0.5                    #Air relative humidity
+    LouversFinsTubes.Air.RH=0.5                    #Air inlet relative humidity
     LouversFinsTubes.Air.FanPower=327.36           #Fan power, Watts
     
     LouversFinsTubes.Louvers.Lalpha=20             #Louver angle, in degree

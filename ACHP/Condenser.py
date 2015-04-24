@@ -27,7 +27,7 @@ class CondenserClass():
         return [
             ('Volumetric flow rate of humid air','m^3/s',self.Fins.Air.Vdot_ha),
             ('Inlet Dry bulb temp','K',self.Tin_a),
-            ('Inlet Air pressure','kPa',self.Fins.Air.p),
+            ('Inlet Air pressure','Pa',self.Fins.Air.p),
             ('Inlet Air Relative Humidity','-',self.Fins.Air.RH),
             ('Tubes per bank','-',self.Fins.Tubes.NTubes_per_bank),
             ('Number of banks','-',self.Fins.Tubes.Nbank),
