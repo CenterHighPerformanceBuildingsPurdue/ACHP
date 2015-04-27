@@ -2,6 +2,7 @@
 from CoolProp.CoolProp import HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp 
 from math import sqrt,pi,tanh,exp,cos,log,sin
 from ACHPTools import ValidateFields
+from scipy.optimize import fsolve
 #Turn on virial correlations for air and water for speed in Humid Air routines
 #UseVirialCorrelations(1)
 #UseIsothermCompressCorrelation(1)
@@ -214,20 +215,20 @@ def MultiLouveredMicroFins(Inputs):
     #Total fin area = Fin area + Louver edge area (per bank)
     Af = 2 * (sf*Lf + sf*delta)*nf + 2*Llouv*delta*nlouv
     #Total surface area on air-side
-    At2 = (Af + Ap) * Nbank
+    At = (Af + Ap) * Nbank
     
     #Minimum free-flow area on air-side = area spacing between tubes - fin and louver edge area
-    Ac2 = b*L3*Npg - (delta*(sf-Llouv) +Llouv*lh)*nf
+    Ac = b*L3*Npg - (delta*(sf-Llouv) +Llouv*lh)*nf
     #Frontal area on air-side
-    Afr2 = L1*L3
+    Afr = L1*L3
     #Hydraulic diameter on air-side
-    Dh2 = 4*Ac2*L2*Nbank / At2
+    Dh = 4*Ac*L2*Nbank / At
     #Porosity on air-side
-    sigma2 = Ac2/Afr2
+    sigma = Ac/Afr
     #Volume of HX on air-side
-    Vhx2 = L2*L3*b*Npg*Nbank
+    Vhx = L2*L3*b*Npg*Nbank
     #Surface area density on air-side
-    beta2 = At2/Vhx2
+    beta = At/Vhx
     
     
     #Evaluate the mass flow rate based on inlet conditions
@@ -241,9 +242,9 @@ def MultiLouveredMicroFins(Inputs):
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
     
     #mass flux on air-side
-    G2 = mdot_ha / Ac2 #[kg/m^2-s]
+    G = mdot_ha / Ac #[kg/m^2-s]
     #maximum velocity on air-side
-    v2 = G2 / rho_ha #[m/s]
+    v = G / rho_ha #[m/s]
     
     #Use a forward difference to calculate cp from cp=dh/dT
     dT=0.0001 #[K]
@@ -256,33 +257,59 @@ def MultiLouveredMicroFins(Inputs):
     
     #Dimensionless Groups
     Pr = cp_ha * mu_ha / k_ha #Prandlt's number
-    Re2 = G2 * Dh2 / mu_ha #Reynold's number on air-side
-    
+    Re_Dh = G * Dh / mu_ha #Reynold's number on air-side
+    Re_lp = G * lp / mu_ha
     
     #Heat transfer
     #Colburn j-Factor based on Chang & Wang, "A Generalized Heat Transfer 
-    #Correlation for Louver Fin Geometry." Int. J . Heat Mass Transfer , 40 (1997): 553–544.
-    j = pow(Re2,-0.49) * pow((Lalpha/90.0),0.27) * pow(pf/lp,-0.14) * pow(b/lp,-0.29) * pow(Lf/lp,-0.23) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.28) * pow(delta/lp,-0.05)
+    #Correlation for Louver Fin Geometry." Int. J. Heat Mass Transfer, 40 (1997): 553-554
+    j = pow(Re_Dh,-0.49) * pow((Lalpha/90.0),0.27) * pow(pf/lp,-0.14) * pow(b/lp,-0.29) * pow(Lf/lp,-0.23) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.28) * pow(delta/lp,-0.05)
     #Air-side mean heat transfer coefficient
-    h_a = j * G2 * cp_ha / pow(Pr,2.0/3.0)
+    h_a = j * G * cp_ha / pow(Pr,2.0/3.0)
     
-    #Air-side pressure drop correlations based on Chang, "A Generalized Friction 
-    #Correlation for Louver Fin Geometry." Int. J . Heat Mass Transfer , 43, 2237–2243.
-    if (Re2<150):
-        fa = 14.39 * Re2**(-0.805*pf/b) * pow(log(1 + pf/lp),3.04)
-        fb = pow(log((delta/pf)**0.48 + 0.9),-1.453) * pow(Dh2/lp,-3.01) * pow(log(0.5*Re2),-3.01)
+    #Air-side pressure drop correlations based on Chang, "A Generalized Friction
+    #Correlation for Louver Fin Geometry." (2000) Int. J. Heat Mass Transfer, 43, 2237-2243
+    """ Not sure yet if Re used here is based of Re_Dh or Re_lp"""
+    if (Re_Dh<150):
+        fa = 14.39 * Re_Dh**(-0.805*pf/sf) * pow(log(1.0 + pf/lp),3.04)
+        fb = pow(log((delta/pf)**0.48 + 0.9),-1.453) * pow(Dh/lp,-3.01) * pow(log(0.5*Re_Dh),-3.01)
         fc = pow(pf/Llouv,-0.308) * pow(Lf/Llouv,-0.308) *exp(-0.1167*pt/Ht) * pow(Lalpha,0.35)
     else:
-        fa = 4.97 * Re2**(0.6049 - 1.064/(Lalpha**0.2)) * pow(log((delta/pf)**0.5 + 0.9),-0.527)
-        fb = pow((Dh2/lp)*log(0.3*Re2),-2.966) * pow(pf/Llouv,-0.7931*pf/b)
+        fa = 4.97 * pow(Re_Dh,(0.6049 - 1.064/Lalpha**0.2)) * pow(log((delta/pf)**0.5 + 0.9),-0.527)
+        fb = pow((Dh/lp)*log(0.3*Re_Dh),-2.966) * pow(pf/Llouv,-0.7931*pt/b)
         fc = pow(pt/Ht, -0.0446) * pow(log(1.2 + (lp/pf)**1.4),-3.553) * pow(Lalpha,-0.477)    
     #Fanning friction factor    
     f = fa*fb*fc
     #Air-side pressure drop
-    #neglecting Entrance effect, momentum effect, exit effect (Kc, Ke ,..etc)
+    #neglecting contraction effect, momentum effect, expansion effect (Kc, Ke ,..etc)
     #this assumption is valid for compact HX based on book of Shah and 
     #Sekulic 2003,"Fundamentals of Heat Exchanger Design"
-    DeltaP_air=At2/Ac2/rho_ha*G2**2/2.0*f
+    DeltaP_air=At/Ac/rho_ha*G**2/2.0*f
+    
+    
+    
+    #Air-side pressure drop including momentum, expansion and contraction effects
+    #so the coefficients are send back for give structure
+    #Assume Reynold's number is turbulent due to louver fin
+    Re_d = 10**7
+    #Contraction and expansion coefficient
+    C_tube = 4.374e-4 * exp(6.737*sqrt(sigma)) + 0.621
+    #Calculate Friction factor, velocity distribution coefficient (triangular tube), 
+    if (Re_d >= 2300):
+        f_d = 0.049*Re_d**(-0.2) #Friction factor
+        Kd_tube = 1.09068*(4*f_d) + 0.05884*sqrt(4*f_d) + 1
+        Kd_tri = 1 + 1.29*(Kd_tube-1)    
+    else:
+        f_d = 64/Re_d
+        Kd_tube = 1.33
+        Kd_tri = 1.43
+        
+    #Expansion coefficient
+    Ke_tri = 1 - 2*Kd_tri*sigma + sigma**2
+    #Contraction coefficient   
+    Kc_tri = (1 - 2*C_tube + C_tube**2 *(2*Kd_tri - 1))/C_tube**2
+    
+    
     
     #calcs needed for specific fin types (Based on Kim & Bullard 2002 paper)
     mf = sqrt(2 * h_a * cs_cp / (k_fin * delta) *(1 + delta/Lf) ) #cs_cp is the correction for heat/mass transfer
@@ -291,11 +318,11 @@ def MultiLouveredMicroFins(Inputs):
     #Finned surface efficiency
     eta_f = tanh(mf * Ls) / (mf * Ls) #Can be included for wet surface >>> *cos(0.1 * m * Ls)
     #overall surface efficiency
-    eta_o = 1 - Af / At2 * (1 - eta_f)
+    eta_o = 1 - Af / At * (1 - eta_f)
 
     
     #write necessary values back into the given structure
-    Inputs.A_a=h_a
+    Inputs.A_a=At
     Inputs.cp_da=cp_da
     Inputs.cp_ha=cp_ha
     if isWet==True:
@@ -307,8 +334,14 @@ def MultiLouveredMicroFins(Inputs):
     Inputs.mdot_da=mdot_da
     Inputs.f_a=f
     Inputs.dP_a=DeltaP_air
-    Inputs.Re=Re2
-        
+    Inputs.Re=Re_Dh
+    """ADD NEW"""
+    Inputs.G_air = G
+    Inputs.rho_i_air = rho_ha
+    Inputs.sigma = sigma
+    Inputs.Kc_tri = Kc_tri
+    Inputs.Ke_tri = Ke_tri
+    Inputs.Dh_a = Dh  
 
         
 if __name__=='__main__':
