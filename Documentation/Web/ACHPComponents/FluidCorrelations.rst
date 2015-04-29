@@ -473,7 +473,7 @@ Variable                         Description
 :math:`\rho_g`                   Density of saturated vapor [kg/|m3|]
 ===============================  ===================================================
 
-.. [#Churchill] Churchill, S.W., Friction-factor equation spans all fluid-flow regimes, *Chemical Engineering* v. 84, n. 24 91-92
+.. [#Churchill] Churchill, S.W., 1977, Friction-factor equation spans all fluid-flow regimes, *Chemical Engineering* v. 84, n. 24 91-92
 
 .. [#Gnielinski] Gnielinski, V., 1976, New Equation for Heat and Mass Transfer in Turbulent Pipe and Channel Flow, *Int. Chemical Engineering* v. 16, 359-368.
 
