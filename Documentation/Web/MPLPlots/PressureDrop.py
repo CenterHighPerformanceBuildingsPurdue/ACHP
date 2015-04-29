@@ -6,7 +6,7 @@ from math import pi
 import sys
 sys.path.append('../../..../')
 #from PyACHP.Correlations import AccelPressureDrop, LockhartMartinelli
-from Correlations import AccelPressureDrop, LockhartMartinelli
+from Correlations import AccelPressureDrop, LockhartMartinelli, Kim_Mudawar_condensing_DPDZ_h
 
 #flow, dimensions and heat flux related variables
 G_r=300#Mass velocity [kg/m-s]
@@ -34,6 +34,7 @@ x=np.linspace(0,1,1000)
 dp_acc_zivi=np.zeros_like(x)  #accelerational pressure drop, Zivi slip flow model
 dp_acc_hom=np.zeros_like(x)  #accelerational pressure drop, homogeneous equilibrium model
 dp_lm=np.zeros_like(x)   #frictional pressure drop (Lockhardt-Martinelli)
+dp_km=np.zeros_like(x)   #frictional condensation pressure drop (Kim-Mudawar)
 for i in range(len(x)):
     #determine inlet/outlet quality
     x_in = x[i]
@@ -48,15 +49,18 @@ for i in range(len(x)):
     #frictional pressure drop using Lockhart-Martinelli
     C=None
     satTransport=None
-    dp_lm[i]=LockhartMartinelli(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,C,satTransport)[0]*L    
+    dp_lm[i]=LockhartMartinelli(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,C,satTransport)[0]*L
+    beta = 1 #channel aspect ratio (=width/height)
+    dp_km[i]=Kim_Mudawar_condensing_DPDZ_h(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,beta,satTransport)[0]*L    
     #havg=np.trapz(h,x=x)
 
-def plot(LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):
+def plot(KM=None,LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):
     pylab.figure(figsize=(7,5))
     pylab.text(txtx,txty,'%s\nG=%0.1f kg/m$^2$\nD=%0.3f, L=%0.3f m\nq\"=%0.1f W/m$^2$\np=%0.1f Pa' %(Ref,G_r,D,L,Q,psat_r))
     if LM: pylab.plot(x,dp_lm,label="Frictional: Lockhart-Martinelli")
     if Zivi: pylab.plot(x,dp_acc_zivi,label="Accelerational: Zivi")
     if Hom: pylab.plot(x,dp_acc_hom,'--',label="Accelerational: HEM")
+    if KM: pylab.plot(x,dp_km,'--y',label="Frictional Condensation: Kim-Mudawar")
     leg=pylab.legend(loc=pos, fancybox=True)
     leg.get_frame().set_alpha(0.5)
     pylab.title('Pressure drop components as a function of quality')
@@ -66,7 +70,7 @@ def plot(LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):
     pylab.gca().set_ylim(0,None)
     #pylab.subplots_adjust(left=0.18,bottom=0.1, right=0.95, top=0.9
 
-plot('LM','Zivi','Hom','linear',0.5,2000)
-plot('LM','Zivi','Hom','log',0.08,5.5)
-plot(None,'Zivi','Hom','linear',0.6,1.5)
+plot('KM','LM','Zivi','Hom','linear',0.5,2000)
+plot('KM','LM','Zivi','Hom','log',0.08,5.5)
+plot(None,None,'Zivi','Hom','linear',0.6,1.5)
 pylab.show()
