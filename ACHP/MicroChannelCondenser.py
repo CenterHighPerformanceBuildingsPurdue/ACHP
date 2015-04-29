@@ -256,7 +256,7 @@ class MicroCondenserClass():
         v_r=1./rho_superheat;
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2.*self.Dh) #Pressure gradient
-        self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
+        self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat*self.Nports
         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
 
         #Latent heat needed for pseudo-quality calc
@@ -302,9 +302,9 @@ class MicroCondenserClass():
         self.xout_2phase=xout_r_2phase
         
         # Frictional pressure drop component
-        DP_frict=DPDZ_frict_2phase*self.Lcircuit*self.w_2phase
+        DP_frict=DPDZ_frict_2phase*self.Lcircuit*self.w_2phase*self.Nports
         #Accelerational pressure drop component    
-        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
+        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase*self.Nports
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
     
@@ -387,7 +387,7 @@ class MicroCondenserClass():
         v_r=1/rho_subcool
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_subcool*v_r*self.G_r**2/(2*self.Dh)  #Pressure gradient
-        self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool
+        self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool*self.Nports
         
 def SampleMicroCondenser(T=95):
     Fins=FinInputs()
@@ -414,7 +414,7 @@ def SampleMicroCondenser(T=95):
     Fins.Air.p=100000                  #Air pressure in Pa
     Fins.Air.RHmean=0.5
     Fins.Air.RH=0.5                    #Air inlet relative humidity
-    Fins.Air.FanPower=327.36           #Fan power, Watts
+    Fins.Air.FanPower=854.9           #Fan power, Watts
     
     Fins.Louvers.Lalpha=20             #Louver angle, in degree
     Fins.Louvers.lp=0.001              #Louver pitch
