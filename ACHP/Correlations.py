@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI, IsFluidType #,UseSaturationLUT ,T_hp, 
+from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -766,7 +766,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,beta,satTransport=None):
         satTransport['rho_g']=PropsSI('D','T',Tdew,'Q',1.0,Ref)
         satTransport['mu_f']=PropsSI('V','T',Tbubble,'Q',0.0,Ref)
         satTransport['mu_g']=PropsSI('V','T',Tdew,'Q',1.0,Ref)
-        satTransport['sigma']=PropsSI('I','T',(Tdew+Tbubble)/2.0,'Q',0.5,Ref)
+        satTransport['sigma']=PropsSI('I','T',(Tdew+Tbubble)/2.0,'Q',0.0,Ref)
         satTransport['cp_f']=PropsSI('C', 'T', Tbubble, 'Q', 0, Ref)
         satTransport['k_f']=PropsSI('L', 'T', Tbubble, 'Q', 0, Ref)
         satTransport['Pr_f']= satTransport['cp_f'] * satTransport['mu_f'] / satTransport['k_f']
@@ -804,7 +804,7 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, beta, satTranspo
         rho_g = PropsSI('D', 'T', Tdew, 'Q', 1.0, Ref)
         mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0.0, Ref) #//[kg/m-s]
         mu_g = PropsSI('V', 'T', Tdew, 'Q', 1.0, Ref) #//[kg/m-s]
-        sigma = PropsSI('I', 'T', (Tdew+Tbubble)/2.0, 'Q', 0.5, Ref) #//[N/m]
+        sigma = PropsSI('I', 'T', (Tdew+Tbubble)/2.0, 'Q', 0.0, Ref) #//[N/m]
 
         cp_f = PropsSI('C', 'T', Tbubble, 'Q', 0, Ref) # [J/kg-K]
         k_f = PropsSI('L', 'T', Tbubble, 'Q', 0, Ref) # [W/m-K]

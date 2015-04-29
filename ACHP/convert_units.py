@@ -63,7 +63,7 @@ def cfm2cms(cfm):
     """"convert cubic feet per minute(cfm) to cubic meters per second(cms)"""
     return 0.0004719474*cfm  #(0.3048[ft/m])^3/60[s/minute]
 def cms2cfm(cms):
-    """"convert cubic feet per minute(cfm) to cubic meters per second(cms)"""
+    """"convert cubic meters per second(cms) to cubic feet per minutes(cfm)"""
     return cms/0.0004719474  #(0.3048[ft/m])^3/60[s/minute]
 
 """##### Energy     ####################################"""

@@ -34,7 +34,7 @@ Heat Exchanger Inputs
 
 In both secondary loop systems and direct expansion systems, there are two heat exchangers that are used to transfer heat with the indoor and outdoor air streams.  The input screens for both of the heat exchangers are identical.  
 
-Currently, there are three type of fins coded -  plain fin, harringbone fin and wavy lanced fin.  If other fin types are needed, they must be coded into ACHP.  
+Currently, there are three type of fins coded -  plain fin, herringbone fin and wavy lanced fin.  If other fin types are needed, they must be coded into ACHP.  
 
 The inputs are divided into three subgroups - fins, tubes and air.  In the fins group, you can select the fin pitch, waviness parameters of the fin, as well as the fin thickness, and fin material thermal conductivity.
 
