@@ -1,7 +1,7 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi,log,exp
 from CoolProp.CoolProp import PropsSI, HAPropsSI
-from Correlations import f_h_1phase_MicroTube,ShahCondensation_Average,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
+from Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
 from MicroFinCorrelations import MultiLouveredMicroFins, FinInputs, IsFinsClass
 from scipy.optimize import brentq, fsolve
 from ACHPTools import ValidateFields
@@ -32,18 +32,21 @@ class MicroCondenserClass():
             ('Tubes per bank','-',self.Fins.Tubes.NTubes),
             ('Number of banks','-',self.Fins.Tubes.Nbank),
             ('Number of passes','-',self.Fins.Tubes.Npass),
+            ('Number of ports','-',self.Fins.Tubes.Nports),
             ('Length of tube','m',self.Fins.Tubes.Ltube),
             ('Tube width','m',self.Td),
             ('Tube height','m',self.Ht),
             ('Tube spacing','m',self.Fins.Tubes.b),
             ('Tube thickness','m',self.Fins.Tubes.tw),
+            ('Wall port thickness','m',self.Fins.Tubes.twp),
+            ('Channel aspect ratio','-',self.Fins.Tubes.beta),
             ('Fins per inch','1/in',self.Fins.Fins.FPI),
             ('Fin length','m',self.Fins.Fins.Lf),
             ('Fin thickness','m',self.Fins.Fins.t),
             ('Fin Conductivity','W/m-K',self.Fins.Fins.k_fin),
             ('Louver angle','degree',self.Fins.Louvers.Lalpha),
             ('Louver pitch','m',self.Fins.Louvers.lp),
-            ('Louver length','m',self.Fins.Louvers.Llouv),
+            ('Louver cut length','m',self.Fins.Llouv),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
             ('Q Two-Phase','W',self.Q_2phase),
@@ -71,7 +74,8 @@ class MicroCondenserClass():
             ('Mass Flow rate of Humid Air','kg/s',self.Fins.mdot_ha),
             ('Pressure Drop Air-side (core only)','Pa',self.Fins.dP_a),
             ('Pressure Drop Air-side (total)','Pa',self.dP_a),
-            ('Subcooling','K',self.DT_sc)
+            ('Subcooling','K',self.DT_sc),
+            ('circuits','-',self.Ncircuits)
         ]
         
     def Update(self,**kwargs):
@@ -95,46 +99,49 @@ class MicroCondenserClass():
             self.IsValidated=True
         # Retrieve some parameters from nested structures 
         # for code compactness
-        self.Ltube=self.Fins.Tubes.Ltube
-        self.NTubes=self.Fins.Tubes.NTubes
-        self.Nbank=self.Fins.Tubes.Nbank
-        self.Tin_a=self.Fins.Air.Tdb
-        self.Pin_a =self.Fins.Air.p
-        self.RHin_a=self.Fins.Air.RH
+        self.Ltube=self.Fins.Tubes.Ltube    #tube length
+        self.NTubes=self.Fins.Tubes.NTubes  #number of tube (per bank)
+        self.Nbank=self.Fins.Tubes.Nbank    #number of banks
+        self.Tin_a=self.Fins.Air.Tdb        #inlet air temperature
+        self.Pin_a =self.Fins.Air.p         #inlet air pressure
+        self.RHin_a=self.Fins.Air.RH        #inlet air relative humidity
         """NEW ADDED"""
         self.Td=self.Fins.Tubes.Td          #tube outside width (depth)
         self.Ht=self.Fins.Tubes.Ht          #tube outside height (major diameter)
         self.b=self.Fins.Tubes.b            #tube spacing
         self.tw=self.Fins.Tubes.tw          #tube thickness
-        self.Npass=self.Fins.Tubes.Npass    #Number of passes on ref-side
+        self.Npass=self.Fins.Tubes.Npass    #Number of passes on ref-side (per bank)
         self.kw=self.Fins.Fins.k_fin        #thermal conductivity of tube wall (assume same material as the fin)
-        
+        self.Nports=self.Fins.Tubes.Nports  #Number of rectangular ports
+        self.twp=self.Fins.Tubes.twp        #Port wall thickness
+        self.beta=self.Fins.Tubes.beta      #channel (port) aspect ratio (=width/height)
+
         ## Bubble and dew temperatures (same for fluids without glide)
         self.Tbubble=PropsSI('T','P',self.psat_r,'Q',0.0,self.Ref)
         self.Tdew=PropsSI('T','P',self.psat_r,'Q',1.0,self.Ref)
         
+        # Define Number of circuits (=number of tubes per pass)
+        self.Ncircuits = self.NTubes/self.Npass 
         # Calculate an effective length of circuit if circuits are 
         # not all the same length
-        TotalLength=self.Ltube*self.NTubes*self.Nbank /self.Npass
-        self.Lcircuit=TotalLength*self.Npass
-                                                                
+        TotalLength=self.Ltube*self.NTubes*self.Nbank
+        self.Lcircuit=TotalLength/self.Ncircuits
+                                                             
         """NEW ADDED"""
-        # Volume of refrigerant = rectangle of tube + circular part at the ends
-        self.V_r = ((self.Td-self.Ht)*(self.Ht-2.0*self.tw) + (pi/4.0) * (self.Ht - 2.0*self.tw)**2) * self.Lcircuit * self.NTubes / self.Npass
-        # Tube wetted area = tube straight length + circular shape at the ends
-        self.A_r_wetted = (2.0*(self.Td - self.Ht) + pi*(self.Ht-2.0*self.tw)) * self.Lcircuit * self.NTubes / self.Npass
-        # Free-flow area on refrigerant-side
-        self.A_c = ((self.Td-self.Ht)*(self.Ht-2.0*self.tw) + (pi/4.0) * (self.Ht - 2.0*self.tw)**2) * self.NTubes / self.Npass
+        # Volume of refrigerant = rectangle of tube + circular part at the ends - thickness between ports
+        self.V_r = ((self.Td-self.Ht)*(self.Ht-2.0*self.tw) + (pi/4.0) * (self.Ht - 2.0*self.tw)**2 - (self.Ht-2.0*self.tw)*self.twp*(self.Nports-1)) * self.Lcircuit * self.Ncircuits
+        # Tube wetted area = tube straight length + circular shape at the ends - horizontal port thickness  + vertical thickness between ports
+        self.A_r_wetted = (2.0*(self.Td - self.Ht) + pi*(self.Ht-2.0*self.tw) - 2.0*self.twp*(self.Nports-1) + 2.0*(self.Ht-2.0*self.tw)*(self.Nports-1)) * self.Lcircuit * self.Ncircuits
+        # Free-flow area on refrigerant-side = area of rectangle tube + circular parts at end - area thickness between ports
+        self.A_c = ((self.Td-self.Ht)*(self.Ht-2.0*self.tw) + (pi/4.0) * (self.Ht - 2.0*self.tw)**2 - self.twp*(self.Ht-2.0*self.tw)*(self.Nports-1)) * self.Ncircuits
         # Hydraulic diameter on ref-side
         self.Dh = 4*self.A_c*self.Lcircuit/self.A_r_wetted
         # Mass flux ref-side
-        self.G_r = self.mdot_r / self.A_c    
-        #channel aspect ratio (=width/height)
-        self.beta = self.Td/self.Ht
+        self.G_r = self.mdot_r / self.A_c
 
         
-        # Total conduction area
-        self.Aw = 2 * self.Td * self.Lcircuit * self.NTubes/ self.Npass
+        # Total conduction area (exclude port's thickness)
+        self.Aw = 2 * (self.Td - self.twp*(self.Nports-1)) * self.Lcircuit * self.Ncircuits
         # Thermal resistance at the wall
         self.Rw = self.tw /(self.kw*self.Aw)
         
@@ -197,7 +204,7 @@ class MicroCondenserClass():
             #mean air density
             rho_m = pow(0.5*(1/self.Fins.rho_i_air + 1/rho_o),-1)
             #air-side pressure drop including momentum, expansion and contraction effects
-            DeltaP_air = self.Fins.G_air**2/2/self.Fins.rho_i_air * ((1 - self.Fins.sigma**2 + self.Fins.Kc_tri) + 2*(self.Fins.rho_i_air/rho_o - 1) + 4*self.Fins.f_a*self.Td/self.Fins.Dh_a *(self.Fins.rho_i_air/rho_m) - (1 - self.Fins.sigma**2 -self.Fins.Ke_tri)*(self.Fins.rho_i_air/rho_o))
+            DeltaP_air = self.Fins.G_air**2/2/self.Fins.rho_i_air * ((1 - self.Fins.sigma**2 + self.Fins.Kc_tri) + 2*(self.Fins.rho_i_air/rho_o - 1) + self.Fins.f_a*self.Fins.A_a/self.Fins.A_a_c *(self.Fins.rho_i_air/rho_m) - (1 - self.Fins.sigma**2 -self.Fins.Ke_tri)*(self.Fins.rho_i_air/rho_o))
             
             resids=[(self.Pin_a-Pair_o)-DeltaP_air, W-W_new]     
             return resids
@@ -211,7 +218,7 @@ class MicroCondenserClass():
         self.dP_a = self.Pin_a - x[0]
 
         
-    def _Superheat_Forward(self):
+    def _Superheat_Forward(self):  
         
         # **********************************************************************
         #                      SUPERHEATED PART 
@@ -222,7 +229,7 @@ class MicroCondenserClass():
         # Average fluid temps are used for the calculation of properties 
         # Average temp of refrigerant is average of sat. temp and outlet temp		
         # Secondary fluid is air over the fins
-        self.f_r_superheat, self.h_r_superheat, self.Re_r_superheat=f_h_1phase_MicroTube(self.G_r, self.Dh, (Tdew+self.Tin_r)/2.0, self.psat_r, self.Ref, "Single");
+        self.f_r_superheat, self.h_r_superheat, self.Re_r_superheat=f_h_1phase_MicroTube(self.G_r, self.Dh, (Tdew+self.Tin_r)/2.0, self.psat_r, self.Ref, "Single")
             
         cp_r = PropsSI('C', 'T', (Tdew+self.Tin_r)/2, 'P', self.psat_r, self.Ref) #[J/kg-K]
 
@@ -260,6 +267,10 @@ class MicroCondenserClass():
         self.xin_r=1.0+cp_r*(self.Tin_r-Tdew)/h_fg
         
     def _TwoPhase_Forward(self,xout_r_2phase=0.0):
+        
+        # **********************************************************************
+        #                      TWO-PHASE PART 
+        # **********************************************************************
         """
             xout_r_2phase: quality of refrigerant at end of two-phase portion
                 default value is 0.0 (full two phase region)
@@ -315,6 +326,10 @@ class MicroCondenserClass():
     
     
     def _Subcool_Forward(self):
+        
+        # **********************************************************************
+        #                      SUBCOOLED PART 
+        # **********************************************************************
         self.w_subcool=1-self.w_2phase-self.w_superheat
         
         if self.w_subcool<0:
@@ -378,13 +393,16 @@ def SampleMicroCondenser(T=95):
     Fins=FinInputs()
     Fins.Tubes.NTubes=61.354           #Number of tubes (per bank for now!)
     Fins.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
-    Fins.Tubes.Npass=3                 #Number of passes
+    Fins.Tubes.Npass=3                 #Number of passes (per bank-averaged)
+    Fins.Tubes.Nports=1                #Number of rectangular ports
     Fins.Tubes.Ltube=0.30213           #length of a single tube
     Fins.Tubes.Td=0.0333               #Tube outside width (depth)
     Fins.Tubes.Ht= 0.002               #Tube outside height (major diameter)
     Fins.Tubes.b=0.00635               #Tube spacing     
     Fins.Tubes.tw=0.0003               #Tube wall thickness     
-
+    Fins.Tubes.twp=0.0003              #Port (channel) wall thickness     
+    Fins.Tubes.beta=1                  #Port (channel) aspect ratio (=width/height)
+    
     Fins.Fins.FPI=11.0998              #Fin per inch
     Fins.Fins.Lf=0.0333                #Fin length
     Fins.Fins.t=0.000152               #Fin thickness
@@ -400,7 +418,7 @@ def SampleMicroCondenser(T=95):
     
     Fins.Louvers.Lalpha=20             #Louver angle, in degree
     Fins.Louvers.lp=0.001              #Louver pitch
-    Fins.Louvers.Llouv=0.005737        #Louver length
+    Fins.Louvers.Llouv=0.005737        #Louver cut length
     
     params={
         'Ref': 'R410A',
