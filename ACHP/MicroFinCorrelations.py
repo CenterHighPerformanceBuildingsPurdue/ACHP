@@ -83,11 +83,14 @@ class FinInputs():
             ('NTubes',float,0.1,100),
             ('Nbank',float,1,50),
             ('Npass',float,1,50),
+            ('Nports',float,1,50),
             ('Ltube',float,0.001,10),
             ('Td',float,0.0001,1),
             ('Ht',float,0.0001,1),
             ('b',float,0.0001,1),
-            ('tw',float,0.00001,0.01)
+            ('tw',float,0.00001,0.01),
+            ('twp',float,0.00001,0.01),
+            ('beta',float,0.00001,100)
         ]
         optFields=None
         d=dict(self.Tubes.__dict__) #The current values
@@ -96,9 +99,8 @@ class FinInputs():
         reqFields=[
             ('Lalpha',float,1,89),
             ('lp',float,0.0001,1),
-            ('Llouv',float,0.0001,1),
         ]
-        optFields=None
+        optFields=['Llouv']
         d=dict(self.Louvers.__dict__) #The current values
         ValidateFields(d,reqFields,optFields)
 
@@ -129,7 +131,7 @@ def MultiLouveredMicroFins(Inputs):
         
       
      Lf: Fin length (flow depth)
-     Llouv: Louver length
+     Llouv: Louver cut length
      Lalpha: Louver angle
      
      
@@ -154,7 +156,6 @@ def MultiLouveredMicroFins(Inputs):
     """
     Lalpha =      Inputs.Louvers.Lalpha         #Louver angle, in degree
     lp =          Inputs.Louvers.lp             #Louver pitch
-    Llouv =       Inputs.Louvers.Llouv          #Louver length
     
     delta =       Inputs.Fins.t                 #Fin thickness
     Lf =          Inputs.Fins.Lf                #Fin length (flow depth)
@@ -181,6 +182,8 @@ def MultiLouveredMicroFins(Inputs):
     else:
         RHin = Inputs.Air.RH
 
+
+        
     # Check that cs_cp is defined, if so, set it to the value passed in
     if (hasattr(Inputs,'cs_cp') and Inputs.cs_cp>0) or (hasattr(Inputs,'WetDry') and Inputs.WetDry=='Wet'):
         isWet=True
@@ -195,6 +198,11 @@ def MultiLouveredMicroFins(Inputs):
     pf = 1 / FPM
     #Fin height
     sf = sqrt(b**2 + pf**2) 
+    #Louver cut length
+    if hasattr(Inputs,'Llouv'):
+        Llouv = Inputs.Louvers.Llouv
+    else:
+        Llouv = 0.85 *sf
     
     #Fin pitch
     pt = Ht + b
@@ -203,7 +211,7 @@ def MultiLouveredMicroFins(Inputs):
     lh = lp * sin(Lalpha*pi/180)
     
     #Air passages
-    Npg = Ntubes - 1 #sometime there are no tubes on the edges of HX, so >>> Npg = Ntubes_bank + 1
+    Npg = Ntubes + 1 #sometime there are no tubes on the edges of HX, so >>> Npg = Ntubes_bank + 1, otherwise Npg = Ntubes_bank - 1
     #Height of heat exchanger (core width)
     L1 = Npg * b + Ntubes * Ht
     #Total number of fins (per bank)
@@ -244,7 +252,7 @@ def MultiLouveredMicroFins(Inputs):
     #mass flux on air-side
     G = mdot_ha / Ac #[kg/m^2-s]
     #maximum velocity on air-side
-    v = G / rho_ha #[m/s]
+    umax = G / rho_ha * Afr/Ac #[m/s]
     
     #Use a forward difference to calculate cp from cp=dh/dT
     dT=0.0001 #[K]
@@ -258,25 +266,29 @@ def MultiLouveredMicroFins(Inputs):
     #Dimensionless Groups
     Pr = cp_ha * mu_ha / k_ha #Prandlt's number
     Re_Dh = G * Dh / mu_ha #Reynold's number on air-side
-    Re_lp = G * lp / mu_ha
+    Re_lp = rho_ha * umax * lp / mu_ha
     
     #Heat transfer
+    
     #Colburn j-Factor based on Chang & Wang, "A Generalized Heat Transfer 
     #Correlation for Louver Fin Geometry." Int. J. Heat Mass Transfer, 40 (1997): 553-554
-    j = pow(Re_Dh,-0.49) * pow((Lalpha/90.0),0.27) * pow(pf/lp,-0.14) * pow(b/lp,-0.29) * pow(Lf/lp,-0.23) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.28) * pow(delta/lp,-0.05)
-    #Air-side mean heat transfer coefficient
-    h_a = j * G * cp_ha / pow(Pr,2.0/3.0)
+    #j = pow(Re_lp,-0.49) * pow((Lalpha/90.0),0.27) * pow(pf/lp,-0.14) * pow(b/lp,-0.29) * pow(Lf/lp,-0.23) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.28) * pow(delta/lp,-0.05)
+    #h_a = j * G * cp_ha / pow(Pr,2.0/3.0)
     
-    #Air-side pressure drop correlations based on Chang, "A Generalized Friction
+    #Colburn j-Factor based on Kim & Bullard, "Air-side thermal hydraulic performance 
+    #of multi-louvered fin aluminum heat exchanger" Int. J. Refrigeration, 25 (2002): 390-400
+    j = pow(Re_lp,-0.487) * pow((Lalpha/90.0),0.257) * pow(pf/lp,-0.13) * pow(b/lp,-0.29) * pow(Lf/lp,-0.235) * pow(Llouv/lp,0.68) * pow(pt/lp,-0.279) * pow(delta/lp,-0.05)
+    h_a = j * rho_ha * umax * cp_ha / pow(Pr,2.0/3.0)
+    
+    #Air-side pressure drop correlations based on Chang and el., "A Generalized Friction
     #Correlation for Louver Fin Geometry." (2000) Int. J. Heat Mass Transfer, 43, 2237-2243
-    """ Not sure yet if Re used here is based of Re_Dh or Re_lp"""
-    if (Re_Dh<150):
-        fa = 14.39 * Re_Dh**(-0.805*pf/sf) * pow(log(1.0 + pf/lp),3.04)
-        fb = pow(log((delta/pf)**0.48 + 0.9),-1.453) * pow(Dh/lp,-3.01) * pow(log(0.5*Re_Dh),-3.01)
+    if (Re_lp<150):
+        fa = 14.39 * Re_lp**(-0.805*pf/sf) * pow(log(1.0 + pf/lp),3.04)
+        fb = pow(log((delta/pf)**0.48 + 0.9),-1.453) * pow(Dh/lp,-3.01) * pow(log(0.5*Re_lp),-3.01)
         fc = pow(pf/Llouv,-0.308) * pow(Lf/Llouv,-0.308) *exp(-0.1167*pt/Ht) * pow(Lalpha,0.35)
     else:
-        fa = 4.97 * pow(Re_Dh,(0.6049 - 1.064/Lalpha**0.2)) * pow(log((delta/pf)**0.5 + 0.9),-0.527)
-        fb = pow((Dh/lp)*log(0.3*Re_Dh),-2.966) * pow(pf/Llouv,-0.7931*pt/b)
+        fa = 4.97 * pow(Re_lp,(0.6049 - 1.064/Lalpha**0.2)) * pow(log((delta/pf)**0.5 + 0.9),-0.527)
+        fb = pow((Dh/lp)*log(0.3*Re_lp),-2.966) * pow(pf/Llouv,-0.7931*pt/b)
         fc = pow(pt/Ht, -0.0446) * pow(log(1.2 + (lp/pf)**1.4),-3.553) * pow(Lalpha,-0.477)    
     #Fanning friction factor    
     f = fa*fb*fc
@@ -284,8 +296,7 @@ def MultiLouveredMicroFins(Inputs):
     #neglecting contraction effect, momentum effect, expansion effect (Kc, Ke ,..etc)
     #this assumption is valid for compact HX based on book of Shah and 
     #Sekulic 2003,"Fundamentals of Heat Exchanger Design"
-    DeltaP_air=At/Ac/rho_ha*G**2/2.0*f
-    
+    DeltaP_air= f * At/Ac * G**2 / (2.0*rho_ha)
     
     
     #Air-side pressure drop including momentum, expansion and contraction effects
@@ -322,7 +333,9 @@ def MultiLouveredMicroFins(Inputs):
 
     
     #write necessary values back into the given structure
+    Inputs.Llouv=Llouv
     Inputs.A_a=At
+    Inputs.A_a_c=Ac
     Inputs.cp_da=cp_da
     Inputs.cp_ha=cp_ha
     if isWet==True:
@@ -341,8 +354,7 @@ def MultiLouveredMicroFins(Inputs):
     Inputs.sigma = sigma
     Inputs.Kc_tri = Kc_tri
     Inputs.Ke_tri = Ke_tri
-    Inputs.Dh_a = Dh  
-
+    
         
 if __name__=='__main__':
     
@@ -350,13 +362,16 @@ if __name__=='__main__':
     
     LouversFinsTubes.Tubes.NTubes=61.354           #Number of tubes
     LouversFinsTubes.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
-    LouversFinsTubes.Tubes.Npass=3                 #Number of passes
+    LouversFinsTubes.Tubes.Npass=3                 #Number of passes (per bank)
+    LouversFinsTubes.Tubes.Nports=1                #Number of rectangular ports
     LouversFinsTubes.Tubes.Ltube=0.30213           #length of a single tube
     LouversFinsTubes.Tubes.Td=0.0333               #Tube outside width (depth)
     LouversFinsTubes.Tubes.Ht= 0.002               #Tube outside height (major diameter)
     LouversFinsTubes.Tubes.b=0.00635               #Tube spacing     
     LouversFinsTubes.Tubes.tw=0.0003               #Tube wall thickness     
-
+    LouversFinsTubes.Tubes.twp=0.0004              #Port wall thickness     
+    LouversFinsTubes.Tubes.beta=1                  #Port (channel) aspect ratio (=width/height)
+    
     LouversFinsTubes.Fins.FPI=11.0998              #Fin per inch
     LouversFinsTubes.Fins.Lf=0.0333                #Fin length
     LouversFinsTubes.Fins.t=0.000152               #Fin thickness
@@ -370,7 +385,7 @@ if __name__=='__main__':
     
     LouversFinsTubes.Louvers.Lalpha=20             #Louver angle, in degree
     LouversFinsTubes.Louvers.lp=0.001              #Louver pitch
-    LouversFinsTubes.Louvers.Llouv=0.005737        #Louver length
+    LouversFinsTubes.Louvers.Llouv=0.005737        #Louver cut length
     
     LouversFinsTubes.Validate()
     
