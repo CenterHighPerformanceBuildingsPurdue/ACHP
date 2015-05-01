@@ -41,7 +41,7 @@ kwargs={'Ref': 'R410A',
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-        'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
+        'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
 Evap=EvaporatorClass(**kwargs)
@@ -54,7 +54,7 @@ kwargs={'Ref': 'R410A',
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-        'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
+        'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
@@ -72,7 +72,7 @@ kwargs={'Ref': 'R410A',
         'Vdot_ha_coeffs': [0.3,0.2,0.2,0.2,0.1],
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-        'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'), #*1000
+        'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
         'Verbosity':0
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
@@ -89,7 +89,7 @@ kwargs={'Ref': 'R410A',
         'psat_r': PropsSI('P','T',282.0,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-        'hin_r': PropsSI('H','T',282.0,'Q',0.15,'R410A'),
+        'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'),
         'Verbosity':0
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
