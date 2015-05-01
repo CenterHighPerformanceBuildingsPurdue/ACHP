@@ -27,7 +27,7 @@ FinsTubes.Fins.k_fin=237
 
 FinsTubes.Air.Vdot_ha=0.5663
 FinsTubes.Air.Tdb=299.8
-FinsTubes.Air.p=101325          #updated from 101.325kPa to 101325Pa
+FinsTubes.Air.p=101325
 FinsTubes.Air.RH=0.51
 FinsTubes.Air.FanPower=438
 
@@ -36,7 +36,7 @@ kwargs={'Ref': 'R410A',
         'psat_r': PropsSI('P','T',282,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
-        'hin_r': PropsSI('H','T',282,'Q',0.15,'R410A'), #*1000 #[J/kg]
+        'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #[J/kg]
         'Verbosity': 0
         }
 
