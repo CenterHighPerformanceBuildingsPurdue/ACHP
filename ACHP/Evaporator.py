@@ -163,11 +163,15 @@ class EvaporatorClass():
         hsatL=PropsSI('H','T',self.Tbubble_r,'Q',0,self.Ref) #*1000
         hsatV=PropsSI('H','T',self.Tdew_r,'Q',1,self.Ref) #*1000
         
-        #Must give enthalpy and pressure as inputs
-        self.xin_r=(self.hin_r-hsatL)/(hsatV-hsatL)
-        self.sin_r=self.xin_r*ssatV+(1-self.xin_r)*ssatL
-        self.hin_r=self.xin_r*hsatV+(1-self.xin_r)*hsatL
-        self.Tin_r=self.xin_r*self.Tdew_r+(1-self.xin_r)*self.Tbubble_r
+        #if give enthalpy and pressure as inputs
+        if hasattr(self,'hin_r'):
+            self.xin_r=(self.hin_r-hsatL)/(hsatV-hsatL)
+            self.sin_r=self.xin_r*ssatV+(1-self.xin_r)*ssatL
+            self.Tin_r=self.xin_r*self.Tdew_r+(1-self.xin_r)*self.Tbubble_r
+        elif hasattr(self,'xin_r'): #if given quality and pressure as inputs
+            self.hin_r=self.xin_r*hsatV+(1-self.xin_r)*hsatL
+            self.sin_r=self.xin_r*ssatV+(1-self.xin_r)*ssatL
+            self.Tin_r=self.xin_r*self.Tdew_r+(1-self.xin_r)*self.Tbubble_r
         
         if self.xin_r>1.0:
             raise ValueError
