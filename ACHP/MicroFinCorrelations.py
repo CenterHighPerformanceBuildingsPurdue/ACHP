@@ -8,14 +8,14 @@ from scipy.optimize import fsolve
 #UseIsothermCompressCorrelation(1)
 #UseIdealGasEnthalpyCorrelations(1)
 
-def IsFinsClass(Fins):
+def IsFinsClass(MicroFins):
     '''
     Returns the Fins class if Fins is an instance of the FinInputs class, False otherwise
     
     Convenience function for the Validator 
     '''
-    if isinstance(Fins,FinInputs):
-        return Fins
+    if isinstance(MicroFins,MicroFinInputs):
+        return MicroFins
     else:
         return False
     
@@ -28,7 +28,7 @@ class AirVals:
 class LouversVals:
     pass
         
-class FinInputs():
+class MicroFinInputs():
     """ 
     Empty Class for fin data
     """
@@ -38,6 +38,7 @@ class FinInputs():
         self.Air=AirVals()
         self.Fins=FinsVals()
         self.Louvers=LouversVals()
+        
     def __repr__(self):
         string="Tubes::\n"
         for field in self.Tubes.__dict__.keys():
@@ -52,6 +53,7 @@ class FinInputs():
         for field in self.Louvers.__dict__.keys():
             string+=field+": "+repr(self.Louvers.__dict__[field])+"\n"
         return string
+    
     def Validate(self):
         """
         Check that all required fields are included, and no extra fields not listed here are added
@@ -172,16 +174,15 @@ def MultiLouveredMicroFins(Inputs):
     Vdot_ha =     Inputs.Air.Vdot_ha            #Air volume flow rate, m^3/s
     p =           Inputs.Air.p                  #Air pressure, Pa
     
-    if hasattr(Inputs,'Tmean'):
+    if hasattr(Inputs.Air,'Tmean'):
         Temp = Inputs.Air.Tmean
     else:
         Temp = Inputs.Air.Tdb
     
-    if hasattr(Inputs,'RHmean'):
+    if hasattr(Inputs.Air,'RHmean'):
         RHin = Inputs.Air.RHmean
     else:
         RHin = Inputs.Air.RH
-
 
         
     # Check that cs_cp is defined, if so, set it to the value passed in
@@ -199,7 +200,7 @@ def MultiLouveredMicroFins(Inputs):
     #Fin height
     sf = sqrt(b**2 + pf**2) 
     #Louver cut length
-    if hasattr(Inputs,'Llouv'):
+    if hasattr(Inputs.Louvers,'Llouv'):
         Llouv = Inputs.Louvers.Llouv
     else:
         Llouv = 0.85 *sf
@@ -358,7 +359,7 @@ def MultiLouveredMicroFins(Inputs):
         
 if __name__=='__main__':
     
-    LouversFinsTubes=FinInputs()
+    LouversFinsTubes=MicroFinInputs()
     
     LouversFinsTubes.Tubes.NTubes=61.354           #Number of tubes
     LouversFinsTubes.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
