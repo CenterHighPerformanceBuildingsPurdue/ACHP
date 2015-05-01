@@ -51,7 +51,7 @@ for i in range(len(x)):
     satTransport=None
     dp_lm[i]=LockhartMartinelli(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,C,satTransport)[0]*L
     beta = 1 #channel aspect ratio (=width/height)
-    dp_km[i]=Kim_Mudawar_condensing_DPDZ_h(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,beta,satTransport)[0]*L    
+    dp_km[i]=Kim_Mudawar_condensing_DPDZ_h(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,psat_r,beta,satTransport)[0]*L    
     #havg=np.trapz(h,x=x)
 
 def plot(KM=None,LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):
