@@ -28,7 +28,7 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     #UseSaturationLUT(1)
     #h/=1000  #convert J/kg to kJ/kg since CoolProp uses kJ/kg >>> modification: CoolProp 5.x uses J/kg
     
-    if IsFluidType(Ref,'Brine')==1:
+    if 'INCOMP' in Ref: #if IsFluidType(Ref,'Brine')==1:
         #It is subcooled
         # Use a guess of 10 degrees below max temp
         #Tguess=PropsSI('M','T',0,'P',0, Ref)-10
