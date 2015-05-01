@@ -728,7 +728,7 @@ def f_h_1phase_MicroTube(G, Dh, T, p, Fluid, Phase='Single'):
 
 
 
-def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,beta,satTransport=None):
+def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     """
     Returns the average pressure gradient and average heat transfer coefficient
     between qualities of x_min and x_max.
@@ -751,7 +751,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,beta,satTransport=None):
     """
     
     def KMFunc(x):
-        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(Ref,G,Dh,x,Tbubble,Tdew,beta,satTransport)
+        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(Ref,G,Dh,x,Tbubble,Tdew,p,beta,satTransport)
         return dpdz , h
     
     ## Use Simpson's Rule to calculate the average pressure gradient
@@ -766,10 +766,8 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,beta,satTransport=None):
         satTransport['rho_g']=PropsSI('D','T',Tdew,'Q',1.0,Ref)
         satTransport['mu_f']=PropsSI('V','T',Tbubble,'Q',0.0,Ref)
         satTransport['mu_g']=PropsSI('V','T',Tdew,'Q',1.0,Ref)
-        satTransport['sigma']=PropsSI('I','T',(Tdew+Tbubble)/2.0,'Q',0.0,Ref)
         satTransport['cp_f']=PropsSI('C', 'T', Tbubble, 'Q', 0, Ref)
         satTransport['k_f']=PropsSI('L', 'T', Tbubble, 'Q', 0, Ref)
-        satTransport['Pr_f']= satTransport['cp_f'] * satTransport['mu_f'] / satTransport['k_f']
         
         #Calculate Dp and h over the range of xx
         xx=np.linspace(x_min,x_max,30)
@@ -782,7 +780,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,beta,satTransport=None):
         return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
 
     
-def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, beta, satTransport=None):
+def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
     """
     This function return the pressure gradient and heat transfer coefficient for 
     two phase fluid inside Micro-channel tube while CONDENSATION
@@ -804,22 +802,20 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, beta, satTranspo
         rho_g = PropsSI('D', 'T', Tdew, 'Q', 1.0, Ref)
         mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0.0, Ref) #//[kg/m-s]
         mu_g = PropsSI('V', 'T', Tdew, 'Q', 1.0, Ref) #//[kg/m-s]
-        sigma = PropsSI('I', 'T', (Tdew+Tbubble)/2.0, 'Q', 0.0, Ref) #//[N/m]
-
         cp_f = PropsSI('C', 'T', Tbubble, 'Q', 0, Ref) # [J/kg-K]
         k_f = PropsSI('L', 'T', Tbubble, 'Q', 0, Ref) # [W/m-K]
-        Pr_f = cp_f * mu_f / k_f #[-]
     else:
         #Pull out of the dictionary
         rho_f=satTransport['rho_f']
         rho_g=satTransport['rho_g']
         mu_f=satTransport['mu_f']
         mu_g=satTransport['mu_g']
-        sigma=satTransport['sigma']
         cp_f=satTransport['cp_f']
         k_f=satTransport['k_f']
-        Pr_f=satTransport['Pr_f']
 
+    sigma = PropsSI('I', 'T', (Tbubble+Tdew)/2, 'Q', 1, Ref)#use this in the next update of CP after v5.1 >>> saturation_ancillary(Ref,'I',1,'T', (Tbubble+Tdew)/2) #//[N/m]
+    
+    Pr_f = cp_f * mu_f / k_f #[-]
     
     Re_f = G*(1-x)*Dh/mu_f
     Re_g = G*x*Dh/mu_g
@@ -907,7 +903,7 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, beta, satTranspo
 
 
 
-def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, beta, q_fluxH, PH_PF=1, satTransport=None):
+def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, satTransport=None):
     """
     This function return the pressure gradient for 
     two phase fluid inside Micro-channel tube while BOILING (EVAPORATION)
@@ -925,7 +921,6 @@ def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, beta, q_fluxH, PH_PF=
         rho_g = PropsSI('D', 'T', Tdew, 'Q', 1.0, Ref)
         mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0.0, Ref) #//[kg/m-s]
         mu_g = PropsSI('V', 'T', Tdew, 'Q', 1.0, Ref) #//[kg/m-s]
-        sigma = PropsSI('I', 'T', (Tdew+Tbubble)/2.0, 'Q', 0.5, Ref) #//[N/m]
         h_fg = PropsSI('H', 'T', Tdew, 'Q', 1.0, Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0.0, Ref) #// [J/kg]
     else:
         #Pull out of the dictionary
@@ -933,66 +928,62 @@ def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, beta, q_fluxH, PH_PF=
         rho_g=satTransport['rho_g']
         mu_f=satTransport['mu_f']
         mu_g=satTransport['mu_g']
-        sigma=satTransport['sigma']
         h_fg=satTransport['h_fg']
 
+    sigma = PropsSI('I', 'P', p, 'Q', x, Ref) #//[N/m]
 
     Re_f = G*(1-x)*Dh/mu_f
     Re_g = G*x*Dh/mu_g
 
-    if (Re_f < 2000):
+    if x==1: #No liquid
+        f_f = 0 #Just to be ok until next step
+    elif (Re_f<2000): #Laminar
+        f_f = 16.0/Re_f
         if (beta<1):
             f_f = 24*(1-1.3553*beta+1.9467*beta*beta-1.7012*pow(beta,3)+0.9564*pow(beta,4)-0.2537*pow(beta,5))/Re_f
-        else:
-            f_f = 16/Re_f
-        f_laminar = True
-    else:
-        f_laminar = False
-        if (Re_f < 20000):
-            f_f = 0.079*pow(Re_f,-0.25)
-        else:
-            f_f = 0.046*pow(Re_f,-0.2)
+    elif (Re_f>=20000): #Fully-Turbulent
+        f_f = 0.046*pow(Re_f,-0.2)
+    else: #Transient
+        f_f = 0.079*pow(Re_f,-0.25)
 
-    if (Re_g < 2000):
+    if x==0: #No gas
+        f_g = 0 #Just to be ok until next step
+    elif (Re_g<2000): #Laminar
+        f_g=16.0/Re_g
         if (beta<1):
             f_g = 24*(1-1.3553*beta+1.9467*beta*beta-1.7012*pow(beta,3)+0.9564*pow(beta,4)-0.2537*pow(beta,5))/Re_g
-        else:
-            f_g = 16/Re_g
-        g_laminar = True
-    else:
-        g_laminar = False
-        if (Re_g<20000):
-            f_g = 0.079*pow(Re_g,-0.25)
-        else:
-            f_g = 0.046*pow(Re_g,-0.2)
+    elif (Re_g>=20000): #Fully-Turbulent
+        f_g = 0.046*pow(Re_g,-0.2)
+    else: #Transient
+        f_g = 0.079*pow(Re_g,-0.25)
 
     Re_fo = G*Dh/mu_f
     Su_go = rho_g*sigma*Dh/pow(mu_g,2)
 
     dpdz_f = -2*f_f/rho_f*pow(G*(1-x),2)/Dh
     dpdz_g = -2*f_g/rho_g*pow(G*x,2)/Dh
-
+    
     if x<=0:
         # Entirely liquid
-        dpdz=dpdz_f
+        dpdz = dpdz_f
         return dpdz
     if x>=1:
         #Entirely vapor
-        dpdz=dpdz_g
+        dpdz = dpdz_g
         return dpdz
     
     X_squared = dpdz_f/dpdz_g
 
-    #Find the C coefficient
-    if (f_laminar and g_laminar):
-        Cnon_boiling = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)
-    elif (f_laminar and not g_laminar):
+    # Find the C coefficient
+    if (Re_f<2000 and Re_g<2000):
+        Cnon_boiling = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)   
+    elif (Re_f<2000 and Re_g>=2000):
         Cnon_boiling = 0.0015*pow(Re_fo,0.59)*pow(Su_go,0.19)*pow(rho_f/rho_g,0.36)
-    elif (not f_laminar and g_laminar):
+    elif (Re_f>=2000 and Re_g<2000):
         Cnon_boiling = 8.7e-4*pow(Re_fo,0.17)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.14)
-    elif (not f_laminar and not g_laminar):
+    elif (Re_f>=2000 and Re_g>=2000):
         Cnon_boiling = 0.39*pow(Re_fo,0.03)*pow(Su_go,0.10)*pow(rho_f/rho_g,0.35)
-
+        
     We_fo = G*G*Dh/rho_f/sigma
     Bo = q_fluxH/(G*h_fg)
         
