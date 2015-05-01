@@ -257,7 +257,7 @@ def WavyLouveredFins(Inputs):
     eta_o = 1 - Af / A * (1 - eta_f)
 
     G_c=mdot_ha/Ac #air mass flux
-    DeltaP_air=A/Atube/rho_ha*G_c**2/2.0*fa_total #airside pressure drop
+    DeltaP_air=A/Ac/rho_ha*G_c**2/2.0*fa_total #airside pressure drop
     
     #write necessary values back into the given structure
     Inputs.A_a=A;
@@ -414,7 +414,7 @@ def HerringboneFins(Inputs):
 
     G_c=mdot_ha/Ac #air mass flux
     Atube = Ntubes_bank * Nbank * pi * D_o * Ltube# Total outer area of the tubes [m^2]
-    DeltaP_air=A/Atube/rho_ha*G_c**2/2.0*f #airside pressure drop
+    DeltaP_air=A/Ac/rho_ha*G_c**2/2.0*f #airside pressure drop
     
     #write necessary values back into the given structure
     Inputs.A_a=A;
@@ -555,7 +555,7 @@ def PlainFins(Inputs):
 
     G_c=mdot_ha/A_c #air mass flux
     Atube = Ntubes_bank * Nbank * pi * D_o * Ltube# Total outer area of the tubes [m^2]
-    DeltaP_air=A/Atube/rho_ha*G_c**2/2.0*f #airside pressure drop
+    DeltaP_air=A/A_c/rho_ha*G_c**2/2.0*f #airside pressure drop
     
     #write necessary values back into the given structure
     Inputs.A_a=A;
