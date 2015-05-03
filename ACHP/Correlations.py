@@ -657,7 +657,7 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     pc=PropsSI(Ref,'pcrit')                                                     #Updated from PropsSI('E','T',0,'P',0,Ref)
     pr=p/pc
     M=PropsSI('M',Ref)
-    sig = PropsSI('I','T',(Tbubble+Tdew)/2,'Q',0.5,Ref)
+    sig = PropsSI('I','T',(Tbubble+Tdew)/2,'Q',1,Ref)
     g=9.81
 
     #if Ref=='R290':
@@ -687,7 +687,20 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     h_TP=h_nb*(1-x)+h_conv_tp*(1.0+80.0*(x**2-x**6)*exp(-0.6*Co))
     return h_TP
 
-
+def Bertsch_MC_Average(x_min,x_max,Ref,G,Dh,q_flux,L,TsatL,TsatV):
+    '''
+    Returns the average heat transfer coefficient
+    between qualities of x_min and x_max.
+    for Bertsch two-phase evaporation in mico-channel HX 
+    '''
+    if not x_min==x_max:
+        #A proper range is given
+        return quad(Bertsch_MC,x_min,x_max,args=(Ref,G,Dh,q_flux,L))[0]/(x_max-x_min)
+    else:
+        #A single value is given
+        return Bertsch_MC(x_min,Ref,G,Dh,q_flux,L,TsatL,TsatV)
+    
+    
 def f_h_1phase_MicroTube(G, Dh, T, p, Fluid, Phase='Single'):
     """
     This function return the friction factor, heat transfer coefficient, 
@@ -776,8 +789,14 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
         for i in range(len(xx)):
             DP[i]=KMFunc(xx[i])[0]
             h[i]=KMFunc(xx[i])[1]
+        
         #Use Simpson's rule to carry out numerical integration to get average DP and average h
-        return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
+        if abs(x_max-x_min)<5*machine_eps:
+            #return just one of the edge values
+            return DP[0], h[0]
+        else:
+            #Use Simpson's rule to carry out numerical integration to get average DP and average h
+            return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
 
     
 def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
@@ -849,6 +868,7 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
 
     dpdz_f = 2*f_f/rho_f*pow(G*(1-x),2)/Dh
     dpdz_g = 2*f_g/rho_g*pow(G*x,2)/Dh
+
 
     if x<=0:
         # Entirely liquid
