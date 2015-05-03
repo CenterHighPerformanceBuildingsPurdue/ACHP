@@ -131,6 +131,9 @@ def sqm2sqin(sqM):
 def kg2g(kg):
     """convert kg to g"""
     return kg*1000.
+def oz2kg(oz):
+    """convert Ounces to kg"""
+    return oz*0.0283495
 
 """##### Composed properties ####################################"""
 def ipK2siK(ipKValue):
