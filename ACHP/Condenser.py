@@ -147,8 +147,8 @@ class CondenserClass():
             self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
         else:
             self.Tout_r=self.xout_2phase*self.Tdew+(1-self.xout_2phase)*self.Tbubble
-            self.hout_r=PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
-            self.sout_r=PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
+            self.hout_r=PropsSI('H','T',self.Tout_r,'Q',0,self.Ref) + self.xout_2phase * (PropsSI('H','T',self.Tout_r,'Q',1,self.Ref)-PropsSI('H','T',self.Tout_r,'Q',0,self.Ref)) #PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
+            self.sout_r=PropsSI('S','T',self.Tout_r,'Q',0,self.Ref) + self.xout_2phase * (PropsSI('S','T',self.Tout_r,'Q',1,self.Ref)-PropsSI('S','T',self.Tout_r,'Q',0,self.Ref))#PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
             #Use the effective subcooling
             self.DT_sc=self.DT_sc_2phase
         
