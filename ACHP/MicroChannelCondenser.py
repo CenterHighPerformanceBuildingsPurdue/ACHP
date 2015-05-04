@@ -2,7 +2,7 @@ from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi,log,exp
 from CoolProp.CoolProp import PropsSI, HAPropsSI
 from Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
-from MicroFinCorrelations import MultiLouveredMicroFins, FinInputs, IsFinsClass
+from MicroFinCorrelations import MultiLouveredMicroFins, MicroFinInputs, IsFinsClass
 from scipy.optimize import brentq, fsolve
 from ACHPTools import ValidateFields
 class FinVals():
@@ -75,7 +75,7 @@ class MicroCondenserClass():
             ('Pressure Drop Air-side (core only)','Pa',self.Fins.dP_a),
             ('Pressure Drop Air-side (total)','Pa',self.dP_a),
             ('Subcooling','K',self.DT_sc),
-            ('circuits','-',self.Ncircuits)
+            ('Number of Circuits','-',self.Ncircuits)
         ]
         
     def Update(self,**kwargs):
@@ -280,14 +280,14 @@ class MicroCondenserClass():
         Tdew=self.Tdew
         ## Mean temperature for use in HT relationships
         Tsat_r=(Tbubble+Tdew)/2
-        
+
         h_fg = (PropsSI('H', 'T', Tdew, 'Q', 1, self.Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0, self.Ref)) #J/kg
         
         # This block calculates the average frictional pressure drop griendient
         # and average refrigerant heat transfer coefficient by
         # integrating the local heat transfer coefficient between 
         # a quality of 1.0 and the outlet quality
-        DPDZ_frict_2phase, h_r_2phase =KM_Cond_Average(xout_r_2phase,1.0,self.Ref,self.G_r,self.Dh,Tbubble,Tdew,self.beta)
+        DPDZ_frict_2phase, h_r_2phase =KM_Cond_Average(xout_r_2phase,1.0,self.Ref,self.G_r,self.Dh,Tbubble,Tdew,self.psat_r,self.beta)
         
         self.h_r_2phase=h_r_2phase
 
@@ -390,7 +390,7 @@ class MicroCondenserClass():
         self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool*self.Nports
         
 def SampleMicroCondenser(T=95):
-    Fins=FinInputs()
+    Fins=MicroFinInputs()
     Fins.Tubes.NTubes=61.354           #Number of tubes (per bank for now!)
     Fins.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
     Fins.Tubes.Npass=3                 #Number of passes (per bank-averaged)

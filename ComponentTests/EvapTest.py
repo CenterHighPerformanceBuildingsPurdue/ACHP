@@ -48,6 +48,7 @@ kwargs={'Ref': 'R410A',
         'NTubes_per_bank':32,
         'FanPower': 438,
         'Fins': FinsTubes,
+        'FinsType': 'WavyLouveredFins',
         'xin_r': xin_r,
         'Verbosity': 0
 }
