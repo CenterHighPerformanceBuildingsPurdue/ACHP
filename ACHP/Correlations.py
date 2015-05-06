@@ -427,13 +427,18 @@ def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     """
     if Phase =="SatVap":
         mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 1, Fluid)*1. #*1000. #W/m-K
+        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'Q', 1, Fluid) #W/m-K
         rho = PropsSI('D', 'T', T, 'Q', 1, Fluid) #kg/m^3
+    elif Phase =="SatLiq":
+        mu = PropsSI('V', 'T', T, 'Q', 0, Fluid) #kg/m-s
+        cp = PropsSI('C', 'T', T, 'Q', 0, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'Q', 0, Fluid) #W/m-K
+        rho = PropsSI('D', 'T', T, 'Q', 0, Fluid) #kg/m^3
     else:
         mu = PropsSI('V', 'T', T, 'P', p, Fluid)  #kg/m-s
-        cp = PropsSI('C', 'T', T, 'P', p, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'P', p, Fluid)*1. #*1000. #W/m-K
+        cp = PropsSI('C', 'T', T, 'P', p, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'P', p, Fluid) #W/m-K
         rho = PropsSI('D', 'T', T, 'P', p, Fluid) #kg/m^3
 
     Pr = cp * mu / k #[-]
