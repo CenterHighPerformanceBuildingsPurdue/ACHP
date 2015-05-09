@@ -20,8 +20,6 @@ class CoaxialHXClass():
         self.A_r_wetted=pi*self.ID_i*self.L
         # Wetted area of the glycol side (not including outer tube)
         self.A_g_wetted=pi*self.OD_i*self.L
-        # total area of conduction
-        self.A_c_w=(pi/4) * (self.OD_i**2 - self.ID_i**2) * self.L
         
         self.V_r=self.L*pi*self.ID_i**2/4.0
         self.V_g=self.L*pi*(self.ID_o**2-self.OD_i**2)/4.0
@@ -81,11 +79,12 @@ class CoaxialHXClass():
         self.Dh_g=self.ID_o-self.OD_i
         #Evaporation hydraulic diameter [m]
         self.Dh_r=self.ID_i
-        #intermediate wall thickness
-        self.t=self.OD_i-self.ID_i
         #Thermal conductivity of the intermediate wall pipe
         self.k =self.Conductivity
         
+        #Thermal Conduction Resistance of the intermediate wall
+        self.Rw=log(self.OD_i/self.ID_i) / (2*pi*self.k*self.L)
+         
         self.Tbubble_r=PropsSI('T','P',self.pin_r,'Q',0,self.Ref_r)
         self.Tdew_r=PropsSI('T','P',self.pin_r,'Q',1,self.Ref_r)
         self.Tsat_r=(self.Tbubble_r+self.Tdew_r)/2.0
@@ -184,7 +183,7 @@ class CoaxialHXClass():
         cp_r_superheat=PropsSI('C','T',Tavg_sh_r,'P',self.pin_r,self.Ref_r) #*1000
         # Overall conductance of heat transfer surface in superheated
         # portion
-        UA_superheat=w_superheat/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_superheat*self.A_r_wetted)+self.t/(self.k*self.A_c_w))
+        UA_superheat=w_superheat/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_superheat*self.A_r_wetted)+self.Rw)
         #List of capacitance rates [W/K]
         C=[cp_r_superheat*self.mdot_r,self.cp_g*self.mdot_g]
         Cmin=min(C)
@@ -221,7 +220,7 @@ class CoaxialHXClass():
         #
         self.h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.Ref_r,
                     self.G_r,self.Dh_r,self.pin_r,q_flux,self.Tbubble_r,self.Tdew_r)
-        UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted)+self.t/(self.k*self.A_c_w))
+        UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted)+self.Rw)
         C_g=self.cp_g*self.mdot_g
         Ntu_2phase=UA_2phase/(C_g)
         
