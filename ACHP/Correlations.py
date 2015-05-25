@@ -54,14 +54,14 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
             cp=PropsSI('C','T',Tdew,'D',rhosatV,Ref)
             #Tguess=Tdew+(h-hsatV)/cp
             T=PropsSI('T','H',h,'P',p,Ref)   #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','T',T,'P',p,Ref)
+            rho=PropsSI('D','H',h,'P',p,Ref)
             return T,rho,'Superheated'
         elif h<hsatL:
             # It's subcooled
             cp=PropsSI('C','T',Tbubble,'D',rhosatL,Ref)
             #Tguess=Tbubble-(hsatL-h)/cp
             T=PropsSI('T','H',h,'P',p, Ref)  #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','T',T,'P',p,Ref)
+            rho=PropsSI('D','H',h,'P',p,Ref)
             return T,rho,'Subcooled'
         else:
             #It's two-phase
