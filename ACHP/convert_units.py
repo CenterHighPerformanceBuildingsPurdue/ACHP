@@ -156,5 +156,5 @@ if __name__=='__main__':
     print ' * Pressure conversions', '  kPa2Pa',kPa2Pa(x),'  MPa2kPa',MPa2kPa(x),'  MPa2Pa',MPa2Pa(x)
     print ' * Length conversions', '  in2m',in2m(x),'  ft2m',ft2m(x)
     print ' * Area conversions', '  sqin2sqm',sqin2sqm(x), 'sqm2sqin', sqm2sqin(x)
-    print  '* Composed properties conversions', 'ipK2siK', ipK2siK(x),'siK2ipK',siK2ipK(x)
+    print ' * Composed properties conversions', 'ipK2siK', ipK2siK(x),'siK2ipK',siK2ipK(x)
     print " * Test for automatic list and array handeling", unitconvert(x,sqin2sqm), unitconvert([x,2*x,3*x],sqin2sqm), unitconvert(array([x,2*x,3*x]),sqin2sqm)
