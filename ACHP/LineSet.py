@@ -48,12 +48,22 @@ class LineSetClass():
             #It is a brine
             self.Tbubble = None
             self.Tdew = None
+        
         self.Tin,self.rhoin,self.Phasein=TrhoPhase_ph(self.Ref,self.pin,self.hin,self.Tbubble,self.Tdew)
-        self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin, self.pin, self.Ref)
-        # Specific heat capacity [J/kg-K]                        
-        cp=PropsSI('C','T',self.Tin,'P',self.pin,self.Ref) #*1000
-        # Density [kg/m^3]
-        rho=PropsSI('D','T',self.Tin, 'P', self.pin, self.Ref)
+        ###Solver shows TwoPhase in the first iteration, the following if statement just to avoid ValueError with CoolProp for pseudo-pure refrigerants
+        if self.Phasein =='TwoPhase':
+            self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin-1, self.pin, self.Ref)
+            # Specific heat capacity [J/kg-K]                        
+            cp=PropsSI('C','T',self.Tin-1,'P',self.pin,self.Ref) #*1000
+            # Density [kg/m^3]
+            rho=PropsSI('D','T',self.Tin-1, 'P', self.pin, self.Ref)
+        else: #Single phase
+            self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin, self.pin, self.Ref)
+            # Specific heat capacity [J/kg-K]                        
+            cp=PropsSI('C','T',self.Tin,'P',self.pin,self.Ref) #*1000
+            # Density [kg/m^3]
+            rho=PropsSI('D','T',self.Tin, 'P', self.pin, self.Ref)
+
     
         #Thermal resistance of tube
         R_tube=log(self.OD/self.ID)/(2*pi*self.L*self.k_tube)
