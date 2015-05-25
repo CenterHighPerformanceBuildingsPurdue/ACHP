@@ -179,7 +179,7 @@ if __name__=='__main__':
         #       Cycle parameters
         #--------------------------------------
         #--------------------------------------
-        Cycle.Verbosity = 5 #the idea here is to have different levels of debug output
+        Cycle.Verbosity = 0 #the idea here is to have different levels of debug output
         Cycle.ImposedVariable = 'Subcooling'                                                           
         Cycle.DT_sc_target = 7.0
         Cycle.Charge_target = 3.3
