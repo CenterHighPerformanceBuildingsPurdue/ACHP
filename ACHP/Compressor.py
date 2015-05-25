@@ -74,7 +74,7 @@ class CompressorClass():
             ('Inlet Enthalpy','J/kg',self.hin_r),
             ('Outlet Enthalpy','J/kg',self.hout_r),
             ('Overall isentropic efficiency','-',self.eta_oi),
-            ('Pumped flow rate','m^3/s',self.Vdot_pumped)
+            ('Pumped flow rate','m^3/s',self.Vdot_pumped),
             ('Ambient heat loss','W',self.Q_amb)
          ]
         
