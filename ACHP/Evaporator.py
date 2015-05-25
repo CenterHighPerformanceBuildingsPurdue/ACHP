@@ -402,7 +402,7 @@ if __name__=='__main__':
                 'psat_r':  PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
                 'Fins': FinsTubes,
                 'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-                'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
+                'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
                 'Verbosity': 0
         }
         
