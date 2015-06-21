@@ -177,8 +177,8 @@ class MicroCondenserClass():
             self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.psat_r,self.Ref)
         else:
             self.Tout_r=self.xout_2phase*self.Tdew+(1-self.xout_2phase)*self.Tbubble
-            self.hout_r=PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
-            self.sout_r=PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
+            self.hout_r=PropsSI('H','T',self.Tbubble,'Q',0,self.Ref)+self.xout_2phase*(PropsSI('H','T',self.Tdew,'Q',1,self.Ref)-PropsSI('H','T',self.Tbubble,'Q',0,self.Ref))
+            self.sout_r=PropsSI('S','T',self.Tbubble,'Q',0,self.Ref)+self.xout_2phase*(PropsSI('S','T',self.Tdew,'Q',1,self.Ref)-PropsSI('S','T',self.Tbubble,'Q',0,self.Ref))
             #Use the effective subcooling
             self.DT_sc=self.DT_sc_2phase
         

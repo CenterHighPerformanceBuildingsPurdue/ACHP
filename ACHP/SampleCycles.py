@@ -78,7 +78,9 @@ def SampleSecondaryLoopSystem():
     
     params={
         'Ref':     Cycle.Ref,
-        'Verbosity':0
+        'Verbosity':0,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+
     }
     Cycle.Condenser.Update(**params)
         
@@ -115,7 +117,9 @@ def SampleSecondaryLoopSystem():
         'Ref_g': Cycle.SecLoopFluid,
         'pin_g': 200000,                                                        #pin_g in Pa
         'Verbosity':0,
-        'mdot_g':0.38
+        'mdot_g':0.38,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+        
     }
     Cycle.CoolingCoil.Update(**params)
     
@@ -262,7 +266,9 @@ def SampleSecondaryLoopHPSystem():
     Cycle.Evaporator.DT_sh= 5. #Superheat at inlet to compressor [K]
     params={
         'Ref':     Cycle.Ref,
-        'Verbosity':0
+        'Verbosity':0,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+
     }
     Cycle.Evaporator.Update(**params)
         
@@ -299,7 +305,8 @@ def SampleSecondaryLoopHPSystem():
     params={
         'Ref_g': Cycle.SecLoopFluid,
         'pin_g': 200000,                                                        #pin_g in Pa
-        'Verbosity':0
+        'Verbosity':0,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
     Cycle.CoolingCoil.Update(**params)
     
@@ -435,7 +442,9 @@ def SampleDXACSystem(Calculate=True):
     
     params={
         'Ref': Cycle.Ref,   
-        'Verbosity':0
+        'Verbosity':0,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+
     }
     Cycle.Condenser.Update(**params)
     #--------------------------------------
@@ -476,7 +485,8 @@ def SampleDXACSystem(Calculate=True):
     params={
         'Ref': Cycle.Ref,
         'Verbosity':0,
-        'DT_sh':5
+        'DT_sh':5,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
     Cycle.Evaporator.Update(**params)
     
@@ -581,7 +591,8 @@ def SampleDXHPSystem():
     
     params={
         'Ref':     Cycle.Ref,   
-        'Verbosity':0
+        'Verbosity':0,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
     Cycle.Condenser.Update(**params)
         
@@ -617,7 +628,8 @@ def SampleDXHPSystem():
     params={
         'Ref': Cycle.Ref,
         'Verbosity':0,
-        'DT_sh':5
+        'DT_sh':5,
+        'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
     Cycle.Evaporator.Update(**params)
     

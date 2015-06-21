@@ -28,7 +28,7 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     #UseSaturationLUT(1)
     #h/=1000  #convert J/kg to kJ/kg since CoolProp uses kJ/kg >>> modification: CoolProp 5.x uses J/kg
     
-    if IsFluidType(Ref,'Brine')==1:
+    if 'INCOMP' in Ref: #if IsFluidType(Ref,'Brine')==1:
         #It is subcooled
         # Use a guess of 10 degrees below max temp
         #Tguess=PropsSI('M','T',0,'P',0, Ref)-10
@@ -54,14 +54,14 @@ def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
             cp=PropsSI('C','T',Tdew,'D',rhosatV,Ref)
             #Tguess=Tdew+(h-hsatV)/cp
             T=PropsSI('T','H',h,'P',p,Ref)   #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','T',T,'P',p,Ref)
+            rho=PropsSI('D','H',h,'P',p,Ref)
             return T,rho,'Superheated'
         elif h<hsatL:
             # It's subcooled
             cp=PropsSI('C','T',Tbubble,'D',rhosatL,Ref)
             #Tguess=Tbubble-(hsatL-h)/cp
             T=PropsSI('T','H',h,'P',p, Ref)  #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','T',T,'P',p,Ref)
+            rho=PropsSI('D','H',h,'P',p,Ref)
             return T,rho,'Subcooled'
         else:
             #It's two-phase
@@ -427,13 +427,18 @@ def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     """
     if Phase =="SatVap":
         mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 1, Fluid)*1. #*1000. #W/m-K
+        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'Q', 1, Fluid) #W/m-K
         rho = PropsSI('D', 'T', T, 'Q', 1, Fluid) #kg/m^3
+    elif Phase =="SatLiq":
+        mu = PropsSI('V', 'T', T, 'Q', 0, Fluid) #kg/m-s
+        cp = PropsSI('C', 'T', T, 'Q', 0, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'Q', 0, Fluid) #W/m-K
+        rho = PropsSI('D', 'T', T, 'Q', 0, Fluid) #kg/m^3
     else:
         mu = PropsSI('V', 'T', T, 'P', p, Fluid)  #kg/m-s
-        cp = PropsSI('C', 'T', T, 'P', p, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'P', p, Fluid)*1. #*1000. #W/m-K
+        cp = PropsSI('C', 'T', T, 'P', p, Fluid) #J/kg-K
+        k = PropsSI('L', 'T', T, 'P', p, Fluid) #W/m-K
         rho = PropsSI('D', 'T', T, 'P', p, Fluid) #kg/m^3
 
     Pr = cp * mu / k #[-]
@@ -657,7 +662,7 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     pc=PropsSI(Ref,'pcrit')                                                     #Updated from PropsSI('E','T',0,'P',0,Ref)
     pr=p/pc
     M=PropsSI('M',Ref)
-    sig = PropsSI('I','T',(Tbubble+Tdew)/2,'Q',0.5,Ref)
+    sig = PropsSI('I','T',(Tbubble+Tdew)/2,'Q',1,Ref)
     g=9.81
 
     #if Ref=='R290':
@@ -687,7 +692,20 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     h_TP=h_nb*(1-x)+h_conv_tp*(1.0+80.0*(x**2-x**6)*exp(-0.6*Co))
     return h_TP
 
-
+def Bertsch_MC_Average(x_min,x_max,Ref,G,Dh,q_flux,L,TsatL,TsatV):
+    '''
+    Returns the average heat transfer coefficient
+    between qualities of x_min and x_max.
+    for Bertsch two-phase evaporation in mico-channel HX 
+    '''
+    if not x_min==x_max:
+        #A proper range is given
+        return quad(Bertsch_MC,x_min,x_max,args=(Ref,G,Dh,q_flux,L))[0]/(x_max-x_min)
+    else:
+        #A single value is given
+        return Bertsch_MC(x_min,Ref,G,Dh,q_flux,L,TsatL,TsatV)
+    
+    
 def f_h_1phase_MicroTube(G, Dh, T, p, Fluid, Phase='Single'):
     """
     This function return the friction factor, heat transfer coefficient, 
@@ -776,8 +794,14 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
         for i in range(len(xx)):
             DP[i]=KMFunc(xx[i])[0]
             h[i]=KMFunc(xx[i])[1]
+        
         #Use Simpson's rule to carry out numerical integration to get average DP and average h
-        return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
+        if abs(x_max-x_min)<5*machine_eps:
+            #return just one of the edge values
+            return DP[0], h[0]
+        else:
+            #Use Simpson's rule to carry out numerical integration to get average DP and average h
+            return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
 
     
 def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
@@ -849,6 +873,7 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
 
     dpdz_f = 2*f_f/rho_f*pow(G*(1-x),2)/Dh
     dpdz_g = 2*f_g/rho_g*pow(G*x,2)/Dh
+
 
     if x<=0:
         # Entirely liquid

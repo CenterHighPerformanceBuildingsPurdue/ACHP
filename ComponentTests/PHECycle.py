@@ -179,7 +179,7 @@ if __name__=='__main__':
         #       Cycle parameters
         #--------------------------------------
         #--------------------------------------
-        Cycle.Verbosity = 5 #the idea here is to have different levels of debug output
+        Cycle.Verbosity = 0 #the idea here is to have different levels of debug output
         Cycle.ImposedVariable = 'Subcooling'                                                           
         Cycle.DT_sc_target = 7.0
         Cycle.Charge_target = 3.3
@@ -239,6 +239,7 @@ if __name__=='__main__':
         
         params={
             'Ref': Cycle.Ref,
+            'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'Verbosity': 0
         }
         Cycle.Condenser.Update(**params)
@@ -274,7 +275,8 @@ if __name__=='__main__':
                
         params={
             'Ref_g': Cycle.SecLoopFluid,
-            'pin_g': 200000,                                                    #pin_g in Pa
+            'pin_g': 200000,
+            'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'                                                    #pin_g in Pa
             'Verbosity':0
         }
         Cycle.CoolingCoil.Update(**params)

@@ -64,11 +64,12 @@ Cycle.Condenser.Fins.Fins.k_fin=237             #Thermal conductivity of fin mat
 
 Cycle.Condenser.Fins.Air.Vdot_ha=1.7934         #rated volumetric flowrate Cycle.Condenser.Fins.Air.Tmean=308.15
 Cycle.Condenser.Fins.Air.Tdb=308.15             #Dry Bulb Temperature
-Cycle.Condenser.Fins.Air.p=101325                                               #COndenser Air pressure in Pa
+Cycle.Condenser.Fins.Air.p=101325                                               #Condenser Air pressure in Pa
 Cycle.Condenser.Fins.Air.RH=0.51                #Relative Humidity
 Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=260
 
+Cycle.Condenser.FinsType= 'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 Cycle.Condenser.Ref=Cycle.Ref
 Cycle.Condenser.Verbosity=0
 
@@ -103,7 +104,8 @@ params={
         'Ref_g': Cycle.SecLoopFluid,
         'pin_g': 200000,                                                        #pin_g in Pa
         'Verbosity':0,
-        'mdot_g':0.38
+        'mdot_g':0.38,
+        'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         }
 Cycle.CoolingCoil.Update(**params)
 

@@ -224,12 +224,12 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         self.w_2phase=np.sum([self.Evaps[i].w_2phase for i in range(Ncircuits)])/float(Ncircuits)
         self.hout_r=0.0
         for i in range(Ncircuits): self.hout_r+=self.Evaps[i].hout_r*self.Evaps[i].mdot_r 
-        self.hout_r=(self.hout_r/self.mdot_r[0])
+        self.hout_r=(self.hout_r/sum(self.mdot_r))
         self.Tin_a=self.Evaps[0].Fins.Air.Tdb #assuming equal temperature for all circuits
         self.Tout_a=0.0
         for i in range(Ncircuits): self.Tout_a+=self.Evaps[i].Tout_a*self.Evaps[i].Fins.Air.Vdot_ha
         
-        self.Tout_a=(self.Tout_a/self.Fins.Air.Vdot_ha[0])
+        self.Tout_a=(self.Tout_a/sum(self.Fins.Air.Vdot_ha))
         Pout_r=self.psat_r+self.DP_r/1.0 #/1000.0
         hsatV_out=PropsSI('H','P',Pout_r,'Q',1.0,self.Ref) #*1000
         hsatL_out=PropsSI('H','P',Pout_r,'Q',0.0,self.Ref) #*1000
@@ -283,7 +283,7 @@ if __name__=='__main__':
             'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-            'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
+            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
             'Verbosity': 0
     }
     
@@ -301,7 +301,7 @@ if __name__=='__main__':
             'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-            'hin_r': PropsSI('H','T',Tdew,'Q',0.15,'R410A'), #*1000
+            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
             'Verbosity':0,
             'TestName':'MCE-0014',  #this and the two next lines can be used to specify exact test conditions
             'TestDescription':'shows application of MCE',

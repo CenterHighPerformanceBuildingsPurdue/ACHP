@@ -79,7 +79,12 @@ class CoaxialHXClass():
         self.Dh_g=self.ID_o-self.OD_i
         #Evaporation hydraulic diameter [m]
         self.Dh_r=self.ID_i
+        #Thermal conductivity of the intermediate wall pipe
+        self.k =self.Conductivity
         
+        #Thermal Conduction Resistance of the intermediate wall
+        self.Rw=log(self.OD_i/self.ID_i) / (2*pi*self.k*self.L)
+         
         self.Tbubble_r=PropsSI('T','P',self.pin_r,'Q',0,self.Ref_r)
         self.Tdew_r=PropsSI('T','P',self.pin_r,'Q',1,self.Ref_r)
         self.Tsat_r=(self.Tbubble_r+self.Tdew_r)/2.0
@@ -178,7 +183,7 @@ class CoaxialHXClass():
         cp_r_superheat=PropsSI('C','T',Tavg_sh_r,'P',self.pin_r,self.Ref_r) #*1000
         # Overall conductance of heat transfer surface in superheated
         # portion
-        UA_superheat=w_superheat/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_superheat*self.A_r_wetted))
+        UA_superheat=w_superheat/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_superheat*self.A_r_wetted)+self.Rw)
         #List of capacitance rates [W/K]
         C=[cp_r_superheat*self.mdot_r,self.cp_g*self.mdot_g]
         Cmin=min(C)
@@ -215,7 +220,7 @@ class CoaxialHXClass():
         #
         self.h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.Ref_r,
                     self.G_r,self.Dh_r,self.pin_r,q_flux,self.Tbubble_r,self.Tdew_r)
-        UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted))
+        UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted)+self.Rw)
         C_g=self.cp_g*self.mdot_g
         Ntu_2phase=UA_2phase/(C_g)
         
@@ -259,7 +264,8 @@ if __name__=='__main__':
                 'Tin_g':290.52,
                 'Ref_r':'R290',
                 'Ref_g':'Water',
-                'Verbosity':0
+                'Verbosity':0,
+                'Conductivity' : 237 #[W/m-K]
                 }
         IHX=CoaxialHXClass(**params)
         IHX.Calculate()
