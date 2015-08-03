@@ -439,7 +439,7 @@ if __name__=='__main__':
     pylab.legend(['two-phase','superheat'],loc='best')
     pylab.xlabel('Evaporation Dew Temperature in Kelvin')
     pylab.ylabel('Heat Transfer Coefficient in W/m2-K')
-    pylab.savefig('Evaporator_py_flowrate.pdf')
+    pylab.savefig('Evaporator_py_HTC.pdf')
     pylab.show()
     pylab.plot(T_dews,w_2p, T_dews, w_sh)
     pylab.title('Parametric Study with fixed Flowrates - Area Fraction')
