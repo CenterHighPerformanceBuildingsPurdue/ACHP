@@ -1,6 +1,6 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi,log,exp
-from CoolProp.CoolProp import PropsSI #,UseSaturationLUT
+from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube,ShahEvaporation_Average, LockhartMartinelli,LMPressureGradientAvg,AccelPressureDrop,TwoPhaseDensity
 from scipy.optimize import brentq #solver to find roots (zero points) of functions
 from scipy.interpolate import interp1d
@@ -8,8 +8,6 @@ from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneF
 from DryWetSegment import DWSVals, DryWetSegment
 from ACHPTools import ValidateFields
 import numpy as np
-# Turn on saturation curve lookup for CoolProp
-#UseSaturationLUT(1)
 
 class EvaporatorClass():
     def __init__(self,**kwargs):
@@ -82,7 +80,7 @@ class EvaporatorClass():
             ('Sensible Heat Ratio','-',self.SHR),
             ('Bend Temperature profile','K',self.Tbends)
         ]
-        for i in range(0,len(Output_List_default)):                             #append default parameters to output list
+        for i in range(0,len(Output_List_default)):         #append default parameters to output list
             Output_List.append(Output_List_default[i])
         return Output_List
         
@@ -101,7 +99,7 @@ class EvaporatorClass():
             self.Fins.Validate()
             reqFields=[
                        ('Ref',str,None,None),
-                       ('psat_r',float,0.001,100000000),                        #0.000001,100000 is updated to 0.001,100000000
+                       ('psat_r',float,0.001,100000000),                        
                        ('Fins',IsFinsClass,None,None),
                        ('FinsType',str,None,None),
                        ('hin_r',float,-100000,10000000),
@@ -229,8 +227,8 @@ class EvaporatorClass():
         if existsSuperheat:
             self.DT_sh_calc=self.Tout_r-self.Tdew_r
         else:
-            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref)) #*1000 #Effective superheat
-            self.Tout_r=PropsSI('T','P',self.psat_r+self.DP_r/1.0,'Q',xout_r,self.Ref) #self.DP_r/1000.0 is updated by removing /1000.0 #saturated temperature at outlet quality
+            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref))  #Effective superheat
+            self.Tout_r=PropsSI('T','P',self.psat_r+self.DP_r/1.0,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat
         self.UA_r=self.hmean_r*self.A_r_wetted
         self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
@@ -261,7 +259,7 @@ class EvaporatorClass():
     
         # Store temporary values to be passed to DryWetSegment
         DWS.Fins=self.Fins
-        DWS.FinsType = self.FinsType                                            #Added to pass FinsType to DryWetSegment
+        DWS.FinsType = self.FinsType                                            
         DWS.A_a=self.Fins.A_a*w_2phase
         DWS.cp_da=self.Fins.cp_da
         DWS.eta_a=self.Fins.eta_a
@@ -324,7 +322,7 @@ class EvaporatorClass():
         DWS.mdot_da=self.mdot_da*w_superheat
         DWS.pin_a=self.Fins.Air.p
         DWS.Fins=self.Fins
-        DWS.FinsType = self.FinsType           #Added to pass FinsType to DryWetSegment
+        DWS.FinsType = self.FinsType           
     
         # Inputs on the air side to two phase region are inlet air again
         DWS.Tin_a=self.Tin_a
@@ -332,7 +330,7 @@ class EvaporatorClass():
     
         DWS.Tin_r=self.Tdew_r
         DWS.A_r=self.A_r_wetted*w_superheat
-        DWS.cp_r=PropsSI('C','T',self.Tdew_r+2.5, 'P', self.psat_r, self.Ref)#*1000 #Use a guess value of 6K superheat to calculate cp 
+        DWS.cp_r=PropsSI('C','T',self.Tdew_r+2.5, 'P', self.psat_r, self.Ref) #Use a guess value of 6K superheat to calculate cp 
         DWS.pin_r=self.psat_r
         DWS.mdot_r=self.mdot_r
         DWS.IsTwoPhase=False
@@ -364,63 +362,90 @@ class EvaporatorClass():
         self.Tout_r=DWS.Tout_r
     
 if __name__=='__main__':
-    #This code runs if this file is run by itself, but otherwise doesn't run
-    TT=[]
-    Q=[]
-    ff=[]
-    QQ=[]
-    hh=[]
-    import numpy as np,pylab
-    for Tdew in np.linspace(270,299.7,101):  
-        FinsTubes=FinInputs()
+    #Example usage for a parametric study
     
-        FinsTubes.Tubes.NTubes_per_bank=32
-        FinsTubes.Tubes.Ncircuits=5
-        FinsTubes.Tubes.Nbank=3
-        FinsTubes.Tubes.Ltube=0.452
-        FinsTubes.Tubes.OD=0.009525
-        FinsTubes.Tubes.ID=0.0089154
-        FinsTubes.Tubes.Pl=0.0254
-        FinsTubes.Tubes.Pt=0.0219964
+    import pylab
+    
+    num_points= 101
+    T_dews= np.linspace(270,299.7,num_points)
+    TT= np.empty(num_points)
+    Q_2p= np.empty(num_points)
+    w_2p= np.empty(num_points)
+    w_sh= np.empty(num_points)
+    Q_tot= np.empty(num_points)
+    h_2p= np.empty(num_points)
+    h_sh= np.empty(num_points)
+
+    FinsTubes=FinInputs()
+    
+    FinsTubes.Tubes.NTubes_per_bank=32
+    FinsTubes.Tubes.Ncircuits=5
+    FinsTubes.Tubes.Nbank=3
+    FinsTubes.Tubes.Ltube=0.452
+    FinsTubes.Tubes.OD=0.009525
+    FinsTubes.Tubes.ID=0.0089154
+    FinsTubes.Tubes.Pl=0.0254
+    FinsTubes.Tubes.Pt=0.0219964
         
-        FinsTubes.Fins.FPI=14.5
-        FinsTubes.Fins.Pd=0.001
-        FinsTubes.Fins.xf=0.001
-        FinsTubes.Fins.t=0.00011
-        FinsTubes.Fins.k_fin=237
+    FinsTubes.Fins.FPI=14.5
+    FinsTubes.Fins.Pd=0.001
+    FinsTubes.Fins.xf=0.001
+    FinsTubes.Fins.t=0.00011
+    FinsTubes.Fins.k_fin=237
         
-        FinsTubes.Air.Vdot_ha=0.5663
-        FinsTubes.Air.Tmean=299.8
-        FinsTubes.Air.Tdb=299.8
-        FinsTubes.Air.p=101325                                                  #updated from 101.325kPa to 101325Pa
-        FinsTubes.Air.RH=0.51
-        FinsTubes.Air.RHmean=0.51
-        FinsTubes.Air.FanPower=438
+    FinsTubes.Air.Vdot_ha=0.5663
+    FinsTubes.Air.Tmean=299.9
+    FinsTubes.Air.Tdb=299.9
+    FinsTubes.Air.p=101325
+    FinsTubes.Air.RH=0.51
+    FinsTubes.Air.RHmean=0.51
+    FinsTubes.Air.FanPower=438
             
-        kwargs={'Ref': 'R410A',
-                'mdot_r':  0.0708,
-                'psat_r':  PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
-                'Fins': FinsTubes,
-                'FinsType': 'WavyLouveredFins',                                  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-                'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
-                'Verbosity': 0
+    kwargs={'Ref': 'R410A',
+            'mdot_r':  0.0708,
+            'psat_r':  PropsSI('P','T',T_dews[0],'Q',1.0,'R410A'),
+            'Fins': FinsTubes,
+            'FinsType': 'WavyLouveredFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+            'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), 
+            'Verbosity': 0
         }
         
-        Evap=EvaporatorClass(**kwargs)
-        Evap.Update(**kwargs) #update not necessary here, but left for illu
+    Evap=EvaporatorClass(**kwargs) #generate new evaporator instance and update kwargs
+    
+    for i in range(0, len(T_dews)):
+        kwargs={'psat_r':  PropsSI('P','T',T_dews[i],'Q',1.0,'R410A')}
+        Evap.Update(**kwargs)
         Evap.Calculate()
-        
-        #print Evap.OutputList()
-        Q.append(Evap.Q)
-        QQ.append(Evap.Q_2phase)
-        TT.append(Tdew)
-        ff.append(Evap.w_2phase)
-        hh.append(Evap.h_r_2phase)
-        
-    pylab.plot(TT,QQ,TT,Q)
-    pylab.show()
-    pylab.plot(TT,hh)
-    pylab.show()
+        Q_tot[i] = Evap.Q
+        Q_2p[i]= Evap.Q_2phase
+        w_2p[i]= Evap.w_2phase
+        w_sh[i]= Evap.w_superheat
+        h_2p[i]= Evap.h_r_2phase
+        h_sh[i]= Evap.h_r_superheat
+
+    print "Demonstrate output list"
+    print Evap.OutputList()
     
-        
-    
+    pylab.plot(T_dews,Q_2p,T_dews,Q_tot)
+    pylab.title('Parametric Study With Fixed flowrates - Capacity')
+    pylab.legend(['two-phase','total'],loc='best')
+    pylab.title('Parametric Study With Fixed flowrates - Capacity')
+    pylab.xlabel('Evaporation Dew Temperature in Kelvin')
+    pylab.ylabel('Capacity in Watt')
+    pylab.savefig('Evaporator_py_capacity.pdf')
+    pylab.show()
+    pylab.plot(T_dews,h_2p,T_dews, h_sh)
+    pylab.title('Parametric Study with fixed Flowrates - Heat Transfer Coefficients')
+    pylab.legend(['two-phase','superheat'],loc='best')
+    pylab.xlabel('Evaporation Dew Temperature in Kelvin')
+    pylab.ylabel('Heat Transfer Coefficient in W/m2-K')
+    pylab.savefig('Evaporator_py_flowrate.pdf')
+    pylab.show()
+    pylab.plot(T_dews,w_2p, T_dews, w_sh)
+    pylab.title('Parametric Study with fixed Flowrates - Area Fraction')
+    pylab.legend(['two-phase', 'superheat'],loc='best')
+    pylab.xlabel('Evaporation Dew Temperature in Kelvin')
+    pylab.ylabel('Two-phase Wetted Area Fraction')
+    pylab.ylim(-0.01,1.01)
+    pylab.savefig('Evaporator_py_wetted_area.pdf')
+    pylab.show()
