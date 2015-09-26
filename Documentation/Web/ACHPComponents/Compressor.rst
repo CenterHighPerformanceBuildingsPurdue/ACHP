@@ -16,14 +16,14 @@ The compressor is modeled based on a 10-coefficient ARI compressor map which is 
 
 .. plot::
 
-    from CoolProp.CoolProp import Props
+    from CoolProp.CoolProp import PropsSI
     from CoolProp.Plots import Ph
     import pylab
     Ph('R410A')
-    ps=Props('P','T',260,'Q',1,'R410A')
-    pd=Props('P','T',300,'Q',1,'R410A')
-    hs=Props('H','T',260,'Q',1,'R410A')
-    hd=Props('H','T',300,'Q',1,'R410A')
+    ps=PropsSI('P','T',260,'Q',1,'R410A')/1000.0
+    pd=PropsSI('P','T',300,'Q',1,'R410A')/1000.0
+    hs=PropsSI('H','T',260,'Q',1,'R410A')/1000.0
+    hd=PropsSI('H','T',300,'Q',1,'R410A')/1000.0
     pylab.plot(hs,ps,'bo',mfc='b')
     pylab.plot(hd,pd,'bo',mfc='b')
     pylab.gca().axhline(ps)
@@ -135,7 +135,7 @@ If not, first stop should be the :ref:`FAQS`
 Component Class Documentation
 -----------------------------
 
-.. py:module:: Compressor    
+.. py:module:: ACHP.Compressor    
 .. autoclass:: CompressorClass
     :members:
     :undoc-members:

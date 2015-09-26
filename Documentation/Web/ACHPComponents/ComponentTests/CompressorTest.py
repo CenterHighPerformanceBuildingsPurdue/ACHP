@@ -1,4 +1,4 @@
-from Compressor import CompressorClass
+from ACHP.Compressor import CompressorClass
 from CoolProp.CoolProp import PropsSI
 kwds={
       'M':[217.3163128,5.094492028,-0.593170311,4.38E-02,

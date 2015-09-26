@@ -117,7 +117,7 @@ Variable                         Description
 Component Class Documentation
 -----------------------------
 
-.. py:module:: LineSet    
+.. py:module:: ACHP.LineSet    
 .. autoclass:: LineSetClass
     :members:
     :undoc-members:

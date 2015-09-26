@@ -1,4 +1,4 @@
-from Cycle import DXCycleClass 
+from ACHP.Cycle import DXCycleClass 
 
 #Instantiate the cycle class
 Cycle=DXCycleClass()

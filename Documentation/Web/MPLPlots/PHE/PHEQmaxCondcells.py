@@ -24,9 +24,9 @@ ax.axis('off')
 
 ax2=fig.add_axes((0.6,0.2,0.35,0.7))
 Ts('R134a',axis=ax2)
-p=PropsSI('P','T',280,'Q',0.0,'R134a')
-T=np.linspace(270,300,100)
-s=[PropsSI('S','T',T[i],'P',p,'R134a') for i in range(len(T))]
+p = PropsSI('P','T',280,'Q',0.0,'R134a')
+T = np.r_[np.linspace(270,279.9,50),np.linspace(280.1,300,50)]
+s = PropsSI('S','T',T,'P',p,'R134a')/1000.0
 ax2.plot(s,T,'r')
 ax2.plot([s[0],s[-1]],[270,290],'b')
 ax2.set_xlim(0.9,1.9)

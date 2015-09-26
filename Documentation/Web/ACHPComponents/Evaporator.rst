@@ -91,7 +91,7 @@ Variable                         Description
 Component Class Documentation
 -----------------------------
 
-.. py:module:: Evaporator    
+.. py:module:: ACHP.Evaporator    
 .. autoclass:: EvaporatorClass
     :members:
     :undoc-members:

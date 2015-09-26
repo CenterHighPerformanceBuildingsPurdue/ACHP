@@ -200,7 +200,7 @@ which should yield the output, when run, of
 Cycle Solver Code Documentation
 -------------------------------
 
-.. py:module:: Cycle    
+.. py:module:: ACHP.Cycle    
 .. autoclass:: DXCycleClass
     :members:
     :undoc-members:

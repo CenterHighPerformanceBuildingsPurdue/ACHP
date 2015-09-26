@@ -3,10 +3,8 @@ from CoolProp.CoolProp import PropsSI
 import numpy as np
 import pylab as pylab
 from math import pi
-import sys
-sys.path.append('../../..../')
 #from PyACHP.Correlations import AccelPressureDrop, LockhartMartinelli
-from Correlations import AccelPressureDrop, LockhartMartinelli, Kim_Mudawar_condensing_DPDZ_h
+from ACHP.Correlations import AccelPressureDrop, LockhartMartinelli, Kim_Mudawar_condensing_DPDZ_h
 
 #flow, dimensions and heat flux related variables
 G_r=300#Mass velocity [kg/m-s]

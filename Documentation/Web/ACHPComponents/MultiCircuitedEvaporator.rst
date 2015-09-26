@@ -78,7 +78,7 @@ If not, first stop should be the :ref:`FAQS`
 Component Class Documentation
 -----------------------------
 
-.. py:module:: MultiCircuitEvaporator    
+.. py:module:: ACHP.MultiCircuitEvaporator    
 .. autoclass:: MultiCircuitEvaporatorClass
     :members:
     :undoc-members:

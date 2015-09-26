@@ -1,3 +1,3 @@
-Took 21.2757089138 seconds to run Cycle model
-Cycle COP is 3.20388218831
-Cycle refrigerant charge is 2.05224920445 kg
+Took 25.6079199314 seconds to run Cycle model
+Cycle COP is 3.20388157799
+Cycle refrigerant charge is 2.05224922674 kg

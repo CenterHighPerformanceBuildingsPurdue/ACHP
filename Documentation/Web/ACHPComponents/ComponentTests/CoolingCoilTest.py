@@ -1,5 +1,5 @@
-from CoolingCoil import CoolingCoilClass
-from FinCorrelations import FinInputs
+from ACHP.CoolingCoil import CoolingCoilClass
+from ACHP.FinCorrelations import FinInputs
 
 FinsTubes=FinInputs()
 FinsTubes.Tubes.NTubes_per_bank=32
