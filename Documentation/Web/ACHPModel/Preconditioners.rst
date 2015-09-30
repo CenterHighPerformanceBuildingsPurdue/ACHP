@@ -39,7 +39,7 @@ The heat transfer rate in the condenser can therefore be given by the value
 
 .. math::
 
-    \dot Q_{cond}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cond} c_{p,a}(T_{i,a,cond}-T_{cond})
+    \dot Q_{cond}=\varepsilon_{HX} \rho_{da} \dot V_{ha,cond} c_{p,a}(T_{i,a,cond}-T_{cond})
     
 The condenser heat transfer rate based on the imposed subcooling can also be given by
 
@@ -56,7 +56,7 @@ As usual, the evaporator is the most complicated component due to the possibilit
 
 .. math::
 
-    \dot Q_{evap,dry}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,evap} c_{p,a}(T_{i,a,evap}-T_{evap})
+    \dot Q_{evap,dry}=\varepsilon_{HX} \rho_{da} \dot V_{ha,evap} c_{p,a}(T_{i,a,evap}-T_{evap})
     
 Then using the dry evaporator heat transfer analysis it is possible to determine the surface temperature.  The :math:`\mathrm{UA}` values can be obtained from
 
@@ -88,7 +88,7 @@ If both :math:`T_{s,a,o}` and :math:`T_{s,a,i}` are above the dewpoint temperatu
 
 .. math::
 
-    \dot Q_{evap,wet}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,evap}(h_{a,i}-h_{a,s,evap})
+    \dot Q_{evap,wet}=\varepsilon_{HX} \rho_{da} \dot V_{ha,evap}(h_{a,i}-h_{a,s,evap})
 
 where :math:`h_{a,s,evap}` is the saturated air enthalpy at :math:`T_{evap}` and :math:`h_{a,i}` is the enthalpy of the inlet air to the evaporator.
 
@@ -129,7 +129,7 @@ The cooling coil is first considered to be fully dry, yielding the heat transfer
 
 .. math::
 
-    \dot Q_{cc,dry}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cc} c_{p,a}(T_{a,i,cc}-T_{g,i,cc})
+    \dot Q_{cc,dry}=\varepsilon_{HX} \rho_{da} \dot V_{ha,cc} c_{p,a}(T_{a,i,cc}-T_{g,i,cc})
     
 Then using the dry cooling coil heat transfer analysis it is possible to determine the surface temperature.  The :math:`\mathrm{UA}` values can be obtained from
 
@@ -163,7 +163,7 @@ If both :math:`T_{s,a,o}` and :math:`T_{s,a,i}` are above the dewpoint temperatu
 
 .. math::
 
-    \dot Q_{cc,wet}=\varepsilon_{HX} \rho_{ha} \dot V_{ha,cc}(h_{a,i}-h_{a,s,cc})
+    \dot Q_{cc,wet}=\varepsilon_{HX} \rho_{da} \dot V_{ha,cc}(h_{a,i}-h_{a,s,cc})
 
 where :math:`h_{a,s,cc}` is the saturated air enthalpy at :math:`T_{g,i}` and :math:`h_{a,i}` is the enthalpy of the inlet air to the cooling coil.
 
@@ -213,7 +213,7 @@ Variable                         Description
 :math:`\vec{\Delta}`             Residual vector [W]
 :math:`\eta_a`                   Overall air-side surface efficiency [-]
 :math:`\varepsilon_{HX}`         Effectiveness of heat exchangers [-]
-:math:`\rho_{ha}`                Density of humid air [kg\ :subscript:`da`\ /m\ :sup:`3`\ ]
+:math:`\rho_{da}`                Density of humid air [kg\ :subscript:`da`\ /m\ :sup:`3`\ ]
 :math:`A_{a,total}`              Total air-side surface area of evaporator (fins+tubes) [:math:`\mathrm{m}^2`]
 :math:`A_{r,total}`              Total refrigerant-side surface area of evaporator [:math:`\mathrm{m}^2`]
 :math:`c_{p,a}`                  Specific heat of humid air [J/kg\ :subscript:`da`\ /K]
