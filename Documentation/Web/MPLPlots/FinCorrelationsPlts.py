@@ -3,10 +3,8 @@ from CoolProp.CoolProp import PropsSI
 import numpy as np
 import pylab as pylab
 from math import pi
-import sys
-sys.path.append('../../..../')
 #from PyACHP.Correlations import AccelPressureDrop, LockhartMartinelli
-from FinCorrelations import WavyLouveredFins,HerringboneFins,FinInputs,PlainFins
+from ACHP.FinCorrelations import WavyLouveredFins,HerringboneFins,FinInputs,PlainFins
 
 #example evaporator
 FinsTubes=FinInputs()

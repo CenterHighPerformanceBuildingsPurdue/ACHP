@@ -668,9 +668,9 @@ if __name__=='__main__':
     cycle.TestName='DXAC-0018'  #this and the two next lines can be used to specify exact test conditions
     cycle.TestDescription='another point'
     cycle.TestDetails='Here we changed the air temperature'
-    #cycle.Calculate(5,7.0)  #there seems to be a problem, somewhere
-    #Write2CSV(cycle.Evaporator,open('Evaporator.csv','a'),append=True)
-    #Write2CSV(cycle,open('Cycle.csv','a'),append=True)
+    cycle.Calculate(5,7.0)  #Calculate(DT_evap,DT_cond), as defined in the DXCycleClass
+    Write2CSV(cycle.Evaporator,open('Evaporator.csv','a'),append=True)
+    Write2CSV(cycle,open('Cycle.csv','a'),append=True)
     #SampleDXHPSystem()
     SampleSecondaryLoopSystem()
     #SampleSecondaryLoopHPSystem()

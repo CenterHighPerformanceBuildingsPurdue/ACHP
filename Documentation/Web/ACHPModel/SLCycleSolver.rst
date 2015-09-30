@@ -77,7 +77,7 @@ This section is left intentionally empty
 Cycle Solver Class Documentation
 ================================
 
-.. py:module:: Cycle    
+.. py:module:: ACHP.Cycle    
 .. autoclass:: SecondaryCycleClass
     :members:
     :undoc-members:

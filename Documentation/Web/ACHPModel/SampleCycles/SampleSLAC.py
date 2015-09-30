@@ -1,7 +1,7 @@
-from Cycle import SecondaryCycleClass
+from ACHP.Cycle import SecondaryCycleClass
 
-#Instantiate the class
-Cycle=SecondaryCycleClass()
+# Instantiate the class
+Cycle = SecondaryCycleClass()
 
 #--------------------------------------
 #       Cycle parameters
@@ -21,7 +21,7 @@ Cycle.Mode='AC'
 #--------------------------------------
 #--------------------------------------
 
-#A 3 ton cooling capacity compressor map
+# A 3 ton cooling capacity compressor map
 if Cycle.Ref=='R410A':
     M=[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02,
     7.90E-05,-5.73E-05,1.79E-04,-8.08E-05]

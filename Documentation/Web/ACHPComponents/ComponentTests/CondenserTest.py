@@ -1,6 +1,6 @@
 from CoolProp.CoolProp import PropsSI
-from Condenser import CondenserClass
-from FinCorrelations import FinInputs
+from ACHP.Condenser import CondenserClass
+from ACHP.FinCorrelations import FinInputs
 
 Fins=FinInputs()
 Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank or row

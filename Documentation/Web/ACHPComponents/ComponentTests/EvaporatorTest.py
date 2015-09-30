@@ -1,6 +1,6 @@
 from CoolProp.CoolProp import PropsSI
-from FinCorrelations import FinInputs
-from Evaporator import EvaporatorClass
+from ACHP.FinCorrelations import FinInputs
+from ACHP.Evaporator import EvaporatorClass
 
 FinsTubes=FinInputs()
 
@@ -25,12 +25,14 @@ FinsTubes.Air.p=101325
 FinsTubes.Air.RH=0.51
 FinsTubes.Air.FanPower=438
 
-kwargs={'Ref': 'R410A',
+Ref = 'n-Propane'
+
+kwargs={'Ref': Ref,
         'mdot_r': 0.0708,
-        'psat_r': PropsSI('P','T',282,'Q',1.0,'R410A'),
+        'psat_r': PropsSI('P','T',282,'Q',1.0,Ref),
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',#WavyLouveredFins, HerringboneFins, PlainFins
-        'hin_r': PropsSI('H','T',282,'Q',0.15,'R410A'), #[J/kg]
+        'hin_r': PropsSI('H','T',282,'Q',0.15,Ref), #[J/kg]
         'Verbosity': 0
         }
 

@@ -414,7 +414,7 @@ def SampleMicroCondenser(T=95):
     Fins.Air.p=100000                  #Air pressure in Pa
     Fins.Air.RHmean=0.5
     Fins.Air.RH=0.5                    #Air inlet relative humidity
-    Fins.Air.FanPower=327.36           #Fan power, Watts
+    Fins.Air.FanPower=854.9           #Fan power, Watts
     
     Fins.Louvers.Lalpha=20             #Louver angle, in degree
     Fins.Louvers.lp=0.001              #Louver pitch

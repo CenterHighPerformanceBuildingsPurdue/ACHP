@@ -298,7 +298,7 @@ Variable                         Description
 Component Class Documentation
 -----------------------------
 
-.. py:module:: Condenser    
+.. py:module:: ACHP.Condenser    
 .. autoclass:: CondenserClass
     :members:
     :undoc-members:

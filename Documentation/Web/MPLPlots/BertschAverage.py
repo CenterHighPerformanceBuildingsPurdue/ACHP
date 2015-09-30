@@ -2,8 +2,6 @@
 from CoolProp.CoolProp import PropsSI
 import pylab,numpy as np
 
-import sys
-sys.path.append('../../..')
 from ACHP.Correlations import Bertsch_MC_Average
 
 x=np.linspace(0,1,1000)

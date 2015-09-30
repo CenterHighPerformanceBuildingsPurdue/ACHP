@@ -652,6 +652,6 @@ Variable                         Description
 :math:`\omega_i`                 Humidity ratio at air inlet [-]
 ===============================  ===================================================
 
-.. automodule:: DryWetSegment 
+.. automodule:: ACHP.DryWetSegment 
     :members:
     :undoc-members:

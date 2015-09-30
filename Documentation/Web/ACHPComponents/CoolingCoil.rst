@@ -30,7 +30,7 @@ If not, first stop should be the :ref:`FAQS`
 Component Class Documentation
 -----------------------------
 
-.. py:module:: CoolingCoil    
+.. py:module:: ACHP.CoolingCoil    
 .. autoclass:: CoolingCoilClass
     :members:
     :undoc-members:
