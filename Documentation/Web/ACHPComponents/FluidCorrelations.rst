@@ -116,14 +116,14 @@ The Lockhart-Martinelli two-phase pressure drop gradient is based on the followi
     .. math::
         :label: eqFC12
     
-        f_f=\left\lbrace \begin{array}{cc} \dfrac{16.0}{\mathrm{Re}_f} & \mathrm{Re}_f<1000 \\[1.0em] \dfrac{0.046}{\mathrm{Re}_f^{0.2}} & \mathrm{Re}_f>2000 \\[1.0em] w\dfrac{16.0}{\mathrm{Re}_f}+(1-w)\dfrac{0.046}{\mathrm{Re}_f^{0.2}} & 1000 < \mathrm{Re}_f < 2000 \end{array} \right.
+        f_f=\left\lbrace \begin{array}{cc} \dfrac{16.0}{\mathrm{Re}_f} & \mathrm{Re}_f<1000 \\[1.0em] \dfrac{0.046}{\mathrm{Re}_f^{0.2}} & \mathrm{Re}_f>2000 \\[1.0em] (1-w)\dfrac{16.0}{\mathrm{Re}_f}+w\dfrac{0.046}{\mathrm{Re}_f^{0.2}} & 1000 < \mathrm{Re}_f < 2000 \end{array} \right.
     
     where :math:`w=(\mathrm{Re}_f-1000)/(2000-1000)` which results in a linear interpolation for the transitional Reynolds number region
 
     .. math::
         :label: eqFC13
     
-        f_g=\left\lbrace \begin{array}{cc} \dfrac{16.0}{\mathrm{Re}_g} & \mathrm{Re}_g<1000 \\[1.0em] \dfrac{0.046}{\mathrm{Re}_g^{0.2}} & \mathrm{Re}_g>2000 \\[1.0em] w\dfrac{16.0}{\mathrm{Re}_g}+(1-w)\dfrac{0.046}{\mathrm{Re}_g^{0.2}} & 1000 < \mathrm{Re}_g < 2000 \end{array} \right.
+        f_g=\left\lbrace \begin{array}{cc} \dfrac{16.0}{\mathrm{Re}_g} & \mathrm{Re}_g<1000 \\[1.0em] \dfrac{0.046}{\mathrm{Re}_g^{0.2}} & \mathrm{Re}_g>2000 \\[1.0em] (1-w)\dfrac{16.0}{\mathrm{Re}_g}+w\dfrac{0.046}{\mathrm{Re}_g^{0.2}} & 1000 < \mathrm{Re}_g < 2000 \end{array} \right.
         
     where :math:`w=(\mathrm{Re}_g-1000)/(2000-1000)` which results in a linear interpolation for the transitional Reynolds number region
     
