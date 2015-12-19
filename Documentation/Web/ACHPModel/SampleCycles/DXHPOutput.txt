@@ -1,3 +1,3 @@
-Took 24.6074099541 seconds to run Cycle model
-Cycle coefficient of system performance is 3.61217562212
-Cycle refrigerant charge is 1.71013193221 kg
+Took 15.0620000362 seconds to run Cycle model
+Cycle coefficient of system performance is 3.61217562174
+Cycle refrigerant charge is 1.71013193206 kg

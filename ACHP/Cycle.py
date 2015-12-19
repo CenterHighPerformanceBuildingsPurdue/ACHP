@@ -12,8 +12,9 @@ from Pump import PumpClass # Secondary loop pump class
 from scipy.optimize import brentq, fsolve,newton 
 #^^ fsolve - roots (multiple variables); brent - root of one variable fct
 
+import CoolProp
+from CoolProp.Plots import PropertyPlot
 from CoolProp.CoolProp import PropsSI #refrigerant properties
-from CoolProp.Plots import Ph
 from FinCorrelations import FinInputs     #fin correlations
 import numpy as np                  #NumPy is fundamental scientific package
 from Correlations import TrhoPhase_ph            
@@ -213,9 +214,9 @@ class SecondaryCycleClass():
             deltaH_sc=self.Compressor.mdot_r*(PropsSI('H','T',self.Tbubble_cond,'Q',0,self.Ref)-PropsSI('H','T',self.Tbubble_cond-self.DT_sc_target,'P',psat_cond,self.Ref)) #*1000 #*1000
             
 #            ## Plot a p-h plot
-#            Ph(self.Ref,hbounds=(100,500))
-#            pylab.plot([self.Compressor.hin_r/1000,self.Compressor.hout_r/1000,self.Condenser.hout_r/1000,self.PHEIHX.hin_c/1000,self.Compressor.hin_r/1000],[psat_evap/1000,psat_cond/1000,psat_cond/1000,psat_evap/1000,psat_evap/1000])
-#            pylab.show()
+#            plot = PropertyPlot('HEOS::' + self.Ref, 'PH', unit_system='KSI')
+#            plot.plot([self.Compressor.hin_r/1000,self.Compressor.hout_r/1000,self.Condenser.hout_r/1000,self.PHEIHX.hin_c/1000,self.Compressor.hin_r/1000],[psat_evap/1000,psat_cond/1000,psat_cond/1000,psat_evap/1000,psat_evap/1000])
+#            plot.show()
             
             resid=np.zeros((3))
             resid[0]=self.Compressor.mdot_r*(self.Compressor.hin_r-self.IHX.hout_r)

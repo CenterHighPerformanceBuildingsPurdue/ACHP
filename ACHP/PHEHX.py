@@ -5,7 +5,6 @@ from Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoili
 from math import pi,exp,log,sqrt,tan,cos,sin
 from scipy.optimize import brentq
 import numpy as np
-from CoolProp.Plots import Ph
 import pylab
 
 class PHEHXClass():

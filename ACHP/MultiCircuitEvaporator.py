@@ -3,9 +3,11 @@ from math import floor,ceil
 from CoolProp.CoolProp import PropsSI
 from FinCorrelations import FinInputs
 from Evaporator import EvaporatorClass
-import numpy as np, pylab
+import numpy as np
+import matplotlib.pyplot as plt
 import copy
-from CoolProp.Plots import Ph
+import CoolProp
+from CoolProp.Plots import PropertyPlot
 from scipy.optimize import newton
 from ACHPTools import Write2CSV
 
@@ -309,8 +311,8 @@ if __name__=='__main__':
     MCE=MultiCircuitEvaporatorClass(**kwargs)
     MCE.Update(**kwargs)
     MCE.Calculate()
-    print 'Q_standard_evap=' + str(Evap.Q) + ' W'
-    print 'Q_MCE'+str(MCE.Q)+' W'
+    print 'Q_standard_evap = ' + str(Evap.Q) + ' W'
+    print 'Q_MCE = '+str(MCE.Q)+' W'
     print 'Heat transfer reduction due to maldisribution'+str((MCE.Q-Evap.Q)*100./Evap.Q)+' %'
 
     print "demonstrating output list\n",'='*20,'\n'
@@ -324,14 +326,17 @@ if __name__=='__main__':
     print np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)])
 
     # plot maldistribution
-    h=np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
-    p=MCE.psat_r*(1+0*h)
-    Ph('R410A')
-    pylab.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
-    pylab.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
-    pylab.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
-    pylab.legend(loc= 'best', numpoints=1)
-    pylab.savefig('MultiCircuitEvaporator_py_example.pdf')
+    h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
+    p = MCE.psat_r*(1+0*h)
+    plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
+    plot.calc_isolines(CoolProp.iQ, num=2)
+    plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
+    plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
+    plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
+    plt.legend(loc= 'best', numpoints=1)
+    plot.savefig('MultiCircuitEvaporator_py_example.pdf')
+    #plot.figure.show()
+    plt.close(plot.figure)
     
     print  "outlet enthalpies", [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,MCE.Evaps[-1].Ref)
     print  "outlet superheats", [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))]
@@ -349,13 +354,14 @@ if __name__=='__main__':
     Write2CSV(MCE,open(csv_file,'a'),append=True) #does
 
     # plot maldistribution
-    h=np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
-    p=MCE.psat_r*(1+0*h)
-    pylab.figure()
-    Ph('R410A')
-    pylab.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
-    pylab.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
-    pylab.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
-    pylab.legend(loc= 'best', numpoints=1)
-    pylab.savefig('MultiCircuitEvaporator_py_example_reduced_flowrate.pdf')
-    pylab.show()
+    h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
+    p = MCE.psat_r*np.ones_like(h)
+    plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
+    plot.calc_isolines(CoolProp.iQ, num=2)
+    plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
+    plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
+    plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
+    plt.legend(loc= 'best', numpoints=1)
+    plot.savefig('MultiCircuitEvaporator_py_example_reduced_flowrate.pdf')
+    #plt.show()
+    plt.close(plot.figure)
