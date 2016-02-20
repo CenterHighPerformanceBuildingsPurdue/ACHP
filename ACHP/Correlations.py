@@ -216,7 +216,7 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
         # Weighting factor
         w=(Re_f-1000)/(2000-1000)
         # Linear interpolation between laminar and turbulent
-        f_f=w*16.0/Re_f+(1-w)*0.046/(Re_f**0.2)
+        f_f=(1-w)*16.0/Re_f+w*0.046/(Re_f**0.2)
 
     if x==0: #No gas
         f_g=0 #Just to be ok until next step
@@ -228,7 +228,7 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
         # Weighting factor
         w=(Re_g-1000)/(2000-1000)
         # Linear interpolation between laminar and turbulent
-        f_g=w*16.0/Re_g+(1-w)*0.046/(Re_g**0.2)
+        f_g=(1-w)*16.0/Re_g+w*0.046/(Re_g**0.2)
 
     # 3. Frictional pressure drop based on actual flow rate of each phase
     dpdz_f=2*f_f*G**2*(1-x)**2*v_f/D
