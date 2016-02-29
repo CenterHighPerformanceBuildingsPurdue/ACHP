@@ -75,7 +75,7 @@ Spacing between fins
     
     s = 1 / FPM - t
 
-Height of heat exchanger [m], assuming that fin extends 1/2 pt above/below last tube in bundle
+Height of heat exchanger [m], assuming that fin extends 1/2 :math:`P_t` above/below last tube in bundle
 
 .. math::
     :label: eqAC7
@@ -117,7 +117,7 @@ Total outer area of the tubes [m\ :sup:`2`\ ]
     
     A_{tube} = N_{tubes/bank} N_{bank} \pi D L_{tube}
 
-Wetted Area of a single fin [m\ :sup:`2`\ ], assuming that fin extends 1/2 pt in front/after last tube in bundle
+Wetted Area of a single fin [m\ :sup:`2`\ ], assuming that fin extends 1/2 :math:`P_t` in front/after last tube in bundle
 
 .. math:: 
     :label: eqAC13
