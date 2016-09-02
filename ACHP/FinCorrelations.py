@@ -197,12 +197,12 @@ def WavyLouveredFins(Inputs):
     A = Af + Ntubes_bank * Nbank * pi * D * (Ltube-Nfin*t)
 
     #Evaluate the mass flow rate based on inlet conditions
-    # To convert a parameter from per kg_{humid air} to per kg_{dry air}, divide by (1+W)
+    # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
     h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W)#*1000
-    rho_ha = 1 / v_da*(1+W) #[m^3/kg_ha]
-    rho_da = 1 / v_da #[m^3/kg_da]
+    rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
+    rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
 
@@ -293,12 +293,12 @@ def HerringboneFins(Inputs):
     k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W) #*10**3
     #Evaluate the mass flow rate based on inlet conditions
     Vdot_ha =     Inputs.Air.Vdot_ha
-    # To convert a parameter from per kg_{humid air} to per kg_{dry air}, divide by (1+W)
+    # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
     h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #*1000
-    rho_ha = 1 / v_da*(1+W) #[m^3/kg_ha]
-    rho_da = 1 / v_da #[m^3/kg_da]
+    rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
+    rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
     #Use a forward difference to calculate cp from cp=dh/dT
@@ -445,12 +445,12 @@ def PlainFins(Inputs):
     k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W) #*10**3
     #Evaluate the mass flow rate based on inlet conditions
     Vdot_ha =     Inputs.Air.Vdot_ha
-    # To convert a parameter from per kg_{humid air} to per kg_{dry air}, divide by (1+W)
+    # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
     h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #*1000
-    rho_ha = 1 / v_da*(1+W) #[m^3/kg_ha]
-    rho_da = 1 / v_da #[m^3/kg_da]
+    rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
+    rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
     #Use a forward difference to calculate cp from cp=dh/dT
