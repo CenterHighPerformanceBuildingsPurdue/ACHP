@@ -300,7 +300,7 @@ Once the finned surface efficiency (:math:`\eta_f`) is known, the overall surfac
 
     .. rubric:: References
 
-.. [#PerrotinClodic] Thomas Perrotin, Denis Clodic, 2006, "Fin Efficiency Calculation in Enhanced Fin-and-Tube Heat Exchangers in Dry Conditions", *International Congress of Refrigeration*
+.. [#PerrotinClodic] Thomas Perrotin, Denis Clodic, 2003, "Fin Efficiency Calculation in Enhanced Fin-and-Tube Heat Exchangers in Dry Conditions", *International Congress of Refrigeration*
 
 .. [#HongWebb] Kwang Taek Hong and Ralph L. Webb, 1996, "Calculation of Fin Efficiency for Wet and Dry Fins" *HVAC&R Research*,v. 2 `Link to File <http://www.tandfonline.com/doi/abs/10.1080/10789669.1996.10391331>`_
 
