@@ -75,12 +75,12 @@ Spacing between fins
     
     s = 1 / FPM - t
 
-Height of heat exchanger [m]
+Height of heat exchanger [m], assuming that fin extends 1/2 :math:`P_t` above/below last tube in bundle
 
 .. math::
     :label: eqAC7
 
-    H = P_t N_{tubes/bank}
+    H = P_t (N_{tubes/bank} + 1)
     
 :math:`A_{duct}` is the face area [m\ :sup:`2`\ ] equivalent to the duct cross-section
 
@@ -117,12 +117,12 @@ Total outer area of the tubes [m\ :sup:`2`\ ]
     
     A_{tube} = N_{tubes/bank} N_{bank} \pi D L_{tube}
 
-Wetted Area of a single fin [m\ :sup:`2`\ ]
+Wetted Area of a single fin [m\ :sup:`2`\ ], assuming that fin extends 1/2 :math:`P_t` in front/after last tube in bundle
 
 .. math:: 
     :label: eqAC13
     
-    A_{1fin} = 2 (H P_l N_{bank} \sec\theta  - N_{tubes/bank}N_{bank} \pi D^2/4)
+    A_{1fin} = 2 (H P_l (N_{bank}+1) \sec\theta  - N_{tubes/bank}N_{bank} \pi D^2/4)
 
 Total wetted area of the fins [m\ :sup:`2`\ ]
 
@@ -300,7 +300,7 @@ Once the finned surface efficiency (:math:`\eta_f`) is known, the overall surfac
 
     .. rubric:: References
 
-.. [#PerrotinClodic] Thomas Perrotin, Denis Clodic, 2006, "Fin Efficiency Calculation in Enhanced Fin-and-Tube Heat Exchangers in Dry Conditions", *International Congress of Refrigeration*
+.. [#PerrotinClodic] Thomas Perrotin, Denis Clodic, 2003, "Fin Efficiency Calculation in Enhanced Fin-and-Tube Heat Exchangers in Dry Conditions", *International Congress of Refrigeration*
 
 .. [#HongWebb] Kwang Taek Hong and Ralph L. Webb, 1996, "Calculation of Fin Efficiency for Wet and Dry Fins" *HVAC&R Research*,v. 2 `Link to File <http://www.tandfonline.com/doi/abs/10.1080/10789669.1996.10391331>`_
 
