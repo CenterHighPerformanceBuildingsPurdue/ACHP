@@ -45,9 +45,7 @@ class CompressorClass():
                 [2] The value itself
         """
         
-        return [
-            ('Ref','-',self.Ref), 
-            ('Backend','-',self.Backend),   
+        return [ 
             ('M1','-',self.M[0]),
             ('M2','-',self.M[1]),
             ('M3','-',self.M[2]),
