@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI #,T_hp, h_sp
+#from CoolProp.CoolProp import PropsSI #,T_hp, h_sp
 import CoolProp as CP
 
 class CompressorClass():
@@ -92,10 +92,10 @@ class CompressorClass():
         
         #Calculate suction superheat and dew temperatures
         AS.update(CP.PQ_INPUTS, self.pin_r, 1.0)
-        self.Tsat_s_K= AS.T() #PropsSI('T','P',self.pin_r,'Q',1.0,self.Ref)
+        self.Tsat_s_K=AS.T() #[K]
         
         AS.update(CP.PQ_INPUTS, self.pout_r, 1.0)
-        self.Tsat_d_K=AS.T() #PropsSI('T','P',self.pout_r,'Q',1.0,self.Ref)
+        self.Tsat_d_K=AS.T() #[K]
         self.DT_sh_K=self.Tin_r-self.Tsat_s_K
         
         #Convert saturation temperatures in K to F
@@ -119,22 +119,22 @@ class CompressorClass():
         T1_map = self.Tsat_s_K + 20 * 5 / 9
     
         AS.update(CP.PT_INPUTS, P1, T1_map)
-        v_map = 1 / AS.rhomass() #v_map = 1 / PropsSI('D', 'T', self.Tsat_s_K + 20.0/9.0*5.0, 'P', P1, self.Ref)
-        s1_map = AS.smass() #PropsSI('S', 'T', T1_map, 'P', P1, self.Ref)
-        h1_map = AS.hmass() #PropsSI('H', 'T', T1_map, 'P', P1, self.Ref)
+        v_map = 1 / AS.rhomass() #[m^3/kg]
+        s1_map = AS.smass() #[J/kg-K]
+        h1_map = AS.hmass() #[J/kg]
         
         AS.update(CP.PT_INPUTS, P1, T1_actual)
-        s1_actual = AS.smass() #PropsSI('S', 'T', T1_actual, 'P', P1, self.Ref)
-        h1_actual = AS.hmass() #PropsSI('H', 'T', T1_actual, 'P', P1, self.Ref)
-        v_actual = 1 / AS.rhomass() #v_actual = 1 / PropsSI('D', 'T', self.Tsat_s_K + self.DT_sh_K, 'P', P1, self.Ref)
+        s1_actual = AS.smass() #[J/kg-K]
+        h1_actual = AS.hmass() #[J/kg]
+        v_actual = 1 / AS.rhomass() #[m^3/kg]
         F = 0.75
         mdot = (1 + F * (v_map / v_actual - 1)) * mdot_map
         
         AS.update(CP.PSmass_INPUTS, P2, s1_map)
-        h2s_map = AS.hmass() #PropsSI('H','P',P2,'S',s1_map,self.Ref)        
+        h2s_map = AS.hmass() #[J/kg]        
         
         AS.update(CP.PSmass_INPUTS, P2, s1_actual)
-        h2s_actual = AS.hmass() #PropsSI('H','P',P2,'S',s1_actual,self.Ref)
+        h2s_actual = AS.hmass() #[J/kg]
     
         #Shaft power based on 20F superheat calculation from fit overall isentropic efficiency
         power = power_map * (mdot / mdot_map) * (h2s_actual - h1_actual) / (h2s_map - h1_map)
@@ -143,30 +143,31 @@ class CompressorClass():
         self.eta_oi=mdot*(h2s_actual-h1_actual)/(power)
         
         AS.update(CP.HmassP_INPUTS, h2, P2)
-        self.Tout_r = AS.T() #PropsSI('T','H',h2,'P',P2,self.Ref)
-        self.sout_r = AS.smass() #PropsSI('S','T',self.Tout_r,'P',P2,self.Ref) #* 1000        
+        self.Tout_r = AS.T() #[K]
+        self.sout_r = AS.smass() #[J/kg-K]        
         
-        self.sin_r = s1_actual #PropsSI('S','T',self.Tin_r,'P',P1,self.Ref) #* 1000
+        self.sin_r = s1_actual
         self.hout_r = h2
         self.hin_r = h1_actual
         self.mdot_r=mdot
         self.W=power
         self.CycleEnergyIn=power*(1-self.fp)
-        self.Vdot_pumped= mdot*v_actual #mdot/PropsSI('D','T',self.Tin_r,'P',P1,self.Ref)
+        self.Vdot_pumped= mdot*v_actual
         self.Q_amb=-self.fp*power
         
 if __name__=='__main__':        
+    
     for i in range(1):
         kwds={
               'M':[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02,7.90E-05,-5.73E-05,1.79E-04,-8.08E-05],
               'P':[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616,-0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03],
               'Ref':'R134a',
               'Tin_r':280,
-              'pin_r':PropsSI('P','T',279,'Q',1.0,'R134a'),
-              'pout_r':PropsSI('P','T',315,'Q',1.0,'R134a'),
+              'pin_r':360109.31, #PropsSI('P','T',279,'Q',1.0,'R134a')
+              'pout_r':1067977.97, #PropsSI('P','T',315,'Q',1.0,'R134a')
               'fp':0.15, #Fraction of electrical power lost as heat to ambient
               'Vdot_ratio': 1.0, #Displacement Scale factor
-              'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS',and 'BICUBIC&HEOS'
+              'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
               }
         Comp=CompressorClass(**kwds)
         Comp.Calculate()
