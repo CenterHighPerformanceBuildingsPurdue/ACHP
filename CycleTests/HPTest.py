@@ -6,7 +6,8 @@ Created on Mar 23, 2015
 
 '''This code is for Direct Expansion in Heating Mode'''
 
-from Cycle import DXCycleClass,F2K 
+from Cycle import DXCycleClass
+from convert_units import F2K 
 
 #Instantiate the class
 Cycle=DXCycleClass()
@@ -20,6 +21,7 @@ Cycle.DT_sc_target = 7.0
 #Cycle.Charge_target = 3.3 #uncomment for use with imposed charge
 Cycle.Mode='HP'
 Cycle.Ref='R410A'
+Cycle.Backend='TTSE&HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
 
 #--------------------------------------
 #       Compressor parameters
@@ -32,6 +34,7 @@ params={
         'M':M,
         'P':P,
         'Ref':Cycle.Ref,        #refrigerant
+        'Backend':Cycle.Backend, #Backend for refrigerant properties calculation
         'fp':0.0, #Fraction of electrical power lost as heat to ambient #shell heat loss
         'Vdot_ratio': 1.0, #Displacement Scale factor #up- or downsize compressor
         'Verbosity': 0, # How verbose should the debugging statements be [0 to 10] 
@@ -67,6 +70,7 @@ Cycle.Condenser.Fins.Air.FanPower=438
 
 Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Condenser.Ref=Cycle.Ref
+Cycle.Condenser.Backend=Cycle.Backend
 Cycle.Condenser.Verbosity=0
 
 #--------------------------------------
@@ -96,6 +100,7 @@ Cycle.Evaporator.Fins.Air.FanPower=160
 
 Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Evaporator.Ref=Cycle.Ref
+Cycle.Evaporator.Backend=Cycle.Backend
 Cycle.Evaporator.Verbosity=0
 Cycle.Evaporator.DT_sh=5
 
@@ -109,6 +114,7 @@ params={
         'k_insul':0.036,
         'T_air':297,
         'Ref': Cycle.Ref,
+        'Backend': Cycle.Backend,
         'h_air':6,
         }
 

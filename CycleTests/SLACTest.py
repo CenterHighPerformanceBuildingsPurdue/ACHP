@@ -18,7 +18,9 @@ Cycle.ImposedVariable = 'Subcooling' #or this could be 'Charge' for imposed char
 Cycle.DT_sc_target = 7.0
 #Cycle.Charge_target = 2.4  #Needed if charge is imposed, not otherwise
 Cycle.Ref='R410A'
-Cycle.SecLoopFluid = 'INCOMP::MEG-20%'                                          #'EG-20%' is updated to 'INCOMP::MEG-20%'
+Cycle.SecLoopFluid = 'MEG'
+Cycle.MassFrac_SLF = 0.21 #Mass fraction of incompressible SecLoopFluid [i.e MEG-20%]
+Cycle.Backend_SLF = 'INCOMP' #backend of SecLoopFluid
 Cycle.IHXType = 'PHE'# or could be 'Coaxial'
 Cycle.Mode='AC'
 
@@ -102,6 +104,8 @@ Cycle.CoolingCoil.Fins.Air.FanPower=438
 
 params={
         'Ref_g': Cycle.SecLoopFluid,
+        'Backend_g': Cycle.Backend_SLF,
+        'MassFrac_g': Cycle.MassFrac_SLF,
         'pin_g': 200000,                                                        #pin_g in Pa
         'Verbosity':0,
         'mdot_g':0.38,
@@ -117,6 +121,8 @@ params={
         'pin_g':300000,                                                         #pin_g in Pa
         'Ref_r':Cycle.Ref,
         'Ref_g':Cycle.SecLoopFluid,
+        'Backend_g':Cycle.Backend_SLF,
+        'MassFrac_g': Cycle.MassFrac_SLF,
         'Verbosity':0
         }
 Cycle.CoaxialIHX.Update(**params)
@@ -124,6 +130,8 @@ Cycle.CoaxialIHX.Update(**params)
 params={
         'pin_h':300000,                                                         #pin_h in Pa
         'Ref_h':Cycle.SecLoopFluid,
+        'Backend_h':Cycle.Backend_SLF,
+        'MassFrac_h': Cycle.MassFrac_SLF,
         'Ref_c':Cycle.Ref,
     
         #Geometric parameters
@@ -146,6 +154,8 @@ params={
         'mdot_g':0.38, #Flow Rate kg/s
         'pin_g':300000,                                                         #pin_g in Pa
         'Ref_g':Cycle.SecLoopFluid,
+        'Backend_g':Cycle.Backend_SLF,
+        'MassFrac_g': Cycle.MassFrac_SLF,
         'Verbosity':0,
         }
 Cycle.Pump.Update(**params)
@@ -157,6 +167,8 @@ params={
         'k_insul':0.036,
         'T_air':297,
         'Ref': Cycle.SecLoopFluid,
+        'Backend':Cycle.Backend_SLF,
+        'MassFrac': Cycle.MassFrac_SLF,
         'pin': 300000,                                                          #pin in Pa
         'h_air':0.0000000001,
         }
