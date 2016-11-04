@@ -1,11 +1,12 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi
-from CoolProp.CoolProp import PropsSI
+#from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube
 from FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
 from matplotlib import docstring
-from BaseDoc import BaseDocClass
+#from BaseDoc import BaseDocClass
 from DryWetSegment import DWSVals, DryWetSegment
+import CoolProp as CP
 
 class CoolingCoilClass():
     """
@@ -16,12 +17,12 @@ class CoolingCoilClass():
         """Load the parameters passed in using the dictionary"""
         self.__dict__.update(kwargs)
     
-    @docstring.copy_dedent(BaseDocClass.Update) #Use docs from Base Class
+    #@docstring.copy_dedent(BaseDocClass.Update) #Use docs from Base Class
     def Update(self,**kwargs):
         """Update the parameters passed in using the dictionary"""
         self.__dict__.update(kwargs)
     
-    @docstring.copy_dedent(BaseDocClass.OutputList) #Use docs from Base Class
+    #@docstring.copy_dedent(BaseDocClass.OutputList) #Use docs from Base Class
     def OutputList(self):
         return [
             ('Volumetric flow rate','m^3/s',self.Fins.Air.Vdot_ha),
@@ -58,6 +59,15 @@ class CoolingCoilClass():
             ('Sensible Heat Ratio','-',self.SHR)]
      
     def Initialize(self):
+        #AbstractState
+        if hasattr(self,'Backend_g'): #check if backend is given
+            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
+            if hasattr(self,'MassFrac_g'):
+                AS_g.set_mass_fractions([self.MassFrac_g])
+        else: #otherwise, use the defualt backend
+            AS_g = CP.AbstractState('HEOS', self.Ref_g)
+        self.AS_g = AS_g
+        
         self.Update()
         
         # Retrieve some parameters from nested structures 
@@ -92,9 +102,10 @@ class CoolingCoilClass():
         This function is now simply a wrapper around the DryWetSegment() 
         function in order to decrease the amount of code replication
         """
-        
+        #Initialize
         self.Initialize()
-    
+        AS_g = self.AS_g
+        
         DWS=DWSVals() #DryWetSegment structure
     
         # Store temporary values to be passed to DryWetSegment
@@ -111,14 +122,15 @@ class CoolingCoilClass():
     
         DWS.Tin_r=self.Tin_g
         DWS.A_r=self.A_g_wetted
-        DWS.cp_r=PropsSI('C','T',(self.Tin_g+DWS.Tin_a)/2.0, 'P', self.pin_g, self.Ref_g)#*1000 #Use a guess value of 6K superheat to calculate cp 
+        AS_g.update(CP.PT_INPUTS, self.pin_g, (self.Tin_g+DWS.Tin_a)/2.0)
+        DWS.cp_r=AS_g.cpmass() #[J/kg-K]
         DWS.pin_r=self.pin_g
         DWS.mdot_r=self.mdot_g
         DWS.IsTwoPhase=False
         
         #Use a guess value of 6K superheat to calculate the properties
         self.f_g, self.h_g, self.Re_g=f_h_1phase_Tube(self.mdot_g / self.Ncircuits, self.ID, 
-            (self.Tin_g+DWS.Tin_a)/2.0, self.pin_g, self.Ref_g, "Single");
+            (self.Tin_g+DWS.Tin_a)/2.0, self.pin_g, self.AS_g, "Single");
         
         # Average Refrigerant heat transfer coefficient
         DWS.h_r=self.h_g
@@ -131,7 +143,8 @@ class CoolingCoilClass():
     
         #Pressure drop calculations for glycol (water)
         Dh_g=self.ID
-        v_g=1/PropsSI('D','T',self.Tin_g, 'P',self.pin_g,self.Ref_g)
+        AS_g.update(CP.PT_INPUTS, self.pin_g, self.Tin_g)
+        v_g=1/AS_g.rhomass() #[m^3/kg]
         #Pressure gradient using Darcy friction factor
         dp_dz_g=-self.f_g*v_g*self.G_g**2/(2*Dh_g)
         DP_g=dp_dz_g*self.Lcircuit
@@ -175,6 +188,7 @@ def TestCase():
     CC.Fins = FinsTubes
     CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     CC.Ref_g = 'Water'
+    CC.Backend_g = 'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     CC.mdot_g = 0.15
     CC.Tin_g = 278
     CC.pin_g = 300000                    #Refrigerant vapor pressure in Pa
