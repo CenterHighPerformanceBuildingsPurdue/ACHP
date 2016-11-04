@@ -36,7 +36,8 @@ params={'Ref': 'R410A',
         'psat_r': PropsSI('P','T',323.15,'Q',1.0,'R410A'),
         'Fins': Fins,
         'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
-        'Verbosity': 0
+        'Verbosity': 0,
+        'Backend':'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 
 Cond=CondenserClass(**params)
