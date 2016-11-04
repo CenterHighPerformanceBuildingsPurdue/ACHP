@@ -85,6 +85,7 @@ class CompressorClass():
             AS = CP.AbstractState(self.Backend, self.Ref)
         else: #otherwise, use the defualt backend
             AS = CP.AbstractState('HEOS', self.Ref)
+        self.AS = AS
         
         #Local copies of coefficients
         P=self.P
