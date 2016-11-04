@@ -10,6 +10,7 @@ import CoolProp
 from CoolProp.Plots import PropertyPlot
 from scipy.optimize import newton
 from ACHPTools import Write2CSV
+import CoolProp as CP
 
 #MultiCircuitEvaporator inherits things from the Evaporator base class
 class MultiCircuitEvaporatorClass(EvaporatorClass):
@@ -96,6 +97,12 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         return Output_List_tot
 
     def Calculate(self):
+        #AbstractState
+        if hasattr(self,'Backend'): #check if backend is given
+            AS = CP.AbstractState(self.Backend, self.Ref)
+        else: #otherwise, use the defualt backend
+            AS = CP.AbstractState('HEOS', self.Ref)
+        
         #Check that the length of lists of mdot_r and FinsTubes.Air.Vdot_ha 
         #match the number of circuits or are all equal to 1 (standard evap)
         Ncircuits=int(self.Fins.Tubes.Ncircuits)
@@ -146,14 +153,17 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
             elif abs(np.sum(self.mdot_v_coeffs)-1)>=10*np.finfo(float).eps:
                 raise AttributeError("mdot_v_coeffs must sum to 1.0.  Sum is: "+str(np.sum(self.mdot_v_coeffs)))
             else:
-                hsatL=PropsSI('H','P',self.psat_r,'Q',0.0,self.Ref)
-                hsatV=PropsSI('H','P',self.psat_r,'Q',1.0,self.Ref)
+                AS.update(CP.PQ_INPUTS, self.psat_r, 0.0) 
+                hsatL=AS.hmass() #[J/kg]
+                AS.update(CP.PQ_INPUTS, self.psat_r, 1.0)
+                hsatV=AS.hmass() #[J/kg]
                 x_inlet=(self.hin_r-hsatL)/(hsatV-hsatL)
                 mdot_v=x_inlet*sum(self.mdot_r)
                 for i in range(Ncircuits):
                     mdot_v_i=self.mdot_v_coeffs[i]*mdot_v
                     x_i=mdot_v_i/self.Evaps[i].mdot_r
-                    self.Evaps[i].hin_r=PropsSI('H','P',self.psat_r,'Q',x_i,self.Ref)
+                    AS.update(CP.PQ_INPUTS, self.psat_r, x_i)
+                    self.Evaps[i].hin_r=AS.hmass() #[J/kg]
                  
         #For backwards compatibility, if the coefficients are provided in the FinInputs class, copy them to the base class
         if hasattr(self.Fins.Air,'Vdot_ha_coeffs'):
@@ -230,13 +240,17 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         for i in range(Ncircuits): self.Tout_a+=self.Evaps[i].Tout_a*self.Evaps[i].Fins.Air.Vdot_ha
         self.Tout_a=(self.Tout_a/sum(self.Fins.Air.Vdot_ha))
         Pout_r=self.psat_r+self.DP_r/1.0
-        hsatV_out=PropsSI('H','P',Pout_r,'Q',1.0,self.Ref)
-        hsatL_out=PropsSI('H','P',Pout_r,'Q',0.0,self.Ref)
+        AS.update(CP.PQ_INPUTS, Pout_r, 1.0)
+        hsatV_out=AS.hmass() #[J/kg]
+        AS.update(CP.PQ_INPUTS, Pout_r, 0.0)
+        hsatL_out=AS.hmass() #[J/kg]
         if self.hout_r>hsatV_out:
-            self.Tout_r= PropsSI('T','H',self.hout_r,'P',Pout_r,self.Ref) #superheated temperature at outlet
+            AS.update(CP.HmassP_INPUTS, self.hout_r, Pout_r)
+            self.Tout_r= AS.T() #superheated temperature at outlet [K]
         else:
             xout_r=((self.hout_r-hsatL_out)/(hsatV_out-hsatL_out))
-            self.Tout_r=PropsSI('T','P',Pout_r,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
+            AS.update(CP.PQ_INPUTS, Pout_r, xout_r)
+            self.Tout_r=AS.T() #saturated temperature at outlet quality [K]
         self.Capacity=np.sum([self.Evaps[i].Q for i in range(Ncircuits)])-self.Fins.Air.FanPower
         self.SHR=np.mean([self.Evaps[i].SHR for i in range(Ncircuits)])
         self.UA_a=np.sum([self.Evaps[i].UA_a for i in range(Ncircuits)])
@@ -285,7 +299,8 @@ if __name__=='__main__':
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins', #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,'R410A'),'Q',0.15,'R410A'),
-            'Verbosity': 0
+            'Verbosity': 0,
+            'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     }
     
     Evap=EvaporatorClass(**kwargs)
@@ -294,6 +309,7 @@ if __name__=='__main__':
     
     Tdew=282.0
     kwargs={'Ref': 'R410A',
+            'Backend':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             'mdot_r':  0.0708,
             'mdot_r_coeffs':[0.1,0.1,0.3,0.31,0.19],   #Mass flow distribution at distributor
             'mdot_v_coeffs':[0.2,0.2,0.2,0.2,0.2],   #Quality distribution at distributor
@@ -344,6 +360,7 @@ if __name__=='__main__':
     print "\nrerunning with smaller mass flowrate"
 
     kwargs={'Ref': 'R410A',
+            'Backend':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             'mdot_r':  0.05,
             'TestDescription':'shows application of MCE',
             'TestDetails':'Reduced mass flowrate'
