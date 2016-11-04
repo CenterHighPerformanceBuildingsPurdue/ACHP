@@ -1,9 +1,11 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
+#from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
 import numpy as np
+import CoolProp as CP
+import CoolProp
 
 try:
     import psyco
@@ -14,70 +16,75 @@ except ImportError:
 #Machine precision
 machine_eps=np.finfo(np.float).eps
 
-def Phase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV):
+def Phase_ph(AS,p,h,Tbubble,Tdew,rhosatL,rhosatV):
     """
     Convenience function to return just the Phase without temperature or density
+    AS : AbstractState with the refrigerant name and backend
     """
-    (T,rho,Phase)=TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL,rhosatV)
+    (T,rho,Phase)=TrhoPhase_ph(AS,p,h,Tbubble,Tdew,rhosatL,rhosatV)
     return Phase
 
-def TrhoPhase_ph(Ref,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
+def TrhoPhase_ph(AS,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     """
     Convenience function to find temperature, density, and phase of fluid as a function of pressure and enthalpy
+    AS : AbstractState with the refrigerant name and backend
     """
     #UseSaturationLUT(1)
     #h/=1000  #convert J/kg to kJ/kg since CoolProp uses kJ/kg >>> modification: CoolProp 5.x uses J/kg
     
-    if 'INCOMP' in Ref: #if IsFluidType(Ref,'Brine')==1:
+    if 'IncompressibleBackend' in AS.backend_name(): #if IsFluidType(Ref,'Brine')==1:
         #It is subcooled
-        # Use a guess of 10 degrees below max temp
-        #Tguess=PropsSI('M','T',0,'P',0, Ref)-10
-        T=PropsSI('T','H',h,'P',p,Ref)  #T_hp(Ref,h,p,Tguess)
-        rho=PropsSI('D','T',T,'P',p,Ref)
+        AS.update(CP.HmassP_INPUTS,h,p)
+        T=AS.T() #[K]
+        rho=AS.rhomass() #[kg/m^3]
         return T,rho,'Subcooled'
-        
+  
     #Check if it is supercritical
-    if p>PropsSI(Ref,'pcrit'):                                                  #Updated from PropsSI('E','T',0,'P',0, Ref):
+    pcrit = AS.p_critical() #[pa]
+    if p>pcrit:
         return None,None,'Supercritical'
-    #It is not supercritical
-    else:
+    else: #It is not supercritical
         if rhosatL==None:
-            rhosatL=PropsSI('D','T',Tbubble,'Q',0.0,Ref)
-            rhosatV=PropsSI('D','T',Tdew,'Q',1.0,Ref)
+            AS.update(CP.QT_INPUTS,0.0,Tbubble)
+            rhosatL=AS.rhomass() #[kg/m^3]
+            AS.update(CP.QT_INPUTS,1.0,Tdew)
+            rhosatV=AS.rhomass() #[kg/m^3]
         vsatL=1/rhosatL
         vsatV=1/rhosatV
-        hsatL=PropsSI('H','T',Tbubble,'D',rhosatL,Ref)
-        hsatV=PropsSI('H','T',Tdew,'D',rhosatV,Ref)
+        AS.update(CP.DmassT_INPUTS,rhosatL,Tbubble)
+        hsatL=AS.hmass() #[J/kg]
+        AS.update(CP.DmassT_INPUTS,rhosatV,Tdew)
+        hsatV=AS.hmass() #[J/kg]
         
-        if h>hsatV:
-            #It's superheated
-            cp=PropsSI('C','T',Tdew,'D',rhosatV,Ref)
-            #Tguess=Tdew+(h-hsatV)/cp
-            T=PropsSI('T','H',h,'P',p,Ref)   #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','H',h,'P',p,Ref)
+        if h>hsatV:#It's superheated
+            AS.update(CP.HmassP_INPUTS,h,p)
+            cp=AS.cpmass() #[J/kg-]
+            T=AS.T() #[K]
+            rho=AS.rhomass() #[kg/m^3]
             return T,rho,'Superheated'
-        elif h<hsatL:
-            # It's subcooled
-            cp=PropsSI('C','T',Tbubble,'D',rhosatL,Ref)
-            #Tguess=Tbubble-(hsatL-h)/cp
-            T=PropsSI('T','H',h,'P',p, Ref)  #T_hp(Ref,h,p,Tguess)
-            rho=PropsSI('D','H',h,'P',p,Ref)
+        elif h<hsatL:# It's subcooled
+            AS.update(CP.HmassP_INPUTS,h,p)
+            cp=AS.cpmass() #[J/kg-]
+            T=AS.T() #[K]
+            rho=AS.rhomass() #[kg/m^3]
             return T,rho,'Subcooled'
         else:
             #It's two-phase
-            x=(h-hsatL)/(hsatV-hsatL)
-            v=x*vsatV+(1-x)*vsatL
-            T=x*Tdew+(1-x)*Tbubble
-            rho=1/v
+            x=(h-hsatL)/(hsatV-hsatL) #[-]
+            v=x*vsatV+(1-x)*vsatL #[m^3/kg]
+            T=x*Tdew+(1-x)*Tbubble #[K]
+            rho=1/v #[kg/m^3]
             return T,rho,'TwoPhase'
 
-def TwoPhaseDensity(Ref,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
+def TwoPhaseDensity(AS,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
     """
     function to obtain the average density in the two-phase region
+    AS : AbstractState with the refrigerant name and backend
     """
-    
-    rhog=PropsSI('D', 'T', Tdew, 'Q', 1, Ref)
-    rhof=PropsSI('D', 'T', Tbubble, 'Q', 0, Ref)
+    AS.update(CP.QT_INPUTS,1.0,Tdew)
+    rhog=AS.rhomass() #[kg/m^3]
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)
+    rhof=AS.rhomass() #[kg/m^3]
 
     if slipModel=='Zivi':
         S=pow(rhof/rhog,0.3333)
@@ -101,7 +108,7 @@ def TwoPhaseDensity(Ref,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
             alpha_average=-(C*(log( ((xmax-1.0)*C-xmax)/((xmin-1.0)*C-xmin) )+xmax-xmin)-xmax+xmin)/(C**2-2*C+1)/(xmax-xmin)
     return alpha_average*rhog + (1-alpha_average)*rhof
 
-def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,slipModel='Zivi'):
+def AccelPressureDrop(x_min,x_max,AS,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,slipModel='Zivi'):
     """
     Accelerational pressure drop
     
@@ -117,8 +124,10 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
         subst(num1/alpha+num2/(1-alpha),x,0);
     """
     if rhosatL==None or rhosatV==None:
-        rhosatL=PropsSI('D','T',Tbubble,'Q',0.0,Ref)
-        rhosatV=PropsSI('D','T',Tdew,'Q',1.0,Ref)
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        rhosatV=AS.rhomass() #[kg/m^3]
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        rhosatL=AS.rhomass() #[kg/m^3]
         
     def f(x,rhoL,rhoV):
         if abs(x)<1e-12:
@@ -137,7 +146,7 @@ def AccelPressureDrop(x_min,x_max,Ref,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,s
     
     return G**2*(f(x_min,rhosatL,rhosatV)-f(x_max,rhosatL,rhosatV))
         
-def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=None):
+def LMPressureGradientAvg(x_min,x_max,AS,G,D,Tbubble,Tdew,C=None,satTransport=None):
     """
     Returns the average pressure gradient between qualities of x_min and x_max.
     
@@ -146,7 +155,7 @@ def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=N
     Required parameters:
     * x_min : The minimum quality for the range [-]
     * x_max : The maximum quality for the range [-]
-    * Ref : String with the refrigerant name
+    * AS : AbstractState with the refrigerant name and backend
     * G : Mass flux [kg/m^2/s]
     * D : Diameter of tube [m]
     * Tbubble : Bubblepoint temperature of refrigerant [K]
@@ -157,7 +166,7 @@ def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=N
     * satTransport : A dictionary with the keys 'mu_f','mu_g,'v_f','v_g' for the saturation properties.  So they can be calculated once and passed in for a slight improvement in efficiency 
     """
     def LMFunc(x):
-        dpdz,alpha=LockhartMartinelli(Ref,G,D,x,Tbubble,Tdew,C,satTransport)
+        dpdz,alpha=LockhartMartinelli(AS,G,D,x,Tbubble,Tdew,C,satTransport)
         return dpdz
     
     ## Use Simpson's Rule to calculate the average pressure gradient
@@ -168,10 +177,12 @@ def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=N
     else:
         #Calculate the tranport properties once
         satTransport={}
-        satTransport['v_f']=1/PropsSI('D','T',Tbubble,'Q',0.0,Ref)
-        satTransport['v_g']=1/PropsSI('D','T',Tdew,'Q',1.0,Ref)
-        satTransport['mu_f']=PropsSI('V','T',Tbubble,'Q',0.0,Ref)
-        satTransport['mu_g']=PropsSI('V','T',Tdew,'Q',1.0,Ref)
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        satTransport['v_f']=1/AS.rhomass() #[m^3/kg]
+        satTransport['mu_f']=AS.viscosity() #[Pa-s]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        satTransport['v_g']=1/AS.rhomass() #[m^3/kg]
+        satTransport['mu_g']=AS.viscosity() #[Pa-s]
         
         xx=np.linspace(x_min,x_max,30)
         DP=np.zeros_like(xx)
@@ -179,7 +190,7 @@ def LMPressureGradientAvg(x_min,x_max,Ref,G,D,Tbubble,Tdew,C=None,satTransport=N
             DP[i]=LMFunc(xx[i])
         return -simps(DP,xx)/(x_max-x_min)
 
-def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
+def LockhartMartinelli(AS, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
     # Following the method laid out in ME506 notes on 
     # Separated Flow pressure drop calculations
 
@@ -187,13 +198,14 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
     #With the conversion, >20x speedup in the LockhartMartinelli function, not clear why
     x=float(x)
     
-    #UseSaturationLUT(1)
     if satTransport==None:
         # Calculate Necessary saturation properties
-        v_f=1/PropsSI('D','T',Tbubble,'Q',0.0,Ref)
-        v_g=1/PropsSI('D','T',Tdew,'Q',1.0,Ref)
-        mu_f=PropsSI('V','T',Tbubble,'Q',0.0,Ref)
-        mu_g=PropsSI('V','T',Tdew,'Q',1.0,Ref)
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        v_f=1/AS.rhomass() #[m^3/kg]
+        mu_f=AS.viscosity() #[Pa-s]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        v_g=1/AS.rhomass() #[m^3/kg]
+        mu_g=AS.viscosity() #[Pa-s]
     else:
         #Pull out of the dictionary
         v_f=satTransport['v_f']
@@ -277,14 +289,14 @@ def LockhartMartinelli(Ref, G, D, x, Tbubble,Tdew,C=None,satTransport=None):
     
     return dpdz,alpha
 
-def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
+def ShahEvaporation_Average(x_min,x_max,AS,G,D,p,q_flux,Tbubble,Tdew):
     """
     Returns the average heat transfer coefficient between qualities of x_min and x_max.
     
     Required parameters:
     * x_min : The minimum quality for the range [-]
     * x_max : The maximum quality for the range [-]
-    * Ref : String with the refrigerant name
+    * AS : AbstractState with the refrigerant name and backend
     * G : Mass flux [kg/m^2/s]
     * D : Diameter of tube [m]
     * p : Pressure [Pa]
@@ -295,17 +307,21 @@ def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
     # ********************************
     #        Necessary Properties
     # ********************************
-    v_g = 1 / PropsSI('D', 'T', Tdew, 'Q', 1, Ref)# [m^3/kg]
-    v_f = 1 / PropsSI('D', 'T', Tbubble, 'Q', 0, Ref)# [m^3/kg]
-    rho_f = 1 / v_f# [kg/m^3]
-    rho_g = 1 / v_g# [kg/m^3]
-    mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0, Ref)# [kg/m-s] 
-    mu_g = PropsSI('V', 'T', Tdew, 'Q', 1, Ref)# [kg/m-s] 
-    h_fg = (PropsSI('H', 'T', Tdew, 'Q', 1, Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0, Ref))#*1000 #[J/kg]
-    cp_f = PropsSI('C', 'T', Tbubble, 'Q', 0, Ref)#*1000 # [J/kg-K]
-    cp_g = PropsSI('C', 'T', Tdew, 'Q', 1, Ref)#*1000 # [J/kg-K]
-    k_f = PropsSI('L', 'T', Tbubble, 'Q', 0, Ref)#*1000 # [W/m-K]
-    k_g = PropsSI('L', 'T', Tdew, 'Q', 1, Ref)#*1000 # [W/m-K]
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)
+    rho_f = AS.rhomass() #[kg/m^3]
+    mu_f = AS.viscosity() #[Pa-s OR kg/m-s]
+    cp_f = AS.cpmass() #[J/kg-K]
+    k_f = AS.conductivity() #[W/m-K]
+    h_l = AS.hmass() #[J/kg]
+    
+    AS.update(CP.QT_INPUTS,1.0,Tdew)
+    rho_g = AS.rhomass() #[kg/m^3]
+    mu_g = AS.viscosity() #[Pa-s OR kg/m-s] 
+    cp_g = AS.cpmass() #[J/kg-K]
+    k_g = AS.conductivity() #[W/m-K]
+    h_v = AS.hmass() #[J/kg]
+
+    h_fg = h_v - h_l #[J/kg]
     Pr_f = cp_f * mu_f / k_f #[-]
     Pr_g = cp_g * mu_g / k_g #[-]
 
@@ -362,7 +378,7 @@ def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
         return psi * h_L #[W/m^2-K]
     
     #Calculate h over the range of x
-    x=np.linspace(x_min,x_max,10)
+    x=np.linspace(x_min,x_max,30)
     h=np.zeros_like(x)
     for i in range(len(x)):
         h[i]=ShahEvaporation(x[i])
@@ -375,12 +391,15 @@ def ShahEvaporation_Average(x_min,x_max,Ref,G,D,p,q_flux,Tbubble,Tdew):
         #Use Simpson's rule to carry out numerical integration to get average
         return simps(h,x)/(x_max-x_min)
 
-def LongoCondensation(x_avg,G,dh,Ref,TsatL,TsatV):
-    rho_L = PropsSI('D', 'T', TsatL, 'Q', 0, Ref) #kg/m^3
-    rho_V = PropsSI('D', 'T', TsatV, 'Q', 1, Ref) #kg/m^3
-    mu_L = PropsSI('V', 'T', TsatL, 'Q', 0, Ref) #kg/m-s 
-    cp_L = PropsSI('C', 'T', TsatL, 'Q', 0, Ref)#*1000 #J/kg-K
-    k_L = PropsSI('L', 'T', TsatV, 'Q', 0, Ref)#*1000 #W/m-K
+def LongoCondensation(x_avg,G,dh,AS,TsatL,TsatV):
+    
+    AS.update(CP.QT_INPUTS,1.0,TsatV)
+    rho_V = AS.rhomass() #[kg/m^3]
+    AS.update(CP.QT_INPUTS,0.0,TsatL)
+    rho_L = AS.rhomass() #[kg/m^3]
+    mu_L = AS.viscosity() #[Pa-s OR kg/m-s]
+    cp_L = AS.cpmass() #[J/kg-K]
+    k_L = AS.conductivity() #[W/m-K]
     Pr_L = cp_L * mu_L / k_L #[-]
     
     Re_eq=G*((1-x_avg)+x_avg*sqrt(rho_L/rho_V))*dh/mu_L
@@ -392,54 +411,59 @@ def LongoCondensation(x_avg,G,dh,Ref,TsatL,TsatV):
     h=Nu*k_L/dh
     return h
     
-def ShahCondensation_Average(x_min,x_max,Ref,G,D,p,TsatL,TsatV):
+def ShahCondensation_Average(x_min,x_max,AS,G,D,p,TsatL,TsatV):
     # ********************************
     #        Necessary Properties
     #    Calculated outside the quadrature integration for speed
     # ********************************
-    mu_f = PropsSI('V', 'T', TsatL, 'Q', 0, Ref) #kg/m-s 
-    cp_f = PropsSI('C', 'T', TsatL, 'Q', 0, Ref)#*1000 #J/kg-K
-    k_f = PropsSI('L', 'T', TsatV, 'Q', 0, Ref)#*1000 #W/m-K
+    AS.update(CP.QT_INPUTS,0.0,TsatL)
+    mu_f = AS.viscosity() #[Pa-s OR kg/m-s] 
+    cp_f = AS.cpmass() #[J/kg-K]
+    k_f = AS.conductivity() #[W/m-K]
     Pr_f = cp_f * mu_f / k_f #[-]
-    Pstar = p / PropsSI(Ref,'pcrit')
+    pcrit = AS.p_critical() #[Pa]
+    Pstar = p / pcrit
     h_L = 0.023 * (G*D/mu_f)**(0.8) * Pr_f**(0.4) * k_f / D #[W/m^2-K]
-    def ShahCondensation(x,Ref,G,D,p):
+    def ShahCondensation(x,AS,G,D,p):
         return h_L * ((1 - x)**(0.8) + (3.8 * x**(0.76) * (1 - x)**(0.04)) / (Pstar**(0.38)) )
         
     if not x_min==x_max:
         #A proper range is given
-        return quad(ShahCondensation,x_min,x_max,args=(Ref,G,D,p))[0]/(x_max-x_min)
+        return quad(ShahCondensation,x_min,x_max,args=(AS,G,D,p))[0]/(x_max-x_min)
     else:
         #A single value is given
-        return ShahCondensation(x_min,Ref,G,D,p)
+        return ShahCondensation(x_min,AS,G,D,p)
     
-def f_h_1phase_Tube(mdot,ID,T, p,Fluid,Phase='Single'):
+def f_h_1phase_Tube(mdot,ID,T, p,AS,Phase='Single'):
     """ 
     Convenience function to run annular model for tube.  Tube is a degenerate case of annulus with inner diameter of 0
     
     """
-    return f_h_1phase_Annulus(mdot, ID, 0.0, T, p, Fluid, Phase='Single' )
+    return f_h_1phase_Annulus(mdot, ID, 0.0, T, p, AS, Phase='Single' )
 
-def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
+def f_h_1phase_Annulus(mdot, OD, ID, T, p, AS, Phase='Single'):
     """
     This function return the friction factor, heat transfer coefficient, 
     and reynold's number for single phase fluid inside annular pipe
     """
     if Phase =="SatVap":
-        mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 1, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'Q', 1, Fluid) #kg/m^3
+        AS.update(CP.QT_INPUTS,1.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
     elif Phase =="SatLiq":
-        mu = PropsSI('V', 'T', T, 'Q', 0, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 0, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 0, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'Q', 0, Fluid) #kg/m^3
+        AS.update(CP.QT_INPUTS,0.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
     else:
-        mu = PropsSI('V', 'T', T, 'P', p, Fluid)  #kg/m-s
-        cp = PropsSI('C', 'T', T, 'P', p, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'P', p, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'P', p, Fluid) #kg/m^3
+        AS.update(CP.PT_INPUTS,p,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
 
     Pr = cp * mu / k #[-]
 
@@ -459,18 +483,26 @@ def f_h_1phase_Annulus(mdot, OD, ID, T, p, Fluid, Phase='Single'):
     h = k*Nu/Dh #W/m^2-K
     return (f, h, Re)
 
-def f_h_1phase_Channel(mdot,W,H,T,p,Fluid,Phase):
+def f_h_1phase_Channel(mdot,W,H,T,p,AS,Phase):
 
     if Phase=="SatVap":
-        mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 1, Fluid)*1. #*1000. #W/m-K
-        rho = PropsSI('D', 'T', T, 'Q', 1, Fluid) #kg/m^3
+        AS.update(CP.QT_INPUTS,1.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
+    elif Phase =="SatLiq":
+        AS.update(CP.QT_INPUTS,0.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
     else:
-        mu = PropsSI('V', 'T', T, 'P', p, Fluid) ##kg/m-s
-        cp = PropsSI('C', 'T', T, 'P', p, Fluid)*1. #*1000. #J/kg-K
-        k = PropsSI('L', 'T', T, 'P', p, Fluid)*1. #*1000. #W/m-K
-        rho = PropsSI('D', 'T', T, 'P', p, Fluid) #kg/m^3
+        AS.update(CP.PT_INPUTS,p,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
 
     Pr = cp * mu / k #[-]
 
@@ -538,7 +570,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     Bp = Inputs['Bp']
     Lp = Inputs['Lp']
     if JustGeo==False:        
-        Ref = Inputs['Ref']
+        AS = Inputs['AS']
         T = Inputs['T']
         p = Inputs['p']
         mdot_gap = Inputs['mdot_gap']           #mass flow rate per channel
@@ -565,10 +597,11 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         #Also calculate the thermodynamics and pressure drop
         
         #Single phase Fluid properties
-        rho_g=PropsSI('D','T',T,'P',p,Ref)
-        eta_g=PropsSI('V','T',T,'P',p,Ref)
-        cp_g=PropsSI('C','T',T,'P',p,Ref)#*1000
-        k_g=PropsSI('L','T',T,'P',p,Ref)#*1000
+        AS.update(CP.PT_INPUTS, p, T)
+        rho_g=AS.rhomass() #[kg/m^3]
+        eta_g=AS.viscosity() #Viscosity[Pa-s]
+        cp_g=AS.cpmass() #[J/kg-K]
+        k_g=AS.conductivity() #Thermal conductivity[W/m/K]
         
         Pr_g=cp_g*eta_g/k_g
         
@@ -628,19 +661,26 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
 def Cooper_PoolBoiling(pstar,Rp,q,M):
     return 55*pstar**(0.12-0.2*log10(Rp))*(-log10(pstar))**(-0.55)*q**(0.67)*M**(-0.5)
 
-def KandlikarPHE(Ref,xmean,G,D,q,Tbubble,Tdew):
+def KandlikarPHE(AS,xmean,G,D,q,Tbubble,Tdew):
     """
     From http://www.rit.edu/kgcoe/mechanical/taleme/Papers/Conference%20Papers/C041.pdf
     
     Not recommended for fluids other than R134a
     """
-    rhoG=PropsSI('D','T',Tdew,'Q',1,Ref)
-    rhoL=PropsSI('D','T',Tbubble,'Q',0,Ref)
-    mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0, Ref) #kg/m-s 
-    cp_f = PropsSI('C', 'T', Tbubble, 'Q', 0, Ref)#*1000 #J/kg-K
-    k_f = PropsSI('L', 'T', Tdew, 'Q', 0, Ref)#*1000 #W/m-K
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)
+    rhoL = AS.rhomass() #[kg/m^3]
+    mu_f = AS.viscosity() #[Pa-s OR kg/m-s] 
+    cp_f = AS.cpmass() #[J/kg-K]
+    k_f = AS.conductivity() #[W/m/K]
+    h_L = AS.hmass() #[J/kg]
+    
+    AS.update(CP.QT_INPUTS,1.0,Tdew)
+    rhoG = AS.rhomass() #[kg/m^3]
+    h_G = AS.hmass() #[J/kg]
+    
     Pr_f = cp_f * mu_f / k_f #[-]
-    h_LG = (PropsSI('H','T',Tdew,'Q',1,Ref)-PropsSI('H','T',Tbubble,'Q',0,Ref))#*1000
+    
+    h_LG = h_G-h_L #[J/kg]
     alpha_L = 0.023 * (G*D/mu_f)**(0.8) * Pr_f**(0.4) * k_f / D #[W/m^2-K]
     Co=(rhoG/rhoL)**(0.5)*((1-xmean)/xmean)**(0.8)
     Bo=q/(G*h_LG)
@@ -651,18 +691,32 @@ def KandlikarPHE(Ref,xmean,G,D,q,Tbubble,Tdew):
     alpha_r=1.055*(1.056*Co**(-0.4)+1.02*Bo**(0.9))*xmean**(-0.12)*alpha_L**(0.98)
     return alpha_r
 
-def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
+def Bertsch_MC(x,AS,G,Dh,q_flux,L,Tbubble,Tdew):
     """
     This function return the heat transfer coefficient for two phase fluid 
     inside Micro-channel tube
     Correlatation is based on Bertsch (2009)
     """
+    #Define properties
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)
+    k_L=AS.conductivity() #[W/m/K]
+    cp_L=AS.cpmass() #[J/kg-K]
+    mu_L=AS.viscosity() #[Pa-s OR kg/m-s] 
+    rho_L=AS.rhomass() #[kg/m^3]
+
+    AS.update(CP.QT_INPUTS,1.0,Tdew)
+    k_G=AS.conductivity() #[W/m/K]
+    cp_G=AS.cpmass() #[J/kg-K]
+    mu_G=AS.viscosity() #[Pa-s OR kg/m-s] 
+    rho_G=AS.rhomass() #[kg/m^3]
     
-    p=PropsSI('P','T',Tdew,'Q',1.0,Ref)
-    pc=PropsSI(Ref,'pcrit')                                                     #Updated from PropsSI('E','T',0,'P',0,Ref)
+    p=AS.p() #saturation pressure [Pa] @ Tdew
+    pc=AS.p_critical() #critical pressure [Pa]
     pr=p/pc
-    M=PropsSI('M',Ref)
-    sig = PropsSI('I','T',(Tbubble+Tdew)/2,'Q',1,Ref)
+    M=AS.molar_mass() #molar mass [kg/mol]
+    
+    AS.update(CP.QT_INPUTS,1.0,(Tbubble+Tdew)/2)
+    sig = AS.surface_tension() #surface tension [N/m]
     g=9.81
 
     #if Ref=='R290':
@@ -670,15 +724,7 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     #elif Ref=='R410A':
         ## From Okada 1999 "Surface Tension of HFC Refrigerant Mixtures"
     #    sig=62.38*(1-Tdew/344.56)**(1.246)/1000.
-    
-    k_L=PropsSI('L','T',Tbubble,'Q',0,Ref)#*1000
-    k_G=PropsSI('L','T',Tdew,'Q',1,Ref)#*1000
-    cp_L=PropsSI('C','T',Tbubble,'Q',0,Ref)#*1000
-    cp_G=PropsSI('C','T',Tdew,'Q',1,Ref)#*1000
-    rho_L=PropsSI('D','T',Tbubble,'Q',0,Ref)
-    rho_G=PropsSI('D','T',Tdew,'Q',1,Ref)
-    mu_L=PropsSI('V','T',Tbubble,'Q',0,Ref)
-    mu_G=PropsSI('L','T',Tdew,'Q',1,Ref)
+
     Re_L=G*Dh/mu_L
     Re_G=G*Dh/mu_G
     Pr_L=cp_L*mu_G/k_L
@@ -692,7 +738,7 @@ def Bertsch_MC(x,Ref,G,Dh,q_flux,L,Tbubble,Tdew):
     h_TP=h_nb*(1-x)+h_conv_tp*(1.0+80.0*(x**2-x**6)*exp(-0.6*Co))
     return h_TP
 
-def Bertsch_MC_Average(x_min,x_max,Ref,G,Dh,q_flux,L,TsatL,TsatV):
+def Bertsch_MC_Average(x_min,x_max,AS,G,Dh,q_flux,L,TsatL,TsatV):
     '''
     Returns the average heat transfer coefficient
     between qualities of x_min and x_max.
@@ -700,34 +746,35 @@ def Bertsch_MC_Average(x_min,x_max,Ref,G,Dh,q_flux,L,TsatL,TsatV):
     '''
     if not x_min==x_max:
         #A proper range is given
-        return quad(Bertsch_MC,x_min,x_max,args=(Ref,G,Dh,q_flux,L))[0]/(x_max-x_min)
+        return quad(Bertsch_MC,x_min,x_max,args=(AS,G,Dh,q_flux,L))[0]/(x_max-x_min)
     else:
         #A single value is given
-        return Bertsch_MC(x_min,Ref,G,Dh,q_flux,L,TsatL,TsatV)
+        return Bertsch_MC(x_min,AS,G,Dh,q_flux,L,TsatL,TsatV)
     
-    
-def f_h_1phase_MicroTube(G, Dh, T, p, Fluid, Phase='Single'):
+def f_h_1phase_MicroTube(G, Dh, T, p, AS, Phase='Single'):
     """
     This function return the friction factor, heat transfer coefficient, 
     and Reynold's number for single phase fluid inside flat plate tube
     Micro-channel HX
     """
-    
-    if Phase =="SatVap":
-        mu = PropsSI('V', 'T', T, 'Q', 1, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 1, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 1, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'Q', 1, Fluid) #kg/m^3
+    if Phase=="SatVap":
+        AS.update(CP.QT_INPUTS,1.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
     elif Phase =="SatLiq":
-        mu = PropsSI('V', 'T', T, 'Q', 0, Fluid) #kg/m-s
-        cp = PropsSI('C', 'T', T, 'Q', 0, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'Q', 0, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'Q', 0, Fluid) #kg/m^3
+        AS.update(CP.QT_INPUTS,0.0,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
     else:
-        mu = PropsSI('V', 'T', T, 'P', p, Fluid)  #kg/m-s
-        cp = PropsSI('C', 'T', T, 'P', p, Fluid) #J/kg-K
-        k = PropsSI('L', 'T', T, 'P', p, Fluid) #W/m-K
-        rho = PropsSI('D', 'T', T, 'P', p, Fluid) #kg/m^3
+        AS.update(CP.PT_INPUTS,p,T)
+        mu = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp = AS.cpmass() #[J/kg-K]
+        k = AS.conductivity() #[W/m-K]
+        rho = AS.rhomass() #[kg/m^3]
 
     Pr = cp * mu / k #[-]
 
@@ -744,9 +791,7 @@ def f_h_1phase_MicroTube(G, Dh, T, p, Fluid, Phase='Single'):
     h = k*Nu/Dh #W/m^2-K
     return (f, h, Re)
 
-
-
-def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
+def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     """
     Returns the average pressure gradient and average heat transfer coefficient
     between qualities of x_min and x_max.
@@ -757,7 +802,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     Required parameters:
     * x_min : The minimum quality for the range [-]
     * x_max : The maximum quality for the range [-]
-    * Ref : String with the refrigerant name
+    * AS : AbstractState with the refrigerant name and backend
     * G : Mass flux [kg/m^2/s]
     * Dh : Hydraulic diameter of tube [m]
     * Tbubble : Bubblepoint temperature of refrigerant [K]
@@ -769,7 +814,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     """
     
     def KMFunc(x):
-        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(Ref,G,Dh,x,Tbubble,Tdew,p,beta,satTransport)
+        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(AS,G,Dh,x,Tbubble,Tdew,p,beta,satTransport)
         return dpdz , h
     
     ## Use Simpson's Rule to calculate the average pressure gradient
@@ -780,12 +825,15 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     else:
         #Calculate the tranport properties once
         satTransport={}
-        satTransport['rho_f']=PropsSI('D','T',Tbubble,'Q',0.0,Ref)
-        satTransport['rho_g']=PropsSI('D','T',Tdew,'Q',1.0,Ref)
-        satTransport['mu_f']=PropsSI('V','T',Tbubble,'Q',0.0,Ref)
-        satTransport['mu_g']=PropsSI('V','T',Tdew,'Q',1.0,Ref)
-        satTransport['cp_f']=PropsSI('C', 'T', Tbubble, 'Q', 0, Ref)
-        satTransport['k_f']=PropsSI('L', 'T', Tbubble, 'Q', 0, Ref)
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        satTransport['rho_f']=AS.rhomass() #[kg/m^3]
+        satTransport['mu_f']=AS.viscosity() #[Pa-s OR kg/m-s]
+        satTransport['cp_f']=AS.cpmass() #[J/kg-K]
+        satTransport['k_f']=AS.conductivity() #[W/m-K]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        satTransport['rho_g']=AS.rhomass() #[kg/m^3]
+        satTransport['mu_g']=AS.viscosity() #[Pa-s OR kg/m-s]
+
         
         #Calculate Dp and h over the range of xx
         xx=np.linspace(x_min,x_max,30)
@@ -804,7 +852,7 @@ def KM_Cond_Average(x_min,x_max,Ref,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
             return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
 
     
-def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
+def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
     """
     This function return the pressure gradient and heat transfer coefficient for 
     two phase fluid inside Micro-channel tube while CONDENSATION
@@ -822,12 +870,14 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
     
     if satTransport==None:
         # Calculate Necessary saturation properties
-        rho_f = PropsSI('D', 'T', Tbubble, 'Q', 0.0, Ref)
-        rho_g = PropsSI('D', 'T', Tdew, 'Q', 1.0, Ref)
-        mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0.0, Ref) #//[kg/m-s]
-        mu_g = PropsSI('V', 'T', Tdew, 'Q', 1.0, Ref) #//[kg/m-s]
-        cp_f = PropsSI('C', 'T', Tbubble, 'Q', 0, Ref) # [J/kg-K]
-        k_f = PropsSI('L', 'T', Tbubble, 'Q', 0, Ref) # [W/m-K]
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        rho_f=AS.rhomass() #[kg/m^3]
+        mu_f=AS.viscosity() #[Pa-s OR kg/m-s]
+        cp_f=AS.cpmass() #[J/kg-K]
+        k_f=AS.conductivity() #[W/m-K]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        rho_g=AS.rhomass() #[kg/m^3]
+        mu_g=AS.viscosity() #[Pa-s OR kg/m-s]
     else:
         #Pull out of the dictionary
         rho_f=satTransport['rho_f']
@@ -836,8 +886,9 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
         mu_g=satTransport['mu_g']
         cp_f=satTransport['cp_f']
         k_f=satTransport['k_f']
-
-    sigma = PropsSI('I', 'T', (Tbubble+Tdew)/2, 'Q', 1, Ref)#use this in the next update of CP after v5.1 >>> saturation_ancillary(Ref,'I',1,'T', (Tbubble+Tdew)/2) #//[N/m]
+    
+    AS.update(CP.QT_INPUTS,1.0,(Tbubble+Tdew)/2.0)
+    sigma = AS.surface_tension() #surface tesnion [N/m]
     
     Pr_f = cp_f * mu_f / k_f #[-]
     
@@ -878,14 +929,16 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
     if x<=0:
         # Entirely liquid
         dpdz = dpdz_f
-        psat = PropsSI('P', 'T', Tbubble, 'Q', 0.0, Ref)
-        h = f_h_1phase_MicroTube(G, Dh, Tbubble, psat, Ref, Phase='SatLiq')[1]
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        psat = AS.p() #pressure [Pa]
+        h = f_h_1phase_MicroTube(G, Dh, Tbubble, psat, AS, Phase='SatLiq')[1]
         return dpdz, h
     if x>=1:
         #Entirely vapor
         dpdz = dpdz_g
-        psat = PropsSI('P', 'T', Tdew, 'Q', 1.0, Ref)
-        h = f_h_1phase_MicroTube(G, Dh, Tdew, psat, Ref, Phase='SatVap')[1]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        psat = AS.p() #pressure [Pa]
+        h = f_h_1phase_MicroTube(G, Dh, Tdew, psat, AS, Phase='SatVap')[1]
         return dpdz, h
     
     X_squared = dpdz_f/dpdz_g
@@ -928,7 +981,7 @@ def Kim_Mudawar_condensing_DPDZ_h(Ref, G, Dh, x, Tbubble, Tdew, p, beta, satTran
 
 
 
-def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, satTransport=None):
+def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, satTransport=None):
     """
     This function return the pressure gradient for 
     two phase fluid inside Micro-channel tube while BOILING (EVAPORATION)
@@ -942,11 +995,15 @@ def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_
     
     if satTransport==None:
         # Calculate Necessary saturation properties
-        rho_f = PropsSI('D', 'T', Tbubble, 'Q', 0.0, Ref)
-        rho_g = PropsSI('D', 'T', Tdew, 'Q', 1.0, Ref)
-        mu_f = PropsSI('V', 'T', Tbubble, 'Q', 0.0, Ref) #//[kg/m-s]
-        mu_g = PropsSI('V', 'T', Tdew, 'Q', 1.0, Ref) #//[kg/m-s]
-        h_fg = PropsSI('H', 'T', Tdew, 'Q', 1.0, Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0.0, Ref) #// [J/kg]
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        rho_f=AS.rhomass() #[kg/m^3]
+        mu_f=AS.viscosity() #[Pa-s OR kg/m-s]
+        h_L=AS.hmass() #[J/kg]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        rho_g=AS.rhomass() #[kg/m^3]
+        mu_g=AS.viscosity() #[Pa-s OR kg/m-s]
+        h_V=AS.hmass() #[J/kg]
+        h_fg = h_V - h_L #[J/kg]
     else:
         #Pull out of the dictionary
         rho_f=satTransport['rho_f']
@@ -954,8 +1011,9 @@ def Kim_Mudawar_boiling_DPDZ(Ref, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_
         mu_f=satTransport['mu_f']
         mu_g=satTransport['mu_g']
         h_fg=satTransport['h_fg']
-
-    sigma = PropsSI('I', 'P', p, 'Q', x, Ref) #//[N/m]
+    
+    AS.update(CP.PQ_INPUTS,p,x)
+    sigma = AS.surface_tension() #surface tesnion [N/m]
 
     Re_f = G*(1-x)*Dh/mu_f
     Re_g = G*x*Dh/mu_g
@@ -1035,10 +1093,11 @@ if __name__=='__main__':
     DP_vals_acc=[]
     DP_vals_fric=[]
     x_vals=[]
-    import numpy as np,pylab
+    import pylab
+    AS = CP.AbstractState("HEOS", "R410A")
     for x in np.linspace(0.1,1.0,10):  
-        DP_vals_acc.append(AccelPressureDrop(x-0.1,x,'R410A',2,250,250))
-        DP_vals_fric.append(LMPressureGradientAvg(x-0.1,x,'R410A',0.1,0.01,250,250)*1*1)
+        DP_vals_acc.append(AccelPressureDrop(x-0.1,x,AS,2,250,250))
+        DP_vals_fric.append(LMPressureGradientAvg(x-0.1,x,AS,0.1,0.01,250,250)*1*1)
         x_vals.append(x)
         
     print "plot shows accelerational pressure drop as f(x) for 0.1 x segments"
