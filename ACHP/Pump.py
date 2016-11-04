@@ -1,5 +1,5 @@
 from __future__ import division
-from CoolProp.CoolProp import PropsSI
+import CoolProp as CP
 
 class PumpClass():
     def __init__(self,**kwargs):
@@ -28,5 +28,15 @@ class PumpClass():
          ]
         
     def Calculate(self):
-        rho=PropsSI('D','T',self.Tin_g,'P',self.pin_g,self.Ref_g)
+        #AbstractState
+        if hasattr(self,'Backend_g'): #check if backend is given
+            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
+            if hasattr(self,'MassFrac_g'):
+                AS_g.set_mass_fractions([self.MassFrac_g])
+        else: #otherwise, use the defualt backend
+            AS_g = CP.AbstractState('HEOS', self.Ref_g)
+        self.AS_g = AS_g
+        
+        AS_g.update(CP.PT_INPUTS, self.pin_g, self.Tin_g)
+        rho=AS_g.rhomass() #[kg/m^3]
         self.W=abs(self.DP_g)*(self.mdot_g/rho)/self.eta
