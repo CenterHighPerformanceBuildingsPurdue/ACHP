@@ -4,6 +4,7 @@ from Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
 from math import pi,exp,log
 from scipy.optimize import brentq
 import numpy as np
+import CoolProp as CP
 
 class CoaxialHXClass():
     def __init__(self,**kwargs):
@@ -68,6 +69,21 @@ class CoaxialHXClass():
          ]
         
     def Calculate(self):
+        #AbstractState (Ref)
+        if hasattr(self,'Backend_r'): #check if backend is given
+            AS_r = CP.AbstractState(self.Backend_r, self.Ref_r)
+        else: #otherwise, use the defualt backend
+            AS_r = CP.AbstractState('HEOS', self.Ref_r)
+        self.AS_r = AS_r
+        #AbstractState (Glycol)
+        if hasattr(self,'Backend_g'): #check if backend is given
+            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
+            if hasattr(self,'MassFrac_g'):
+                AS_g.set_mass_fractions([self.MassFrac_g])
+        else: #otherwise, use the defualt backend
+            AS_g = CP.AbstractState('HEOS', self.Ref_g)
+        self.AS_g = AS_g
+        
         #Update the parameters
         self.Update()
         
@@ -84,31 +100,37 @@ class CoaxialHXClass():
         
         #Thermal Conduction Resistance of the intermediate wall
         self.Rw=log(self.OD_i/self.ID_i) / (2*pi*self.k*self.L)
-         
-        self.Tbubble_r=PropsSI('T','P',self.pin_r,'Q',0,self.Ref_r)
-        self.Tdew_r=PropsSI('T','P',self.pin_r,'Q',1,self.Ref_r)
+        
+        AS_r.update(CP.PQ_INPUTS,self.pin_r,0.0)
+        self.Tbubble_r=AS_r.T() #[K]
+        hsatL=AS_r.hmass() #[J/kg]
+        ssatL=AS_r.smass() #[J/kg-K]
+        AS_r.update(CP.PQ_INPUTS,self.pin_r,1.0)
+        self.Tdew_r=AS_r.T() #[K]
+        hsatV=AS_r.hmass() #[J/kg]
+        ssatV=AS_r.smass() #[J/kg-K]
+        
+        #Saturation temperature
         self.Tsat_r=(self.Tbubble_r+self.Tdew_r)/2.0
         
-        #Inlet enthalpy
-        hsatL=PropsSI('H','T',self.Tbubble_r,'Q',0,self.Ref_r) #*1000
-        hsatV=PropsSI('H','T',self.Tdew_r,'Q',1,self.Ref_r) #*1000
+        #Inlet quality        
         self.xin_r=(self.hin_r-hsatL)/(hsatV-hsatL)
         
         #Change in enthalpy through two-phase region [J/kg]
         self.h_fg=hsatV - hsatL
         self.Tin_r=self.xin_r*self.Tdew_r+(1-self.xin_r)*self.Tbubble_r
         #Inlet entropy
-        ssatL=PropsSI('S','T',self.Tbubble_r,'Q',0,self.Ref_r) #*1000
-        ssatV=PropsSI('S','T',self.Tdew_r,'Q',1,self.Ref_r) #*1000
         self.sin_r=self.xin_r*ssatV+(1-self.xin_r)*ssatL
         
         #Mean values for the glycol side based on average of inlet temperatures
         Tavg_g=(self.Tsat_r+self.Tin_g)/2.0
-        self.f_g,self.h_g,self.Re_g=f_h_1phase_Annulus(self.mdot_g, self.ID_o, self.OD_i, Tavg_g, self.pin_g, self.Ref_g)
-        self.cp_g=PropsSI('C','T',Tavg_g,'P',self.pin_g,self.Ref_g) #*1000
+        self.f_g,self.h_g,self.Re_g=f_h_1phase_Annulus(self.mdot_g, self.ID_o, self.OD_i, Tavg_g, self.pin_g, self.AS_g)
+        
+        AS_g.update(CP.PT_INPUTS,self.pin_g,Tavg_g)
+        self.cp_g=AS_g.cpmass() #[J/kg-K]
+        v_g=1/AS_g.rhomass() #[m^3/kg]
         
         #Glycol pressure drop
-        v_g=1/PropsSI('D','T',Tavg_g,'P',self.pin_g,self.Ref_g)
         dpdz_g=-self.f_g*v_g*self.G_g**2/(2.*self.Dh_g) #Pressure gradient
         self.DP_g=dpdz_g*self.L
         
@@ -159,12 +181,14 @@ class CoaxialHXClass():
         self.DP_r=self.DP_r_2phase+self.DP_r_superheat
         
         if existsSuperheat==True:
-            self.hout_r=PropsSI('H','T',self.Tout_r,'P',self.pin_r,self.Ref_r) #*1000
-            self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.pin_r,self.Ref_r) #*1000
+            AS_r.update(CP.PT_INPUTS,self.pin_r,self.Tout_r)
+            self.hout_r=AS_r.hmass() #[J/kg]
+            self.sout_r=AS_r.smass() #[J/kg-K]
         else:
             self.Tout_r=self.xout_2phase*self.Tdew_r+(1-self.xout_2phase)*self.Tbubble_r
-            self.hout_r=PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref_r) #*1000
-            self.sout_r=PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref_r) #*1000
+            AS_r.update(CP.QT_INPUTS,self.xout_2phase,self.Tout_r)
+            self.hout_r=AS_r.hmass() #[J/kg]
+            self.sout_r=AS_r.smass() #[J/kg-K]
         
         #Dummy variables for the subcooled section which doesn't exist
         self.Q_subcool=0.0
@@ -179,8 +203,10 @@ class CoaxialHXClass():
         # Mean temperature for superheated part can be taken to be average
         # of dew and glycol inlet temps
         Tavg_sh_r=(self.Tdew_r+self.Tin_g)/2.0
-        self.f_r_superheat,self.h_r_superheat,self.Re_r_superheat=f_h_1phase_Tube(self.mdot_r, self.ID_i, Tavg_sh_r, self.pin_r, self.Ref_r)
-        cp_r_superheat=PropsSI('C','T',Tavg_sh_r,'P',self.pin_r,self.Ref_r) #*1000
+        self.f_r_superheat,self.h_r_superheat,self.Re_r_superheat=f_h_1phase_Tube(self.mdot_r, self.ID_i, Tavg_sh_r, self.pin_r, self.AS_r)
+        # Refrigerant specific heat
+        self.AS_r.update(CP.PT_INPUTS,self.pin_r,Tavg_sh_r)
+        cp_r_superheat=self.AS_r.cpmass() #[J/kg-K]
         # Overall conductance of heat transfer surface in superheated
         # portion
         UA_superheat=w_superheat/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_superheat*self.A_r_wetted)+self.Rw)
@@ -197,11 +223,14 @@ class CoaxialHXClass():
         self.Q_superheat=epsilon_superheat*Cmin*(self.Tin_g-self.Tdew_r)
         
         self.Tout_r=self.Tdew_r+self.Q_superheat/(self.mdot_r*cp_r_superheat)
-        rho_superheat=PropsSI('D','T',(self.Tin_g+self.Tdew_r)/2.0, 'P', self.pin_r, self.Ref_r)
+        # Refrigerant density (supeheated)
+        self.AS_r.update(CP.PT_INPUTS,self.pin_r,(self.Tin_g+self.Tdew_r)/2.0) 
+        rho_superheat=self.AS_r.rhomass() #[kg/m^3]
+        # Regrigerant charge (supeheated)
         self.Charge_r_superheat = w_superheat * self.V_r * rho_superheat
         
         #Pressure drop calculations for superheated refrigerant
-        v_r=1./rho_superheat;
+        v_r=1./rho_superheat
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2.*self.Dh_r) #Pressure gradient
         self.DP_r_superheat=dpdz_r*self.L*w_superheat
@@ -218,7 +247,7 @@ class CoaxialHXClass():
         # Heat flux in 2phase section (for Shah correlation) [W/m^2]
         q_flux=self.Q_2phase/(w_2phase*self.A_r_wetted)
         #
-        self.h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.Ref_r,
+        self.h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.AS_r,
                     self.G_r,self.Dh_r,self.pin_r,q_flux,self.Tbubble_r,self.Tdew_r)
         UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted)+self.Rw)
         C_g=self.cp_g*self.mdot_g
@@ -228,13 +257,13 @@ class CoaxialHXClass():
         epsilon_2phase=1-exp(-Ntu_2phase)
         Q_2phase_eNTU=epsilon_2phase*C_g*(self.T_g_x-self.Tsat_r)
         
-        rho_average=TwoPhaseDensity(self.Ref_r,self.xin_r,xout_2phase,self.Tdew_r,self.Tbubble_r,slipModel='Zivi')
+        rho_average=TwoPhaseDensity(self.AS_r,self.xin_r,xout_2phase,self.Tdew_r,self.Tbubble_r,slipModel='Zivi')
         self.Charge_r_2phase = rho_average * w_2phase * self.V_r     
         
         # Frictional prssure drop component
-        DP_frict=LMPressureGradientAvg(self.xin_r,xout_2phase,self.Ref_r,self.G_r,self.Dh_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
+        DP_frict=LMPressureGradientAvg(self.xin_r,xout_2phase,self.AS_r,self.G_r,self.Dh_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
         # Accelerational prssure drop component
-        DP_accel=AccelPressureDrop(self.xin_r,xout_2phase,self.Ref_r,self.G_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
+        DP_accel=AccelPressureDrop(self.xin_r,xout_2phase,self.AS_r,self.G_r,self.Tbubble_r,self.Tdew_r)*w_2phase*self.L
         self.DP_r_2phase=DP_frict+DP_accel
         
         if self.Verbosity>4:
@@ -263,7 +292,9 @@ if __name__=='__main__':
                 'pin_g':300000,     #pin_g in Pa
                 'Tin_g':290.52,
                 'Ref_r':'R290',
+                'Backend_r':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
                 'Ref_g':'Water',
+                'Backend_g':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
                 'Verbosity':0,
                 'Conductivity' : 237 #[W/m-K]
                 }

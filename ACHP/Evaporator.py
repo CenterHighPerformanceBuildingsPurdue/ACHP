@@ -8,6 +8,7 @@ from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneF
 from DryWetSegment import DWSVals, DryWetSegment
 from ACHPTools import ValidateFields
 import numpy as np
+import CoolProp as CP
 
 class EvaporatorClass():
     def __init__(self,**kwargs):
@@ -105,10 +106,17 @@ class EvaporatorClass():
                        ('hin_r',float,-100000,10000000),
                        ('mdot_r',float,0.000001,10),
                        ]
-            optFields=['Verbosity']
+            optFields=['Verbosity','Backend']
             d=self.__dict__ #Current fields in model
             ValidateFields(d,reqFields,optFields)
             self.IsValidated=True
+        
+        #AbstractState
+        if hasattr(self,'Backend'): #check if backend is given
+            AS = CP.AbstractState(self.Backend, self.Ref)
+        else: #otherwise, use the defualt backend
+            AS = CP.AbstractState('HEOS', self.Ref)
+        self.AS = AS
             
         # Retrieve some parameters from nested structures 
         # for code compactness
@@ -130,13 +138,17 @@ class EvaporatorClass():
         #Average mass flux of refrigerant in circuit
         self.G_r = self.mdot_r/(self.Ncircuits*pi*self.ID**2/4.0) #[kg/m^2-s]
         
-        ## Bubble and dew temperatures (same for fluids without glide) 
-        self.Tbubble_r=PropsSI('T','P',self.psat_r,'Q',0,self.Ref)
-        self.Tdew_r=PropsSI('T','P',self.psat_r,'Q',1,self.Ref)
+        ## Bubble and dew temperatures (same for fluids without glide)
+        AS.update(CP.PQ_INPUTS, self.psat_r, 0.0)
+        self.Tbubble_r=AS.T() #[K]
+        h_l = AS.hmass() #[J/kg]
+        AS.update(CP.PQ_INPUTS, self.psat_r, 1.0)
+        self.Tdew_r=AS.T() #[K]
+        h_v = AS.hmass() #[J/kg]
         ## Mean temperature for use in HT relationships
         self.Tsat_r=(self.Tbubble_r+self.Tdew_r)/2
         # Latent heat
-        self.h_fg=(PropsSI('H','T',self.Tdew_r,'Q',1.0,self.Ref)-PropsSI('H','T',self.Tbubble_r,'Q',0.0,self.Ref))*1. #*1000. #[J/kg]
+        self.h_fg=h_v - h_l #[J/kg]
         
         self.Fins.Air.RHmean=self.Fins.Air.RH
         
@@ -153,13 +165,17 @@ class EvaporatorClass():
         
     def Calculate(self):
         
+        #Initialize
         self.Initialize()
+        AS = self.AS
         
         # Input and output thermodynamic properties
-        ssatL=PropsSI('S','T',self.Tbubble_r,'Q',0,self.Ref) #*1000
-        ssatV=PropsSI('S','T',self.Tdew_r,'Q',1,self.Ref) #*1000
-        hsatL=PropsSI('H','T',self.Tbubble_r,'Q',0,self.Ref) #*1000
-        hsatV=PropsSI('H','T',self.Tdew_r,'Q',1,self.Ref) #*1000
+        AS.update(CP.QT_INPUTS, 0.0, self.Tbubble_r)
+        ssatL=AS.smass() #[J/kg-K]
+        hsatL=AS.hmass() #[J/kg]
+        AS.update(CP.QT_INPUTS, 1.0, self.Tdew_r)
+        ssatV=AS.smass() #[J/kg-K]
+        hsatV=AS.hmass() #[J/kg]
         
         #if give enthalpy and pressure as inputs
         if hasattr(self,'hin_r'):
@@ -218,7 +234,8 @@ class EvaporatorClass():
         
         #Outlet entropy
         if existsSuperheat==True:
-            self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
+            AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
+            self.sout_r=AS.smass() #[J/kg-K]
         else:
             xout_r=(self.hout_r-hsatL)/(hsatV-hsatL)
             self.sout_r=ssatV*xout_r+(1-xout_r)*ssatL
@@ -227,8 +244,11 @@ class EvaporatorClass():
         if existsSuperheat:
             self.DT_sh_calc=self.Tout_r-self.Tdew_r
         else:
-            self.DT_sh_calc=(self.hout_r-hsatV)/(PropsSI('C','T',self.Tdew_r,'Q',1,self.Ref))  #Effective superheat
-            self.Tout_r=PropsSI('T','P',self.psat_r+self.DP_r/1.0,'Q',xout_r,self.Ref) #saturated temperature at outlet quality
+            AS.update(CP.QT_INPUTS, 1.0, self.Tdew_r)
+            cp_sh = AS.cpmass() #[J/kg-K]
+            self.DT_sh_calc=(self.hout_r-hsatV)/cp_sh #Effective superheat
+            AS.update(CP.PQ_INPUTS, self.psat_r+self.DP_r, xout_r)
+            self.Tout_r=AS.T() #saturated temperature at outlet quality [K]
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat
         self.UA_r=self.hmean_r*self.A_r_wetted
         self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
@@ -286,7 +306,7 @@ class EvaporatorClass():
             raise ValueError('Q_target in Evaporator must be positive')
         
         # Average Refrigerant heat transfer coefficient
-        DWS.h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+        DWS.h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
         
         #Run the DryWetSegment to carry out the heat and mass transfer analysis
         DryWetSegment(DWS)
@@ -297,13 +317,13 @@ class EvaporatorClass():
         self.fdry_2phase=DWS.f_dry
         self.Tout_a_2phase=DWS.Tout_a
         
-        rho_average=TwoPhaseDensity(self.Ref,self.xin_r,self.xout_2phase,self.Tdew_r,self.Tbubble_r,slipModel='Zivi')
+        rho_average=TwoPhaseDensity(self.AS,self.xin_r,self.xout_2phase,self.Tdew_r,self.Tbubble_r,slipModel='Zivi')
         self.Charge_2phase = rho_average * w_2phase * self.V_r        
         
         #Frictional pressure drop component
-        DP_frict=LMPressureGradientAvg(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.ID,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
+        DP_frict=LMPressureGradientAvg(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
         #Accelerational pressure drop component    
-        DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.Ref,self.G_r,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
+        DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
         self.DP_r_2phase=DP_frict+DP_accel;
         
         if self.Verbosity>7:
@@ -313,6 +333,7 @@ class EvaporatorClass():
     def _Superheat_Forward(self,w_superheat):
         self.w_superheat=w_superheat
         DWS=DWSVals() #DryWetSegment structure
+        AS=self.AS #AbstractState
     
         # Store temporary values to be passed to DryWetSegment
         DWS.A_a=self.Fins.A_a*w_superheat
@@ -330,14 +351,15 @@ class EvaporatorClass():
     
         DWS.Tin_r=self.Tdew_r
         DWS.A_r=self.A_r_wetted*w_superheat
-        DWS.cp_r=PropsSI('C','T',self.Tdew_r+2.5, 'P', self.psat_r, self.Ref) #Use a guess value of 6K superheat to calculate cp 
+        AS.update(CP.PT_INPUTS, self.psat_r, self.Tdew_r+2.5)
+        DWS.cp_r=AS.cpmass() #Use a guess value of 6K superheat to calculate cp [J/kg-K] 
         DWS.pin_r=self.psat_r
         DWS.mdot_r=self.mdot_r
         DWS.IsTwoPhase=False
         
         #Use a guess value of 6K superheat to calculate the properties
         self.f_r_superheat, self.h_r_superheat, self.Re_r_superheat=f_h_1phase_Tube(self.mdot_r / self.Ncircuits, self.ID, 
-            self.Tdew_r+3, self.psat_r, self.Ref, "Single");
+            self.Tdew_r+3, self.psat_r, self.AS, "Single");
         
         # Average Refrigerant heat transfer coefficient
         DWS.h_r=self.h_r_superheat
@@ -345,7 +367,8 @@ class EvaporatorClass():
         #Run DryWetSegment
         DryWetSegment(DWS)
         
-        rho_superheat=PropsSI('D','T',(DWS.Tout_r+self.Tdew_r)/2.0, 'P', self.psat_r, self.Ref)
+        AS.update(CP.PT_INPUTS, self.psat_r, (DWS.Tout_r+self.Tdew_r)/2.0)
+        rho_superheat=AS.rhomass() #[kg/m^3]
         self.Charge_superheat = w_superheat * self.V_r * rho_superheat
         
         #Pressure drop calculations for superheated refrigerant
@@ -407,7 +430,8 @@ if __name__=='__main__':
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), 
-            'Verbosity': 0
+            'Verbosity': 0,
+            'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
         
     Evap=EvaporatorClass(**kwargs) #generate new evaporator instance and update kwargs

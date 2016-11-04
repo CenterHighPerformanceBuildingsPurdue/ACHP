@@ -37,13 +37,14 @@ CC=CoolingCoilClass()
 CC.Fins = FinsTubes
 CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 CC.Ref_g = 'Water'
+CC.Backend_g= 'HEOS'                  #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
 CC.mdot_g = 0.15
 CC.Tin_g = 278
 CC.pin_g = 300000                   #Refrigerant vapor pressure in Pa
 CC.Verbosity = 3
 CC.Calculate()
 
-print "Method 1:"
+print "Method 1 (HEOS):"
 print "Cooling Coil Q: " + str(CC.Q) + " W"
 print "Cooling Coil SHR: " + str(CC.SHR) + " "
 
@@ -51,6 +52,7 @@ print "Cooling Coil SHR: " + str(CC.SHR) + " "
 kwds={'Fins':FinsTubes,
       'FinsType': 'WavyLouveredFins',   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
       'Ref_g': 'Water',
+      'Backend_g':'TTSE&HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
       'mdot_g': 0.15,
       'Tin_g': 278,
       'pin_g': 300000,               #Refrigerant vapor pressure in Pa
@@ -58,7 +60,7 @@ kwds={'Fins':FinsTubes,
 CC2=CoolingCoilClass(**kwds)
 CC2.Calculate()
 
-print "Method 2:"
+print "Method 2 (TTSE&HEOS):"
 print "Cooling Coil Q: " + str(CC2.Q) + " W"
 print "Cooling Coil SHR: " + str(CC2.SHR) + " "
 print "hout_a: " + str(CC2.hout_a) + " "

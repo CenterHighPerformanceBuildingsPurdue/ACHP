@@ -1,5 +1,6 @@
 from __future__ import division
 from CoolProp.CoolProp import PropsSI#, IsFluidType #,Help,Phase
+import CoolProp as CP
 
 from Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
 from math import pi,exp,log,sqrt,tan,cos,sin
@@ -104,14 +105,20 @@ class PHEHXClass():
         # See if each phase could change phase if it were to reach the
         # inlet temperature of the opposite phase 
         
+        #AbstractState
+        AS_h = self.AS_h
+        AS_c =self.AS_c
+        
         #Inlet phases
-        self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.Ref_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
-        self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.Ref_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
+        self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
+        self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
         
         # Find the maximum possible rate of heat transfer as the minimum of 
         # taking each stream to the inlet temperature of the other stream
-        hout_h=PropsSI('H','T',self.Tin_c,'P',self.pin_h,self.Ref_h) #*1000
-        hout_c=PropsSI('H','T',self.Tin_h,'P',self.pin_c,self.Ref_c) #*1000
+        AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_c)
+        hout_h=AS_h.hmass() #[J/kg]
+        AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_h)
+        hout_c=AS_c.hmass() #[J/kg]
         Qmax=min([self.mdot_c*(hout_c-self.hin_c),self.mdot_h*(self.hin_h-hout_h)])
         if Qmax<0:
             raise ValueError('Qmax in PHE must be > 0')
@@ -132,8 +139,8 @@ class PHEHXClass():
         
         #Make the lists of temperatures of each fluid at each cell boundary
         for i in range(len(EnthalpyList_h)):
-            TList_c[i]=TrhoPhase_ph(self.Ref_c,self.pin_c,EnthalpyList_c[i],self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
-            TList_h[i]=TrhoPhase_ph(self.Ref_h,self.pin_h,EnthalpyList_h[i],self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
+            TList_c[i]=TrhoPhase_ph(self.AS_c,self.pin_c,EnthalpyList_c[i],self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
+            TList_h[i]=TrhoPhase_ph(self.AS_h,self.pin_h,EnthalpyList_h[i],self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
 
 #        #Double-check that the edges are not pinched
 #        if TList_c[0]-1e-9>TList_h[0] or TList_c[-1]-1e-9>TList_h[-1]:
@@ -147,14 +154,15 @@ class PHEHXClass():
                 #If cold stream is hotter than the hot stream
                 if TList_c[i]-1e-9>TList_h[i]:
                     #Find new enthalpy of cold stream at the hot stream cell boundary
-                    hpinch=PropsSI('H','T',TList_h[i],'P',self.pin_c,self.Ref_c) #*1000
+                    AS_c.update(CP.PT_INPUTS, self.pin_c, TList_h[i])
+                    hpinch=AS_c.hmass() #[J/kg]
                     #Find heat transfer of hot stream in right-most cell
                     Qextra=self.mdot_h*(EnthalpyList_h[i+1]-EnthalpyList_h[i])
                     Qmax=self.mdot_c*(hpinch-self.hin_c)+Qextra
         
         return Qmax
         
-    def PlateHTDP(self,Ref,T,p,mdot_gap):
+    def PlateHTDP(self,AS,T,p,mdot_gap):
         """
         This function calls mainly the heat transfer and pressure drop 
         for single phase fluids in PHE. 
@@ -164,7 +172,7 @@ class PHEHXClass():
         for more details.
         """
         Inputs={
-            'Ref':Ref,
+            'AS':AS, #AS: AbstractState which includes refrigerant or glycol and backend
             'T':T,
             'p':p,
             'mdot_gap' : mdot_gap,                  #mass flow rate per channel
@@ -188,20 +196,28 @@ class PHEHXClass():
         self.hout_h=EnthalpyList_h[0]
         self.hout_c=EnthalpyList_c[1]
         
+        #Call AbstractState
+        AS_h = self.AS_h
+        AS_c = self.AS_c
+        
         #Find the phase boundaries that exist, and add them to lists
-        if 'INCOMP' in self.Ref_h: #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
             hsatL_h=1e9
             hsatV_h=1e9
         else:
-            hsatL_h=PropsSI('H','T',self.Tbubble_h,'D',self.rhosatL_h,self.Ref_h) #*1000
-            hsatV_h=PropsSI('H','T',self.Tdew_h,'D',self.rhosatV_h,self.Ref_h) #*1000
+            AS_h.update(CP.DmassT_INPUTS, self.rhosatL_h, self.Tbubble_h)
+            hsatL_h=AS_h.hmass() #[J/kg]
+            AS_h.update(CP.DmassT_INPUTS, self.rhosatV_h, self.Tdew_h)
+            hsatV_h=AS_h.hmass() #[J/kg]
         
-        if 'INCOMP' in self.Ref_c:#if IsFluidType(self.Ref_c,'Brine'):
+        if 'IncompressibleBackend' in AS_c.backend_name():#if IsFluidType(self.Ref_c,'Brine'):
             hsatL_c=1e9
             hsatV_c=1e9
         else:
-            hsatL_c=PropsSI('H','T',self.Tbubble_c,'D',self.rhosatL_c,self.Ref_c) #*1000
-            hsatV_c=PropsSI('H','T',self.Tdew_c,'D',self.rhosatV_c,self.Ref_c) #*1000
+            AS_c.update(CP.DmassT_INPUTS, self.rhosatL_c, self.Tbubble_c)
+            hsatL_c=AS_c.hmass() #[J/kg]
+            AS_c.update(CP.DmassT_INPUTS, self.rhosatV_c, self.Tdew_c)
+            hsatV_c=AS_c.hmass() #[J/kg]
         
         # Check whether the enthalpy boundaries are within the bounds set by 
         # the imposed amount of heat transfer
@@ -244,6 +260,10 @@ class PHEHXClass():
         Combine all the cells to calculate overall parameters like pressure drop
         and fraction of heat exchanger in two-phase on both sides
         """
+        #AbstractState
+        AS_c = self.AS_c
+        AS_h = self.AS_h
+        
         def collect(cellList,tag,tagvalue,out):
             collectList=[]
             for cell in cellList:
@@ -362,30 +382,36 @@ class PHEHXClass():
         
         self.q_flux=collect(cellList,'Phase_c','TwoPhase','q_flux')
             
-        self.Tout_h,self.rhoout_h=TrhoPhase_ph(self.Ref_h,self.pin_h,self.hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
-        self.Tout_c,self.rhoout_c=TrhoPhase_ph(self.Ref_c,self.pin_c,self.hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
+        self.Tout_h,self.rhoout_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
+        self.Tout_c,self.rhoout_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'INCOMP' in self.Ref_c: #if IsFluidType(self.Ref_c,'Brine'):
-            self.sout_c=PropsSI('S','T',self.Tout_c,'P',self.pin_c,self.Ref_c) #*1000
+        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
+            AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tout_c)
+            self.sout_c=AS_c.smass() #[J/kg-K]
             self.DT_sc_c=1e9
         else:
-            self.sout_c=PropsSI('S','T',self.Tout_c,'D',self.rhoout_c,self.Ref_c) #*1000
+            AS_c.update(CP.DmassT_INPUTS, self.rhoout_c, self.Tout_c)
+            self.sout_c=AS_c.smass() #[J/kg-K]
             #Effective subcooling for both streams
-            hsatL=PropsSI('H','T',self.Tbubble_c,'Q',0,self.Ref_c) #*1000
-            cpsatL=PropsSI('C','T',self.Tbubble_c,'Q',0,self.Ref_c) #*1000
+            AS_c.update(CP.QT_INPUTS, 0.0, self.Tbubble_c)
+            hsatL=AS_c.hmass() #[J/kg]
+            cpsatL=AS_c.cpmass() #[J/kg-K]
             if self.hout_c>hsatL:
                 #Outlet is at some quality on cold side
                 self.DT_sc_c=-(self.hout_c-hsatL)/cpsatL
             else:
                 self.DT_sc_c=self.Tbubble_c-self.Tout_c
         
-        if 'INCOMP' in self.Ref_h: #if IsFluidType(self.Ref_h,'Brine'):
-            self.sout_h=PropsSI('S','T',self.Tout_h,'P',self.pin_h,self.Ref_h) #*1000
+        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+            AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tout_h)
+            self.sout_h=AS_h.smass() #[J/kg-K]
             self.DT_sc_h=1e9
         else:
-            self.sout_h=PropsSI('S','T',self.Tout_h,'D',self.rhoout_h,self.Ref_h) #*1000
-            hsatL=PropsSI('H','T',self.Tbubble_h,'Q',0,self.Ref_h) #*1000
-            cpsatL=PropsSI('C','T',self.Tbubble_h,'Q',0,self.Ref_h) #*1000
+            AS_h.update(CP.DmassT_INPUTS, self.rhoout_h, self.Tout_h)
+            self.sout_h=AS_c.smass() #[J/kg-K]
+            AS_h.update(CP.QT_INPUTS, 0.0, self.Tbubble_h)
+            hsatL=AS_c.hmass() #[J/kg]
+            cpsatL=AS_c.cpmass() #[J/kg-K]
             if self.hout_h>hsatL:
                 #Outlet is at some quality on hot side
                 self.DT_sc_h=-(self.hout_h-hsatL)/cpsatL
@@ -408,13 +434,16 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h 
         """
+        #AbstarctState
+        AS_h = self.AS_h
+        AS_c = self.AS_c
         
         #Calculate the mean temperature
         Tmean_h=Inputs['Tmean_h']
         Tmean_c=Inputs['Tmean_c']
         #Evaluate heat transfer coefficient for both fluids
-        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.Ref_h, Tmean_h, Inputs['pin_h'],self.mdot_h/self.NgapsHot)
-        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.Ref_c, Tmean_c, Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.AS_h, Tmean_h, Inputs['pin_h'],self.mdot_h/self.NgapsHot)
+        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c/self.NgapsCold)
         
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
@@ -441,9 +470,11 @@ class PHEHXClass():
         w=UA_req/UA_total
         
         #Determine both charge components
-        rho_h=PropsSI('D','T',Tmean_h, 'P', self.pin_h, self.Ref_h)
+        AS_h.update(CP.PT_INPUTS, self.pin_h,Tmean_h)
+        rho_h=AS_h.rhomass()#[kg/m^3]
         Charge_h = w * self.V_h * rho_h
-        rho_c=PropsSI('D','T',Tmean_c, 'P', self.pin_c, self.Ref_c)
+        AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
+        rho_c=AS_c.rhomass()#[kg/m^3]
         Charge_c = w * self.V_c * rho_c
         
         #Pack outputs
@@ -470,15 +501,19 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h
         """
+        #AbstarctState
+        AS_h = self.AS_h
+        AS_c = self.AS_c
         
         #Calculate the mean temperature for the hot single-phase fluid
-        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.Ref_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
+        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.AS_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
         #Mole mass of refrigerant for Cooper correlation
-        M=PropsSI('M',self.Ref_c)
+        M=AS_c.molar_mass() #[kg/mol]
         #Reduced pressure for Cooper Correlation
-        pstar=Inputs['pin_c']/PropsSI(self.Ref_c,'pcrit') #PropsSI('E','T',0,'P',0,self.Ref_c)
+        pcrit_c = AS_c.p_critical() #critical pressure of Ref_c [Pa]
+        pstar=Inputs['pin_c']/pcrit_c
         change=999
         w=1
         Q=Inputs['Q']
@@ -511,15 +546,16 @@ class PHEHXClass():
             w=UA_req/UA_total
         
         #Refrigerant charge
-        rho_h=PropsSI('D','T',Inputs['Tmean_h'], 'P', self.pin_h, self.Ref_h)
+        AS_h.update(CP.PT_INPUTS,self.pin_h,Inputs['Tmean_h'])
+        rho_h=AS_h.rhomass() #[kg/m^3]
         Charge_h = w * self.V_h * rho_h
-        rho_c=TwoPhaseDensity(self.Ref_c,Inputs['xin_c'],Inputs['xout_c'],self.Tdew_c,self.Tbubble_c,slipModel='Zivi')
+        rho_c=TwoPhaseDensity(self.AS_c,Inputs['xin_c'],Inputs['xout_c'],self.Tdew_c,self.Tbubble_c,slipModel='Zivi')
         Charge_c = rho_c * w * self.V_c
         
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
-        DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.Ref_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
+        DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.Ref_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c)*w*self.Lp
+        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c)*w*self.Lp
         
         #Pack outputs
         Outputs={
@@ -545,9 +581,12 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h
         """
+        #AbstarctState
+        AS_h = self.AS_h
+        AS_c = self.AS_c
         
-        h_h_2phase=LongoCondensation((Inputs['xout_h']+Inputs['xin_h'])/2,self.mdot_h/self.A_h_flow,self.Dh_h,self.Ref_h,self.Tbubble_h,self.Tdew_h);
-        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.Ref_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        h_h_2phase=LongoCondensation((Inputs['xout_h']+Inputs['xin_h'])/2,self.mdot_h/self.A_h_flow,self.Dh_h,self.AS_h,self.Tbubble_h,self.Tdew_h);
+        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
         #Use cp calculated from delta h/delta T
         cp_c=Inputs['cp_c']
         UA_total=1/(1/(h_c*self.A_c_wetted)+1/(h_h_2phase*self.A_h_wetted)+self.PlateThickness/(self.PlateConductivity*(self.A_c_wetted+self.A_h_wetted)/2.))
@@ -566,22 +605,23 @@ class PHEHXClass():
         UA_req=NTU*C_c
         w=UA_req/UA_total
         
-        rho_c=PropsSI('D','T',Inputs['Tmean_c'], 'P', self.pin_c, self.Ref_c)
+        AS_c.update(CP.PT_INPUTS,self.pin_c,Inputs['Tmean_c'])
+        rho_c=AS_c.rhomass() #[kg/m^3]
         Charge_c = w * self.V_c * rho_c
-        rho_h=TwoPhaseDensity(self.Ref_h,Inputs['xout_h'],Inputs['xin_h'],self.Tdew_h,self.Tbubble_h,slipModel='Zivi')
+        rho_h=TwoPhaseDensity(self.AS_h,Inputs['xout_h'],Inputs['xin_h'],self.Tdew_h,self.Tbubble_h,slipModel='Zivi')
         Charge_h = w * self.V_h * rho_h
         
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
-        DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
+        DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.Ref_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
+        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
         
         #Pack outputs
         Outputs={
             'w': w,
             'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
             'DP_c': -PlateOutput_c['DELTAP'],
-            'DP_h': DP_frict_h+DP_frict_h,
+            'DP_h': DP_accel_h+DP_frict_h,
             'Charge_c':Charge_c,
             'Charge_h':Charge_h,
             'h_h':h_h_2phase,
@@ -598,7 +638,22 @@ class PHEHXClass():
         Cold: Ref
         Hot: Glycol
         """
-        
+        #AbstractState
+        if hasattr(self,'Backend_c'): #check if backend is given
+            AS_c = CP.AbstractState(self.Backend_c, self.Ref_c)
+            if hasattr(self,'MassFrac_c'):
+                AS_c.set_mass_fractions([self.MassFrac_c])
+        else: #otherwise, use the defualt backend
+            AS_c = CP.AbstractState('HEOS', self.Ref_c)
+        self.AS_c =AS_c
+        if hasattr(self,'Backend_h'): #check if backend is given
+            AS_h = CP.AbstractState(self.Backend_h, self.Ref_h)
+            if hasattr(self,'MassFrac_h'):
+                AS_h.set_mass_fractions([self.MassFrac_h])
+        else: #otherwise, use the defualt backend
+            AS_h = CP.AbstractState('HEOS', self.Ref_h)
+        self.AS_h =AS_h
+            
         # Allocate channels between hot and cold streams
         if not hasattr(self,'MoreChannels') or self.MoreChannels not in ['Hot','Cold']:
             raise KeyError("MoreChannels not found, options are 'Hot' or 'Cold'")
@@ -613,21 +668,22 @@ class PHEHXClass():
             self.NgapsHot=self.Nplates-1-self.NgapsCold
         
         #Saturation temperatures for cold fluid
-        if 'INCOMP' in self.Ref_c: #if IsFluidType(self.Ref_c,'Brine'):
+        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
             self.rhosatL_c= None #Update: changed from 1 to None
             self.rhosatV_c= None #Update: changed from 1 to None
             self.Tbubble_c = None
             self.Tdew_c = None
             self.Tsat_c = None
         else:
-            self.Tbubble_c=PropsSI('T','P',self.pin_c,'Q',0,self.Ref_c)
-            self.Tdew_c=PropsSI('T','P',self.pin_c,'Q',1,self.Ref_c)
+            AS_c.update(CP.PQ_INPUTS, self.pin_c, 0.0)
+            self.Tbubble_c=AS_c.T() #[K]
+            self.rhosatL_c=AS_c.rhomass() #[kg/m^3]
+            AS_c.update(CP.PQ_INPUTS, self.pin_c, 1.0)
+            self.Tdew_c=AS_c.T() #[K]
+            self.rhosatV_c=AS_c.rhomass() #[kg/m^3]
             self.Tsat_c=(self.Tbubble_c+self.Tdew_c)/2.0
-            self.rhosatL_c=PropsSI('D','T',self.Tbubble_c,'Q',0,self.Ref_c)
-            self.rhosatV_c=PropsSI('D','T',self.Tdew_c,'Q',1,self.Ref_c)
         
-        
-        if 'INCOMP' in self.Ref_h: #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
             self.Tbubble_h=None
             self.Tdew_h=None
             self.Tsat_h=None
@@ -635,25 +691,31 @@ class PHEHXClass():
             self.rhosatV_h=None
         else:
             #Saturation temperatures for hot fluid
-            self.Tbubble_h=PropsSI('T','P',self.pin_h,'Q',0,self.Ref_h)
-            self.Tdew_h=PropsSI('T','P',self.pin_h,'Q',1,self.Ref_h)
+            AS_h.update(CP.PQ_INPUTS, self.pin_h, 0.0)
+            self.Tbubble_h=AS_h.T() #[K]
+            self.rhosatL_h=AS_h.rhomass() #[kg/m^3]
+            AS_h.update(CP.PQ_INPUTS, self.pin_h, 1.0)
+            self.Tdew_h=AS_h.T() #[K]
+            self.rhosatV_h=AS_h.rhomass() #[kg/m^3]
             self.Tsat_h=(self.Tbubble_h+self.Tdew_h)/2.0
-            self.rhosatL_h=PropsSI('D','T',self.Tbubble_h,'Q',0,self.Ref_h)
-            self.rhosatV_h=PropsSI('D','T',self.Tdew_h,'Q',1,self.Ref_h)
         
         #The rest of the inlet states
-        self.Tin_h,self.rhoin_h=TrhoPhase_ph(self.Ref_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
-        self.Tin_c,self.rhoin_c=TrhoPhase_ph(self.Ref_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
+        self.Tin_h,self.rhoin_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
+        self.Tin_c,self.rhoin_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'INCOMP' in self.Ref_c: #if IsFluidType(self.Ref_c,'Brine'):
-            self.sin_c=PropsSI('S','T',self.Tin_c,'P',self.pin_c,self.Ref_c) #*1000
+        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
+            AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_c)
+            self.sin_c=AS_c.smass() #[J/kg-K]
         else:
-            self.sin_c=PropsSI('S','T',self.Tin_c,'D',self.rhoin_c,self.Ref_c) #*1000
+            AS_c.update(CP.DmassT_INPUTS, self.rhoin_c,self.Tin_c)
+            self.sin_c=AS_c.smass() #[J/kg-K]
             
-        if 'INCOMP' in self.Ref_h: #if IsFluidType(self.Ref_h,'Brine'):
-            self.sin_h=PropsSI('S','T',self.Tin_h,'P',self.pin_h,self.Ref_h) #*1000
+        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+            AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_h)
+            self.sin_h=AS_h.smass() #[J/kg-K]
         else:
-            self.sin_h=PropsSI('S','T',self.Tin_h,'D',self.rhoin_h,self.Ref_h) #*1000
+            AS_h.update(CP.DmassT_INPUTS, self.rhoin_h, self.Tin_h)
+            self.sin_h=AS_h.smass() #[J/kg-K]
             
         # Find HT and Delta P on the hot side
         #---------------
@@ -752,13 +814,13 @@ class PHEHXClass():
                 # Cold stream is either single phase or evaporating (two phase)
                 
                 #Use midpoint enthalpies to figure out the phase in the cell
-                Phase_h=Phase_ph(self.Ref_h,self.pin_h,(hin_h+hout_h)/2,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
-                Phase_c=Phase_ph(self.Ref_c,self.pin_c,(hin_c+hout_c)/2,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
+                Phase_h=Phase_ph(self.AS_h,self.pin_h,(hin_h+hout_h)/2,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
+                Phase_c=Phase_ph(self.AS_c,self.pin_c,(hin_c+hout_c)/2,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
                 #Determine inlet and outlet temperatures to the cell ([0] gives the first element of the tuple which is temeperature)
-                Tin_h=TrhoPhase_ph(self.Ref_h,self.pin_h,hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
-                Tin_c=TrhoPhase_ph(self.Ref_c,self.pin_c,hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
-                Tout_h=TrhoPhase_ph(self.Ref_h,self.pin_h,hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
-                Tout_c=TrhoPhase_ph(self.Ref_c,self.pin_c,hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
+                Tin_h=TrhoPhase_ph(self.AS_h,self.pin_h,hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
+                Tin_c=TrhoPhase_ph(self.AS_c,self.pin_c,hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
+                Tout_h=TrhoPhase_ph(self.AS_h,self.pin_h,hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0]
+                Tout_c=TrhoPhase_ph(self.AS_c,self.pin_c,hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0]
                 
                 if Phase_h in ['Subcooled','Superheated'] and Phase_c in ['Subcooled','Superheated']:
                     # Both are single-phase
@@ -959,11 +1021,13 @@ def SamplePHEHX():
             'mdot_c':0.03312,
             'pin_c':PropsSI('P','T',Tin,'Q',1.0,'R290'),
             'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #*1000
+            'Backend_c':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             
             'Ref_h':'Water',
             'mdot_h':mdot_h,
             'pin_h':200000,                                                     #Pin_h in Pa
             'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #*1000
+            'Backend_h':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             
             #Geometric parameters
             'Bp' : 0.101,
@@ -975,7 +1039,6 @@ def SamplePHEHX():
             'InclinationAngle' : 65/180*pi,#[rad]
             'PlateConductivity' : 15.0, #[W/m-K]
             'MoreChannels' : 'Hot', #Which stream gets the extra channel, 'Hot' or 'Cold'
-        
             'Verbosity':0
         }
         PHE=PHEHXClass(**params)
@@ -993,5 +1056,6 @@ def SamplePHEHX():
 #    pylab.show()
         
 if __name__=='__main__':
-    SamplePHEHX()
+    #SamplePHEHX()
     #WyattPHEHX()
+    SWEPVariedmdot()

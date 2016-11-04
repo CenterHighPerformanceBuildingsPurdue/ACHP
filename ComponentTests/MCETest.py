@@ -42,7 +42,8 @@ kwargs={'Ref': 'R410A',
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
-        'Verbosity':0
+        'Verbosity':0,
+        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 Evap=EvaporatorClass(**kwargs)
 Evap.Calculate()
@@ -55,7 +56,8 @@ kwargs={'Ref': 'R410A',
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
-        'Verbosity':0
+        'Verbosity':0,
+        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()
@@ -73,7 +75,8 @@ kwargs={'Ref': 'R410A',
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #*1000
-        'Verbosity':0
+        'Verbosity':0,
+        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()
@@ -90,7 +93,8 @@ kwargs={'Ref': 'R410A',
         'Fins': FinsTubes,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'hin_r': PropsSI('H','P',PropsSI('P','T',282.0,'Q',1.0,'R410A'),'Q',0.15,'R410A'),
-        'Verbosity':0
+        'Verbosity':0,
+        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()

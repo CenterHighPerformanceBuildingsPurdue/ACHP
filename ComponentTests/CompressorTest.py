@@ -15,7 +15,8 @@ kwds={
       'pin_r':PropsSI('P','T',279,'Q',1,'R134a'),
       'pout_r':PropsSI('P','T',315,'Q',1,'R134a'),
       'fp':0.15, #Fraction of electrical power lost as heat to ambient
-      'Vdot_ratio': 1.0 #Displacement Scale factor
+      'Vdot_ratio': 1.0, #Displacement Scale factor
+      'Backend':'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
       }
 Comp=CompressorClass(**kwds)
 Comp.Calculate()

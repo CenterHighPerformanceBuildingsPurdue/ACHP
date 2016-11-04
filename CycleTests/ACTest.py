@@ -19,6 +19,7 @@ Cycle.ImposedVariable = 'Subcooling'
 Cycle.DT_sc_target = 7.0
 Cycle.Mode='AC'
 Cycle.Ref='R410A'
+Cycle.Backend='TTSE&HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
 
 #--------------------------------------
 #       Compressor parameters
@@ -31,6 +32,7 @@ params={
         'M':M,
         'P':P,
         'Ref':Cycle.Ref, #Refrigerant
+        'Backend':Cycle.Backend, #Backend for refrigerant properties calculation 
         'fp':0.0, #Fraction of electrical power lost as heat to ambient 
         'Vdot_ratio': 1.0, #Displacement Scale factor
         'Verbosity': 0, # How verbose should the debugging be [0-10]
@@ -66,6 +68,7 @@ Cycle.Condenser.Fins.Air.FanPower=260
 
 Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Condenser.Ref=Cycle.Ref
+Cycle.Condenser.Backend=Cycle.Backend              #Backend for refrigerant properties calculation
 Cycle.Condenser.Verbosity=0
 
 #--------------------------------------
@@ -96,6 +99,7 @@ Cycle.Evaporator.Fins.Air.FanPower=438
 
 Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
 Cycle.Evaporator.Ref=Cycle.Ref
+Cycle.Evaporator.Backend=Cycle.Backend              #Backend for refrigerant properties calculation
 Cycle.Evaporator.Verbosity=0
 Cycle.Evaporator.DT_sh=5
 
@@ -109,6 +113,7 @@ params={
         'k_insul':0.036,
         'T_air':297,
         'Ref': Cycle.Ref,
+        'Backend':Cycle.Backend,
         'h_air':0.0000000001,
         }
 
