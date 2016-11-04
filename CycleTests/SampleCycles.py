@@ -1,4 +1,5 @@
-from Cycle import DXCycleClass,SecondaryCycleClass,F2K
+from Cycle import DXCycleClass,SecondaryCycleClass
+from convert_units import F2K
 from ACHPTools import Write2CSV
 
 def SampleSecondaryLoopSystem():
@@ -21,7 +22,8 @@ def SampleSecondaryLoopSystem():
     Cycle.DT_sc_target = 7.0
     Cycle.Charge_target = 2.4
     Cycle.Ref='R410A'
-    Cycle.SecLoopFluid = 'INCOMP::MEG-20%'
+    Cycle.SecLoopFluid = 'MEG'
+    Cycle.Backend_SLF = 'INCOMP'
     Cycle.IHXType = 'PHE'# or could be 'Coaxial'
     Cycle.Mode='AC'
     
@@ -115,6 +117,7 @@ def SampleSecondaryLoopSystem():
            
     params={
         'Ref_g': Cycle.SecLoopFluid,
+        'Backend_g': Cycle.Backend_SLF,
         'pin_g': 200000,                                                        #pin_g in Pa
         'Verbosity':0,
         'mdot_g':0.38,
@@ -131,6 +134,7 @@ def SampleSecondaryLoopSystem():
         'pin_g':300000,                                                         #pin_g in Pa
         'Ref_r':Cycle.Ref,
         'Ref_g':Cycle.SecLoopFluid,
+        'Backend_g': Cycle.Backend_SLF,
         'Verbosity':0
         }
     Cycle.CoaxialIHX.Update(**params)
@@ -138,6 +142,7 @@ def SampleSecondaryLoopSystem():
     params={
         'pin_h':300000,                                                         #pin_h in Pa
         'Ref_h':Cycle.SecLoopFluid,
+        'Backend_h': Cycle.Backend_SLF,
         'Ref_c':Cycle.Ref,
         
         #Geometric parameters
@@ -160,6 +165,7 @@ def SampleSecondaryLoopSystem():
         'mdot_g':0.38, #Flow Rate kg/s
         'pin_g':300000,                                                         #pin_g in Pa
         'Ref_g':Cycle.SecLoopFluid,
+        'Backend_g': Cycle.Backend_SLF,
         'Verbosity':0,
         }
     Cycle.Pump.Update(**params)
@@ -171,6 +177,7 @@ def SampleSecondaryLoopSystem():
         'k_insul':0.036,
         'T_air':297,
         'Ref': Cycle.SecLoopFluid,
+        'Backend': Cycle.Backend_SLF,
         'pin': 300000,                                                          #pin in Pa
         'h_air':0.0000000001,
     }
@@ -334,6 +341,7 @@ def SampleSecondaryLoopHPSystem():
         'mdot_g':0.38, #Flow Rate kg/s
         'pin_g':300000,                                                         #pin_g in Pa
         'Ref_g':Cycle.SecLoopFluid,
+        'Backend_g': Cycle.Backend_SLF,
         'Verbosity':0,
         }
     Cycle.Pump.Update(**params)
@@ -345,6 +353,7 @@ def SampleSecondaryLoopHPSystem():
         'k_insul':0.036,
         'T_air':297,
         'Ref': Cycle.SecLoopFluid,
+        'Backend': Cycle.Backend_SLF,
         'h_air':0.0000000001,
     }
     
