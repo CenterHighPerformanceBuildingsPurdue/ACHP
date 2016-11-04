@@ -1,10 +1,11 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
 from math import pi,log,exp
-from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube,ShahCondensation_Average,LMPressureGradientAvg,TwoPhaseDensity,AccelPressureDrop 
 from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
 from scipy.optimize import brentq
 from ACHPTools import ValidateFields
+import CoolProp as CP
+
 class FinVals():
     def __init__(self):
         pass
@@ -89,9 +90,15 @@ class CondenserClass():
                ('Tin_r',float,200,500),
                ('psat_r',float,0.01,20000000)              #0.00001,20000 changed to 0.01,20000000
                ]
-            optFields=['Verbosity']
+            optFields=['Verbosity','Backend']
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
+        #AbstractState
+        if hasattr(self,'Backend'): #check if backend is given
+            AS = CP.AbstractState(self.Backend, self.Ref)
+        else: #otherwise, use the defualt backend
+            AS = CP.AbstractState('HEOS', self.Ref)
+        self.AS = AS
         # Retrieve some parameters from nested structures 
         # for code compactness
         self.ID=self.Fins.Tubes.ID
@@ -103,8 +110,14 @@ class CondenserClass():
         self.Tin_a=self.Fins.Air.Tdb
 
         ## Bubble and dew temperatures (same for fluids without glide)
-        self.Tbubble=PropsSI('T','P',self.psat_r,'Q',0.0,self.Ref)
-        self.Tdew=PropsSI('T','P',self.psat_r,'Q',1.0,self.Ref)
+        AS.update(CP.PQ_INPUTS, self.psat_r, 0.0)
+        self.Tbubble=AS.T() #[K]
+        self.h_l = AS.hmass() #[J/kg]
+        self.cp_satL = AS.cpmass() #[J/kg-K]
+        
+        AS.update(CP.PQ_INPUTS, self.psat_r, 1.0)
+        self.Tdew=AS.T() #[K]
+        self.h_v = AS.hmass() #[J/kg]
         
         # Calculate an effective length of circuit if circuits are 
         # not all the same length
@@ -114,6 +127,11 @@ class CondenserClass():
         self.V_r = pi * self.ID**2 / 4.0 * self.Lcircuit * self.Ncircuits
         self.A_r_wetted = pi * self.ID * self.Ncircuits * self.Lcircuit
         self.G_r = self.mdot_r/(self.Ncircuits*pi*self.ID**2/4.0)    
+        
+        #define known parameters
+        AS.update(CP.PT_INPUTS, self.psat_r, self.Tin_r)
+        self.hin_r=AS.hmass() #[J/kg]
+        self.sin_r=AS.smass() #[J/kg-K]
         
         #Definitely have a superheated portion
         self._Superheat_Forward()
@@ -141,14 +159,20 @@ class CondenserClass():
         self.DP_r=self.DP_r_superheat+self.DP_r_2phase+self.DP_r_subcool
         self.Charge=self.Charge_2phase+self.Charge_subcool+self.Charge_superheat
         
-        self.sin_r=PropsSI('S','T',self.Tin_r,'P',self.psat_r,self.Ref)#*1000
         if self.existsSubcooled==True:
-            self.hout_r=PropsSI('H','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
-            self.sout_r=PropsSI('S','T',self.Tout_r,'P',self.psat_r,self.Ref)#*1000
+            AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
+            self.hout_r=AS.hmass() #[J/kg]
+            self.sout_r=AS.smass() #[J/kg-K]
         else:
             self.Tout_r=self.xout_2phase*self.Tdew+(1-self.xout_2phase)*self.Tbubble
-            self.hout_r=PropsSI('H','T',self.Tout_r,'Q',0,self.Ref) + self.xout_2phase * (PropsSI('H','T',self.Tout_r,'Q',1,self.Ref)-PropsSI('H','T',self.Tout_r,'Q',0,self.Ref)) #PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
-            self.sout_r=PropsSI('S','T',self.Tout_r,'Q',0,self.Ref) + self.xout_2phase * (PropsSI('S','T',self.Tout_r,'Q',1,self.Ref)-PropsSI('S','T',self.Tout_r,'Q',0,self.Ref))#PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)#*1000
+            AS.update(CP.QT_INPUTS, 0.0, self.Tout_r)
+            h_l=AS.hmass() #[J/kg]
+            s_l=AS.smass() #[J/kg-K]
+            AS.update(CP.QT_INPUTS, 1.0, self.Tout_r)
+            h_v=AS.hmass() #[J/kg]
+            s_v=AS.smass() #[J/kg-K]
+            self.hout_r= h_l + self.xout_2phase * (h_v - h_l) #PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
+            self.sout_r= s_l + self.xout_2phase * (s_v - s_l) #PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
             #Use the effective subcooling
             self.DT_sc=self.DT_sc_2phase
         
@@ -163,16 +187,21 @@ class CondenserClass():
         # **********************************************************************
         #                      SUPERHEATED PART 
         # **********************************************************************
+        #AbstractState
+        AS = self.AS
         #Dew temperature for constant pressure cooling to saturation
         Tdew=self.Tdew
+        Tbubble=self.Tbubble
         
         # Average fluid temps are used for the calculation of properties 
         # Average temp of refrigerant is average of sat. temp and outlet temp		
         # Secondary fluid is air over the fins
         self.f_r_superheat, self.h_r_superheat, self.Re_r_superheat=f_h_1phase_Tube(self.mdot_r / self.Ncircuits, self.ID, 
-            (Tdew+self.Tin_r)/2.0, self.psat_r, self.Ref, "Single");
-            
-        cp_r = PropsSI('C', 'T', (Tdew+self.Tin_r)/2, 'P', self.psat_r, self.Ref)*1. #*1000. #//[J/kg-K]
+            (Tdew+self.Tin_r)/2.0, self.psat_r, self.AS, "Single");
+        
+        AS.update(CP.PT_INPUTS, self.psat_r, (Tdew+self.Tin_r)/2)    
+        cp_r = AS.cpmass() #[J/kg-K]
+        rho_superheat= AS.rhomass() #[kg/m^3]
 
         #Compute Fins Efficiency based on FinsType 
         if self.FinsType == 'WavyLouveredFins':
@@ -197,19 +226,19 @@ class CondenserClass():
         # Heat is removed here from the refrigerant since it is being cooled
         self.Q_superheat = self.mdot_r * cp_r * (Tdew-self.Tin_r)
 
-        rho_superheat=PropsSI('D','T',(self.Tin_r+Tdew)/2.0, 'P', self.psat_r, self.Ref)
         #Pressure drop calculations for superheated refrigerant
-        v_r=1./rho_superheat;
+        v_r=1./rho_superheat
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2.*self.ID) #Pressure gradient
         self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
 
         #Latent heat needed for pseudo-quality calc
-        Tbubble=PropsSI('T','P',self.psat_r,'Q',0,self.Ref)
-        Tdew=PropsSI('T','P',self.psat_r,'Q',1,self.Ref)
-        h_fg = (PropsSI('H', 'T', Tdew, 'Q', 1, self.Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0, self.Ref))#*1000 #J/kg
-        self.hin_r=PropsSI('H','T',self.Tin_r,'P',self.psat_r,self.Ref)#*1000
+        AS.update(CP.QT_INPUTS, 0.0, Tbubble)
+        h_l = AS.hmass() #[J/kg]
+        AS.update(CP.QT_INPUTS, 1.0, Tdew)
+        h_v = AS.hmass() #[J/kg]
+        h_fg = h_v - h_l #[J/kg]
         self.xin_r=1.0+cp_r*(self.Tin_r-Tdew)/h_fg
         
     def _TwoPhase_Forward(self,xout_r_2phase=0.0):
@@ -223,12 +252,14 @@ class CondenserClass():
         ## Mean temperature for use in HT relationships
         Tsat_r=(Tbubble+Tdew)/2
         
-        h_fg = (PropsSI('H', 'T', Tdew, 'Q', 1, self.Ref) - PropsSI('H', 'T', Tbubble, 'Q', 0, self.Ref))#*1000 #J/kg
+        h_l = self.h_l #[J/kg]
+        h_v = self.h_v #[J/kg]
+        h_fg = h_v - h_l #[J/kg]
         
         # This block calculates the average refrigerant heat transfer coefficient by
         # integrating the local heat transfer coefficient between 
         # a quality of 1.0 and the outlet quality
-        self.h_r_2phase=ShahCondensation_Average(xout_r_2phase,1.0,self.Ref,self.G_r,self.ID,self.psat_r,Tbubble,Tdew);
+        self.h_r_2phase=ShahCondensation_Average(xout_r_2phase,1.0,self.AS,self.G_r,self.ID,self.psat_r,Tbubble,Tdew);
 
         UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1 / (self.h_r_2phase * self.A_r_wetted));
         self.epsilon_2phase=1-exp(-UA_overall/(self.mdot_da*self.Fins.cp_da));
@@ -241,13 +272,13 @@ class CondenserClass():
         self.xout_2phase=xout_r_2phase
         
         # Frictional pressure drop component
-        DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.Ref,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
+        DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.AS,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         #Accelerational pressure drop component    
-        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.Ref,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
+        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.AS,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
     
-        rho_average=TwoPhaseDensity(self.Ref,self.xout_2phase,1.0,self.Tdew,self.Tbubble,slipModel='Zivi')
+        rho_average=TwoPhaseDensity(self.AS,self.xout_2phase,1.0,self.Tdew,self.Tbubble,slipModel='Zivi')
         self.Charge_2phase = rho_average * self.w_2phase * self.V_r    
         
         if self.Verbosity>7:
@@ -256,7 +287,7 @@ class CondenserClass():
         
         #Calculate an effective pseudo-subcooling based on the equality
         #     cp*DT_sc=-dx*h_fg
-        cp_satL=PropsSI('C','T',self.Tbubble,'Q',0.0,self.Ref)#*1000
+        cp_satL = self.cp_satL #[J/kg-K]
         self.DT_sc_2phase=-self.xout_2phase*h_fg/(cp_satL)
             
         #If the quality is being solved for, the length of the two-phase and subcooled
@@ -269,8 +300,10 @@ class CondenserClass():
         
         if self.w_subcool<0:
             raise ValueError('w_subcool in Condenser cannot be less than zero')
-        # Bubble temperature
-        Tbubble=PropsSI('T','P',self.psat_r,'Q',0.0,self.Ref)
+        #AbstractState
+        AS = self.AS
+        ## Bubble and dew temperatures (same for fluids without glide)
+        Tbubble=self.Tbubble
         
         # Based on the the construction of the cycle model there is guaranteed to be a 
         # two-phase portion of the heat exchanger
@@ -284,10 +317,11 @@ class CondenserClass():
         # Secondary fluid is air over the fins
     
         self.f_r_subcool, self.h_r_subcool, self.Re_r_subcool=f_h_1phase_Tube(
-          self.mdot_r / self.Ncircuits, self.ID, Tbubble-1.0, self.psat_r, self.Ref,
+          self.mdot_r / self.Ncircuits, self.ID, Tbubble-1.0, self.psat_r, self.AS,
           "Single")
         
-        cp_r = PropsSI('C', 'T', Tbubble-1, 'P', self.psat_r, self.Ref)#*1000 #[J/kg-K]
+        AS.update(CP.PT_INPUTS, self.psat_r, Tbubble-1)
+        cp_r = AS.cpmass() #[J/kg-K]
     
         # Cross-flow in the subcooled region.
         R_a=1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a)
@@ -311,7 +345,8 @@ class CondenserClass():
         self.DT_sc=-self.Q_subcool/(self.mdot_r*cp_r)
         self.Tout_r=Tbubble-self.DT_sc
         
-        rho_subcool=PropsSI('D', 'T', (Tbubble + self.Tout_r) / 2, 'P', self.psat_r, self.Ref)
+        AS.update(CP.PT_INPUTS, self.psat_r, (Tbubble + self.Tout_r) / 2)
+        rho_subcool=AS.rhomass() #[kg/m^3]
         self.Charge_subcool = self.w_subcool * self.V_r * rho_subcool
     
         #Pressure drop calculations for subcooled refrigerant
@@ -349,10 +384,11 @@ def SampleCondenser(T=41.37):
         'Ref': 'R410A',
         'mdot_r': 0.0708,
         'Tin_r': T+20+273.15,
-        'psat_r': PropsSI('P','T',T+273.15,'Q',1.0,'R410A'), 
+        'psat_r': 2500076.19, #PropsSI('P','T',T+273.15,'Q',1.0,'R410A') 
         'Fins': Fins,
         'FinsType': 'HerringboneFins',                                          #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-        'Verbosity':0
+        'Verbosity':0,
+        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     }
     Cond=CondenserClass(**params)
     Cond.Calculate()
