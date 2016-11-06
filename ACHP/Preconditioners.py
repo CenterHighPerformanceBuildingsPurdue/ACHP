@@ -76,9 +76,14 @@ def DXPreconditioner(Cycle,epsilon=0.96):
             f_dry=1-(Tdewpoint-T_so_a)/(T_so_b-T_so_a)
         Qevap=f_dry*Qevap_dry+(1-f_dry)*Qevap_wet
         
-        Cycle.AS.update(CP.PT_INPUTS,pcond,Tcond-Cycle.DT_sc_target)
-        h_target = Cycle.AS.hmass() #[J/kg]
-        Qcond_enthalpy=Cycle.Compressor.mdot_r*(Cycle.Compressor.hout_r-h_target)
+        if Cycle.ImposedVariable == 'Subcooling': #if Subcooling impose
+            Cycle.AS.update(CP.PT_INPUTS,pcond,Tcond-Cycle.DT_sc_target)
+            h_target = Cycle.AS.hmass() #[J/kg]
+            Qcond_enthalpy=Cycle.Compressor.mdot_r*(Cycle.Compressor.hout_r-h_target)
+        else: #otherwise, if Charge impose
+            Cycle.AS.update(CP.PT_INPUTS,pcond,Tcond-5)
+            h_target = Cycle.AS.hmass() #[J/kg]
+            Qcond_enthalpy=Cycle.Compressor.mdot_r*(Cycle.Compressor.hout_r-h_target)
         
         resids=[Qevap+W+Qcond,Qcond+Qcond_enthalpy]#,Qevap,f_dry]
         return resids
