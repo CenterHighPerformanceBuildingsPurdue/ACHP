@@ -1,5 +1,5 @@
 
-from CoolProp.CoolProp import PropsSI
+import CoolProp as CP
 import pylab,numpy as np
 
 from ACHP.Correlations import Bertsch_MC_Average
@@ -7,11 +7,13 @@ from ACHP.Correlations import Bertsch_MC_Average
 x=np.linspace(0,1,1000)
 h=np.zeros_like(x)
 TsatL,TsatV=300.,300.
-p=PropsSI('P','T',TsatL,'Q',0,'R134a')
+AS= CP.AbstractState('HEOS','R134a')
+AS.update(CP.QT_INPUTS,0.0,TsatL)
+p = AS.p() #[Pa]
 q_flux =200
 L=1
 for i in range(len(x)):
-    h[i]=Bertsch_MC_Average(x[i],x[i],'R134a',300,0.01,q_flux,L,TsatL,TsatV)
+    h[i]=Bertsch_MC_Average(x[i],x[i],AS,300,0.01,q_flux,L,TsatL,TsatV)
     
 havg=np.trapz(h,x=x)
 pylab.figure(figsize=(7,5))

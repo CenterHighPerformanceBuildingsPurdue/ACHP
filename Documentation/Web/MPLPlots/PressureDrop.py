@@ -1,5 +1,5 @@
 from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-from CoolProp.CoolProp import PropsSI
+import CoolProp as CP
 import numpy as np
 import pylab as pylab
 from math import pi
@@ -12,19 +12,27 @@ D=0.01 #tube diameter[m]
 Q=200 #W/m^s
 L=1 #length of tube
 m_dot=(G_r*pi*D**2)/4.0
-Ref="R134a"
+Ref = "R134a"
+Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
 psat_r=702800 #Pa
-print PropsSI('R134a','pcrit')
-Tdew_r=PropsSI('T','P',psat_r,'Q',1.0,Ref)
-Tbubble_r=PropsSI('T','P',psat_r,'Q',0.0,Ref) #same value as above for pure fluids
+AS = CP.AbstractState(Backend,Ref)
+AS.update(CP.PQ_INPUTS,psat_r,0.0)
+Tbubble_r = AS.T() #[K]
+rho_l = AS.rhomass() #[kg/m^3]
+h_l = AS.hmass() #[J/kg]
+AS.update(CP.PQ_INPUTS,psat_r,1.0)
+Tdew_r = AS.T() #[K]
+rho_v = AS.rhomass() #[kg/m^3]
+h_v = AS.hmass() #[J/kg]
+print AS.p_critical() #[Pa]
 print Tdew_r,Tbubble_r
-print PropsSI('H','P',702800,'Q',1.0,Ref)
-print PropsSI('D','T',Tbubble_r,'Q',0.0,Ref)
-h_fg=PropsSI('H','T',Tdew_r,'Q',1.0,Ref)-PropsSI('H','T',Tbubble_r,'Q',0.0,Ref)
+#print PropsSI('H','P',702800,'Q',1.0,Ref)
+print rho_l
+h_fg=h_v - h_l
 print "h_fg",h_fg
-v_f=1/PropsSI('D','P',psat_r,'Q',0.0,Ref)  #liquid density
-v_g=1/PropsSI('D','P',psat_r,'Q',1.0,Ref)  #gas density
-v_fg=v_g-v_f #difference between the two of them
+v_f=1/rho_l  #liquid density [m^3/kg]
+v_g=1/rho_v  #gas density [m^3/kg]
+v_fg=v_g-v_f #difference between the two of them [m^3/kg]
 DELTA_x=Q*D*pi*L/(h_fg*m_dot)  #change of quality in section
 
 #generate data
@@ -41,15 +49,15 @@ for i in range(len(x)):
         x_in=1.0-DELTA_x
         x_out=1.0
     #accelerational pressure drop using ACHP
-    dp_acc_zivi[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Zivi')*L
+    dp_acc_zivi[i]=-AccelPressureDrop(x_in,x_out,AS,G_r,Tbubble_r,Tdew_r,None,None,'Zivi')*L
     #accelerational pressure drop using homogeneous equilibrium model:
-    dp_acc_hom[i]=-AccelPressureDrop(x_in,x_out,Ref,G_r,Tbubble_r,Tdew_r,None,None,'Homogeneous')*L
+    dp_acc_hom[i]=-AccelPressureDrop(x_in,x_out,AS,G_r,Tbubble_r,Tdew_r,None,None,'Homogeneous')*L
     #frictional pressure drop using Lockhart-Martinelli
     C=None
     satTransport=None
-    dp_lm[i]=LockhartMartinelli(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,C,satTransport)[0]*L
+    dp_lm[i]=LockhartMartinelli(AS, G_r, D, x[i], Tbubble_r,Tdew_r,C,satTransport)[0]*L
     beta = 1 #channel aspect ratio (=width/height)
-    dp_km[i]=Kim_Mudawar_condensing_DPDZ_h(Ref, G_r, D, x[i], Tbubble_r,Tdew_r,psat_r,beta,satTransport)[0]*L    
+    dp_km[i]=Kim_Mudawar_condensing_DPDZ_h(AS, G_r, D, x[i], Tbubble_r,Tdew_r,psat_r,beta,satTransport)[0]*L    
     #havg=np.trapz(h,x=x)
 
 def plot(KM=None,LM=None,Zivi=None,Hom=None,scl='log',txtx=0.1,txty=5,pos='best'):

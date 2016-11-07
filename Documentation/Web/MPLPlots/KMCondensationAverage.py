@@ -1,5 +1,5 @@
 
-from CoolProp.CoolProp import PropsSI
+import CoolProp as CP
 import pylab,numpy as np
 
 from ACHP.Correlations import KM_Cond_Average
@@ -7,10 +7,12 @@ from ACHP.Correlations import KM_Cond_Average
 x=np.linspace(0,1,1000)
 h=np.zeros_like(x)
 TsatL,TsatV=300.,300.
-p=PropsSI('P','T',TsatL,'Q',0,'R134a')
+AS= CP.AbstractState('HEOS','R134a')
+AS.update(CP.QT_INPUTS,0.0,TsatL)
+p = AS.p() #[Pa]
 beta = 1 #channel aspect ratio (=width/height)
 for i in range(len(x)):
-    h[i]=KM_Cond_Average(x[i],x[i],'R134a',200,0.01,TsatL,TsatV,p,beta)[1]
+    h[i]=KM_Cond_Average(x[i],x[i],AS,200,0.01,TsatL,TsatV,p,beta)[1]
     
 havg=np.trapz(h,x=x)
 pylab.figure(figsize=(7,5))
