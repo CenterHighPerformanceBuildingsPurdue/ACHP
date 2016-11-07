@@ -1,13 +1,8 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division
 from math import log,exp
-#from CoolProp.HumidAirProp import HAPropsSI,cair_sat #,UseVirialCorrelations,UseIsothermCompressCorrelation,UseIdealGasEnthalpyCorrelations
-from CoolProp.CoolProp import HAPropsSI, cair_sat #HAPropsSI and cair_sat are updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp
+from CoolProp.CoolProp import HAPropsSI, cair_sat
 from FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
 
-#Turn on virial correlations for air and water for speed in Humid Air routines
-#UseVirialCorrelations(1)
-#UseIsothermCompressCorrelation(1)
-#UseIdealGasEnthalpyCorrelations(1)
 class DWSVals():
     """ 
     Empty Class for passing data with DryWetSegment
@@ -51,7 +46,7 @@ def DryWetSegment(DWS):
     #Calculate the dewpoint (amongst others)
     omega_in=HAPropsSI('W','T',Tin_a,'P',pin_a,'R',RHin_a)
     Tdp=HAPropsSI('D','T',Tin_a,'P',pin_a,'W',omega_in)
-    hin_a=HAPropsSI('H','T',Tin_a,'P',pin_a,'W',omega_in)#*1000 #[J/kg_da]
+    hin_a=HAPropsSI('H','T',Tin_a,'P',pin_a,'W',omega_in) #[J/kg_da]
     
     # Internal UA between fluid flow and outside surface (neglecting tube conduction)
     UA_i=h_r*A_r #[W/K], from Shah or f_h_1phase_Tube-fct -> Correlations.py
@@ -99,7 +94,7 @@ def DryWetSegment(DWS):
                 # Dry fraction found by solving epsilon=1-exp(-f_dry*Ntu) for known epsilon from above equation
                 f_dry=-1.0/Ntu_dry*log(1.0-epsilon_dry)
                 # Enthalpy, using air humidity at the interface between wet and dry surfaces, which is same humidity ratio as inlet
-                h_ac=HAPropsSI('H','T',T_ac,'P',pin_a,'W',omega_in) #*1000 #[J/kg_da]
+                h_ac=HAPropsSI('H','T',T_ac,'P',pin_a,'W',omega_in) #[J/kg_da]
                 # Dry heat transfer
                 Q_dry=mdot_da*cp_da*(Tin_a-T_ac)
 
@@ -130,7 +125,7 @@ def DryWetSegment(DWS):
             # Wet effectiveness [-]
             epsilon_wet=1-exp(-(1-f_dry)*Ntu_wet)
             # Air saturated at refrigerant saturation temp [J/kg]
-            h_s_s_o=HAPropsSI('H','T',Tin_r, 'P',pin_a, 'R', 1.0)#*1000 #[kJ/kg_da]
+            h_s_s_o=HAPropsSI('H','T',Tin_r, 'P',pin_a, 'R', 1.0) #[kJ/kg_da]
             
             # Wet heat transfer [W]
             Q_wet=epsilon_wet*mdot_da*(h_ac-h_s_s_o)
@@ -141,7 +136,7 @@ def DryWetSegment(DWS):
             # Saturated air temp at effective surface temp [J/kg_da]
             h_s_s_e=h_ac-(h_ac-hout_a)/(1-exp(-(1-f_dry)*Ntu_o))
             # Effective surface temperature [K]
-            T_s_e = HAPropsSI('T','H',h_s_s_e/1.0,'P',pin_a,'R',1.0) #h_s_s_e/1000.0 is updated by removing /1000.0
+            T_s_e = HAPropsSI('T','H',h_s_s_e,'P',pin_a,'R',1.0)
             # Outlet dry-bulb temp [K]
             Tout_a = T_s_e+(T_ac-T_s_e)*exp(-(1-f_dry)*Ntu_o)
             #Sensible heat transfer rate [kW]
@@ -219,7 +214,7 @@ def DryWetSegment(DWS):
 
                 Tout_r_start=Tout_r;
                 # Saturated air enthalpy at the inlet water temperature [J/kg]
-                h_s_w_i=HAPropsSI('H','T',Tin_r,'P', pin_a, 'R', 1.0)#*1000 #[J/kg_da]
+                h_s_w_i=HAPropsSI('H','T',Tin_r,'P', pin_a, 'R', 1.0) #[J/kg_da]
                 # Saturation specific heat at mean water temp [J/kg]
                 c_s=cair_sat((Tin_r+Tout_r)/2.0)*1000
                 # Ratio of specific heats [-]
@@ -255,7 +250,7 @@ def DryWetSegment(DWS):
                 # Water outlet temp [K]
                 Tout_r = Tin_r+mdot_da/(mdot_r*cp_r)*(hin_a-hout_a)
                 # Water outlet saturated surface enthalpy [J/kg_da]
-                h_s_w_o=HAPropsSI('H','T',Tout_r, 'P',pin_a, 'R', 1.0)#*1000 #[J/kg_da]
+                h_s_w_o=HAPropsSI('H','T',Tout_r, 'P',pin_a, 'R', 1.0) #[J/kg_da]
                 #Local UA* and c_s
                 UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)/2.0)*1000/h_r/A_r)
                 # Wet-analysis surface temperature [K]
@@ -263,7 +258,7 @@ def DryWetSegment(DWS):
                 # Wet-analysis saturation enthalpy [J/kg_da]
                 h_s_s_e=hin_a+(hout_a-hin_a)/(1-exp(-Ntu_owet))
                 # Surface effective temperature [K]
-                T_s_e=HAPropsSI('T','H',h_s_s_e/1.0,'P',pin_a,'R',1.0) #h_s_s_e/1000.0 is updated by removing /1000.0
+                T_s_e=HAPropsSI('T','H',h_s_s_e,'P',pin_a,'R',1.0)
                 # Air outlet temp based on effective temp [K]
                 Tout_a=T_s_e + (Tin_a-T_s_e)*exp(-Ntu_o)
                 #Sensible heat transfer rate [W]
@@ -365,7 +360,7 @@ def DryWetSegment(DWS):
                 # Wet-analysis saturation enthalpy [J/kg]
                 h_s_s_e=h_a_x+(hout_a-h_a_x)/(1-exp(-(1-f_dry)*Ntu_owet))
                 # Surface effective temperature [K]
-                T_s_e=HAPropsSI('T','H',h_s_s_e/1.0,'P',pin_a,'R',1.0)   #h_s_s_e/1000.0 is updated to by removing /1000.0
+                T_s_e=HAPropsSI('T','H',h_s_s_e,'P',pin_a,'R',1.0)
                 # Air outlet temp based on effective surface temp [K]
                 Tout_a=T_s_e + (T_a_x-T_s_e)*exp(-(1-f_dry)*Ntu_o)
                 # Heat transferred [W]
@@ -384,7 +379,7 @@ def DryWetSegment(DWS):
           
 
     DWS.f_dry=f_dry
-    DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a/1.0)    ##hout_a/1000.0 is updated by removing /1000.0
+    DWS.omega_out=HAPropsSI('W','T',Tout_a,'P',101325,'H',hout_a)
     DWS.RHout_a=HAPropsSI('R','T',Tout_a,'P',101325,'W',DWS.omega_out)
     DWS.Tout_a=Tout_a
     DWS.Q=Q

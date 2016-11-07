@@ -1,4 +1,4 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division
 from math import pi,log,exp
 from CoolProp.CoolProp import HAPropsSI
 from Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
@@ -99,12 +99,14 @@ class MicroCondenserClass():
             optFields=['Verbosity','Backend']
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
+        
         #AbstractState
         if hasattr(self,'Backend'): #check if backend is given
             AS = CP.AbstractState(self.Backend, self.Ref)
         else: #otherwise, use the defualt backend
             AS = CP.AbstractState('HEOS', self.Ref)
         self.AS = AS
+        
         # Retrieve some parameters from nested structures 
         # for code compactness
         self.Ltube=self.Fins.Tubes.Ltube    #tube length
@@ -113,7 +115,6 @@ class MicroCondenserClass():
         self.Tin_a=self.Fins.Air.Tdb        #inlet air temperature
         self.Pin_a =self.Fins.Air.p         #inlet air pressure
         self.RHin_a=self.Fins.Air.RH        #inlet air relative humidity
-        """NEW ADDED"""
         self.Td=self.Fins.Tubes.Td          #tube outside width (depth)
         self.Ht=self.Fins.Tubes.Ht          #tube outside height (major diameter)
         self.b=self.Fins.Tubes.b            #tube spacing
@@ -141,7 +142,6 @@ class MicroCondenserClass():
         TotalLength=self.Ltube*self.NTubes*self.Nbank
         self.Lcircuit=TotalLength/self.Ncircuits
                                                              
-        """NEW ADDED"""
         # Volume of refrigerant = rectangle of tube + circular part at the ends - thickness between ports
         self.V_r = ((self.Td-self.Ht)*(self.Ht-2.0*self.tw) + (pi/4.0) * (self.Ht - 2.0*self.tw)**2 - (self.Ht-2.0*self.tw)*self.twp*(self.Nports-1)) * self.Lcircuit * self.Ncircuits
         # Tube wetted area = tube straight length + circular shape at the ends - horizontal port thickness  + vertical thickness between ports
@@ -152,7 +152,6 @@ class MicroCondenserClass():
         self.Dh = 4*self.A_c*self.Lcircuit/self.A_r_wetted
         # Mass flux ref-side
         self.G_r = self.mdot_r / self.A_c
-
         
         # Total conduction area (exclude port's thickness)
         self.Aw = 2 * (self.Td - self.twp*(self.Nports-1)) * self.Lcircuit * self.Ncircuits
@@ -244,7 +243,6 @@ class MicroCondenserClass():
 
         
     def _Superheat_Forward(self):  
-        
         # **********************************************************************
         #                      SUPERHEATED PART 
         # **********************************************************************
@@ -298,7 +296,6 @@ class MicroCondenserClass():
         self.xin_r=1.0+cp_r*(self.Tin_r-Tdew)/h_fg
         
     def _TwoPhase_Forward(self,xout_r_2phase=0.0):
-        
         # **********************************************************************
         #                      TWO-PHASE PART 
         # **********************************************************************
@@ -349,7 +346,6 @@ class MicroCondenserClass():
             print 'h_r_2phase',self.h_r_2phase
         
         #Calculate an effective pseudo-subcooling based on the equality
-        #     cp*DT_sc=-dx*h_fg
         cp_satL=self.cp_satL
         self.DT_sc_2phase=-self.xout_2phase*h_fg/(cp_satL)
             
@@ -359,7 +355,6 @@ class MicroCondenserClass():
     
     
     def _Subcool_Forward(self):
-        
         # **********************************************************************
         #                      SUBCOOLED PART 
         # **********************************************************************
@@ -382,7 +377,6 @@ class MicroCondenserClass():
         # Average fluid temps are used for the calculation of properties 
         # Average temp of refrigerant is average of sat. temp and outlet temp
         # Secondary fluid is air over the fins
-    
         self.f_r_subcool, self.h_r_subcool, self.Re_r_subcool=f_h_1phase_MicroTube(
           self.G_r, self.Dh, Tbubble-1.0, self.psat_r, self.AS,
           "Single")

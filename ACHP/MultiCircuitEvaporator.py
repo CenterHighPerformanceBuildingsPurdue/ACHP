@@ -1,4 +1,4 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division
 from math import floor,ceil
 from CoolProp.CoolProp import PropsSI
 from FinCorrelations import FinInputs
@@ -102,6 +102,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
             AS = CP.AbstractState(self.Backend, self.Ref)
         else: #otherwise, use the defualt backend
             AS = CP.AbstractState('HEOS', self.Ref)
+        self.AS = AS
         
         #Check that the length of lists of mdot_r and FinsTubes.Air.Vdot_ha 
         #match the number of circuits or are all equal to 1 (standard evap)

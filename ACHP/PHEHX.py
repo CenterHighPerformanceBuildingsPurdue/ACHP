@@ -1,5 +1,5 @@
 from __future__ import division
-from CoolProp.CoolProp import PropsSI#, IsFluidType #,Help,Phase
+from CoolProp.CoolProp import PropsSI
 import CoolProp as CP
 
 from Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
@@ -201,7 +201,7 @@ class PHEHXClass():
         AS_c = self.AS_c
         
         #Find the phase boundaries that exist, and add them to lists
-        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name():
             hsatL_h=1e9
             hsatV_h=1e9
         else:
@@ -210,7 +210,7 @@ class PHEHXClass():
             AS_h.update(CP.DmassT_INPUTS, self.rhosatV_h, self.Tdew_h)
             hsatV_h=AS_h.hmass() #[J/kg]
         
-        if 'IncompressibleBackend' in AS_c.backend_name():#if IsFluidType(self.Ref_c,'Brine'):
+        if 'IncompressibleBackend' in AS_c.backend_name():
             hsatL_c=1e9
             hsatV_c=1e9
         else:
@@ -270,6 +270,7 @@ class PHEHXClass():
                 if cell[tag]==tagvalue:
                     collectList.append(cell[out])
             return collectList
+        
         self.DP_c=0
         self.DP_c_superheat=0
         self.DP_c_2phase=0
@@ -385,7 +386,7 @@ class PHEHXClass():
         self.Tout_h,self.rhoout_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
         self.Tout_c,self.rhoout_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
+        if 'IncompressibleBackend' in AS_c.backend_name():
             AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tout_c)
             self.sout_c=AS_c.smass() #[J/kg-K]
             self.DT_sc_c=1e9
@@ -402,7 +403,7 @@ class PHEHXClass():
             else:
                 self.DT_sc_c=self.Tbubble_c-self.Tout_c
         
-        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name():
             AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tout_h)
             self.sout_h=AS_h.smass() #[J/kg-K]
             self.DT_sc_h=1e9
@@ -668,9 +669,9 @@ class PHEHXClass():
             self.NgapsHot=self.Nplates-1-self.NgapsCold
         
         #Saturation temperatures for cold fluid
-        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
-            self.rhosatL_c= None #Update: changed from 1 to None
-            self.rhosatV_c= None #Update: changed from 1 to None
+        if 'IncompressibleBackend' in AS_c.backend_name():
+            self.rhosatL_c= None
+            self.rhosatV_c= None
             self.Tbubble_c = None
             self.Tdew_c = None
             self.Tsat_c = None
@@ -683,7 +684,7 @@ class PHEHXClass():
             self.rhosatV_c=AS_c.rhomass() #[kg/m^3]
             self.Tsat_c=(self.Tbubble_c+self.Tdew_c)/2.0
         
-        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name():
             self.Tbubble_h=None
             self.Tdew_h=None
             self.Tsat_h=None
@@ -703,14 +704,14 @@ class PHEHXClass():
         self.Tin_h,self.rhoin_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
         self.Tin_c,self.rhoin_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'IncompressibleBackend' in AS_c.backend_name(): #if IsFluidType(self.Ref_c,'Brine'):
+        if 'IncompressibleBackend' in AS_c.backend_name():
             AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_c)
             self.sin_c=AS_c.smass() #[J/kg-K]
         else:
             AS_c.update(CP.DmassT_INPUTS, self.rhoin_c,self.Tin_c)
             self.sin_c=AS_c.smass() #[J/kg-K]
             
-        if 'IncompressibleBackend' in AS_h.backend_name(): #if IsFluidType(self.Ref_h,'Brine'):
+        if 'IncompressibleBackend' in AS_h.backend_name():
             AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_h)
             self.sin_h=AS_h.smass() #[J/kg-K]
         else:
@@ -913,14 +914,14 @@ def WyattPHEHX():
     params={
         'Ref_c':'R134a',
         'mdot_c':0.073,
-        'pin_c':962833,                                                         #Pin_c in Pa
-        'hin_c':PropsSI('H','T',Tdew,'Q',0.0,'R134a'), #*1000
+        'pin_c':962833,
+        'hin_c':PropsSI('H','T',Tdew,'Q',0.0,'R134a'), #[J/kg-K]
         'xin_c':0.0,
         
         'Ref_h':'Water',
         'mdot_h':100.017,
         'pin_h':PropsSI('P','T',115.5+273.15,'Q',1,'Water'),
-        'hin_h':PropsSI('H','T',115.5+273.15,'Q',1,'Water'), #*1000
+        'hin_h':PropsSI('H','T',115.5+273.15,'Q',1,'Water'), #[J/kg-K]
         
         #Geometric parameters
         'Bp' : 0.119,
@@ -948,12 +949,12 @@ def SWEPVariedmdot():
             'Ref_c':'R290',
             'mdot_c':0.03312,
             'pin_c':PropsSI('P','T',Tin,'Q',1.0,'R290'),
-            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #*1000
+            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #[J/kg-K]
             
             'Ref_h':'Water',
             'mdot_h':mdot_h,
-            'pin_h':200000,                                                     #pin_h in Pa
-            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #*1000
+            'pin_h':200000,
+            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #[J/kg-K]
             
             #Geometric parameters
             'Bp' : 0.101,
@@ -1020,13 +1021,13 @@ def SamplePHEHX():
             'Ref_c':'R290',
             'mdot_c':0.03312,
             'pin_c':PropsSI('P','T',Tin,'Q',1.0,'R290'),
-            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #*1000
+            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #[J/kg-K]
             'Backend_c':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             
             'Ref_h':'Water',
             'mdot_h':mdot_h,
-            'pin_h':200000,                                                     #Pin_h in Pa
-            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #*1000
+            'pin_h':200000,
+            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #[J/kg-K]
             'Backend_h':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
             
             #Geometric parameters

@@ -1,12 +1,7 @@
-#from CoolProp.HumidAirProp import HAPropsSI #UseVirialCorrelation,UseIdealGasEnthalpyCorrelations,UseIsothermCompressCorrelation
-from CoolProp.CoolProp import HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp 
+from CoolProp.CoolProp import HAPropsSI 
 from math import sqrt,pi,tanh,exp,cos,log,sin
 from ACHPTools import ValidateFields
 from scipy.optimize import fsolve
-#Turn on virial correlations for air and water for speed in Humid Air routines
-#UseVirialCorrelations(1)
-#UseIsothermCompressCorrelation(1)
-#UseIdealGasEnthalpyCorrelations(1)
 
 def IsFinsClass(MicroFins):
     '''
@@ -320,8 +315,6 @@ def MultiLouveredMicroFins(Inputs):
     Ke_tri = 1 - 2*Kd_tri*sigma + sigma**2
     #Contraction coefficient   
     Kc_tri = (1 - 2*C_tube + C_tube**2 *(2*Kd_tri - 1))/C_tube**2
-    
-    
     
     #calcs needed for specific fin types (Based on Kim & Bullard 2002 paper)
     mf = sqrt(2 * h_a * cs_cp / (k_fin * delta) *(1 + delta/Lf) ) #cs_cp is the correction for heat/mass transfer

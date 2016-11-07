@@ -1,11 +1,6 @@
-#from CoolProp.HumidAirProp import HAPropsSI #UseVirialCorrelation,UseIdealGasEnthalpyCorrelations,UseIsothermCompressCorrelation
-from CoolProp.CoolProp import HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp 
+from CoolProp.CoolProp import HAPropsSI
 from math import sqrt,pi,tanh,exp,cos,log
 from ACHPTools import ValidateFields
-#Turn on virial correlations for air and water for speed in Humid Air routines
-#UseVirialCorrelations(1)
-#UseIsothermCompressCorrelation(1)
-#UseIdealGasEnthalpyCorrelations(1)
 
 def IsFinsClass(Fins):
     '''
@@ -55,7 +50,7 @@ class FinInputs():
             ('RH',float,0,1),
             ('Tdb',float,-80+273.15,200+273.15),
             ('FanPower',float,0,4000),
-            ('p',float,10,10000000),                                            #0.01,10000 updated to 10,10000000
+            ('p',float,10,10000000),
             ('Vdot_ha',float,0.001,10)
         ]
         optFields=['RHmean','Tmean']
@@ -200,7 +195,7 @@ def WavyLouveredFins(Inputs):
     # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
-    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W)#*1000
+    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #[J/kg]
     rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
     rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
@@ -210,12 +205,12 @@ def WavyLouveredFins(Inputs):
 
     #Use a forward difference to calculate cp from cp=dh/dT
     dT=0.0001 #[K]
-    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #*1000 #[J/kg_da/K]
+    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #[J/kg_da/K]
     cp_ha=cp_da/(1+W) #[J/kg_ha/K]
     
     #Transport properties of humid air from CoolProp
     mu_ha=HAPropsSI('M','T',Inputs.Air.Tdb,'P',p,'W',W)
-    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W)#*10**3
+    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W)
     
     #Dimensionless Groups
     Pr = cp_ha * mu_ha / k_ha
@@ -290,20 +285,20 @@ def HerringboneFins(Inputs):
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     #Transport properties of humid air from CoolProp
     mu_ha=HAPropsSI('M','T',Inputs.Air.Tdb,'P',p,'W',W) 
-    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W) #*10**3
+    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W)
     #Evaluate the mass flow rate based on inlet conditions
     Vdot_ha =     Inputs.Air.Vdot_ha
     # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
-    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #*1000
+    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #[J/kg]
     rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
     rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
     #Use a forward difference to calculate cp from cp=dh/dT
     dT=0.0001 #[K] 
-    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #*1000 #[J/kg_da/K]
+    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #[J/kg_da/K]
     cp_ha=cp_da/(1+W) #[J/kg_ha/K]
     
     # Check that cs_cp is defined, if so, set it to the value passed in
@@ -442,20 +437,20 @@ def PlainFins(Inputs):
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     #Transport properties of humid air from CoolProp
     mu_ha=HAPropsSI('M','T',Inputs.Air.Tdb,'P',p,'W',W) 
-    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W) #*10**3
+    k_ha=HAPropsSI('K','T',Inputs.Air.Tdb,'P',p,'W',W)
     #Evaluate the mass flow rate based on inlet conditions
     Vdot_ha =     Inputs.Air.Vdot_ha
     # To convert a parameter from per kg_{dry air} to per kg_{humid air}, divide by (1+W)
     W=HAPropsSI('W','T',Inputs.Air.Tdb,'P',p,'R',Inputs.Air.RH)
     v_da=HAPropsSI('V','T',Inputs.Air.Tdb,'P',p,'W',W)
-    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W) #*1000
+    h_da=HAPropsSI('H','T',Inputs.Air.Tdb,'P',p,'W',W)
     rho_ha = 1 / v_da*(1+W) #[kg_ha/m^3]
     rho_da = 1 / v_da #[kg_da/m^3]
     mdot_ha = Vdot_ha * rho_ha #[kg_ha/s]
     mdot_da = Vdot_ha * rho_da #[kg_da/s]
     #Use a forward difference to calculate cp from cp=dh/dT
     dT=0.0001 #[K] 
-    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #*1000 #[J/kg_da/K]
+    cp_da=(HAPropsSI('H','T',Inputs.Air.Tdb+dT,'P', p, 'W',W)-h_da)/dT #[J/kg_da/K]
     cp_ha=cp_da/(1+W) #[J/kg_ha/K]
     
     # Check that cs_cp is defined, if so, set it to the value passed in
@@ -515,7 +510,7 @@ def PlainFins(Inputs):
     #pressure drop
     F1=-0.764+0.739*P_t/P_L+0.177*F_p/D_c-0.00758/N
     F2=-15.689+64.021/log(Re_Dc)
-    F3=1.696-15.695/log(Re_Dc)          #CORRECTION: division instead of multiplication >> bug solved!
+    F3=1.696-15.695/log(Re_Dc)
     f=0.0267*pow(Re_Dc,F1)*pow(P_t/P_L,F2)*pow(F_p/D_c,F3)
     
     
@@ -574,7 +569,6 @@ def PlainFins(Inputs):
     
     
     
-    
 if __name__=='__main__':
     
     FinsTubes=FinInputs()
@@ -597,7 +591,7 @@ if __name__=='__main__':
     FinsTubes.Air.Vdot_ha=0.5663
     FinsTubes.Air.Tmean=299.8
     FinsTubes.Air.Tdb=299.8
-    FinsTubes.Air.p=101325                                                      #updated from 101.325kPa to 101325Pa
+    FinsTubes.Air.p=101325
     FinsTubes.Air.RH=0.51
     FinsTubes.Air.RHmean=0.51
     FinsTubes.Air.FanPower=438
@@ -612,4 +606,3 @@ if __name__=='__main__':
     PlainFins(FinsTubes) 
     print "Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa" #print some of the results
     print "a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots"
-    

@@ -1,5 +1,4 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-#from CoolProp.CoolProp import PropsSI#, IsFluidType #,UseSaturationLUT ,T_hp, 
+from __future__ import division
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -29,10 +28,8 @@ def TrhoPhase_ph(AS,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     Convenience function to find temperature, density, and phase of fluid as a function of pressure and enthalpy
     AS : AbstractState with the refrigerant name and backend
     """
-    #UseSaturationLUT(1)
-    #h/=1000  #convert J/kg to kJ/kg since CoolProp uses kJ/kg >>> modification: CoolProp 5.x uses J/kg
-    
-    if 'IncompressibleBackend' in AS.backend_name(): #if IsFluidType(Ref,'Brine')==1:
+
+    if 'IncompressibleBackend' in AS.backend_name():
         #It is subcooled
         AS.update(CP.HmassP_INPUTS,h,p)
         T=AS.T() #[K]
@@ -850,7 +847,6 @@ def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
         else:
             #Use Simpson's rule to carry out numerical integration to get average DP and average h
             return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
-
     
 def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
     """
@@ -918,13 +914,11 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
     else: #Transient
         f_g = 0.079*pow(Re_g,-0.25)
 
-
     Re_fo = G*Dh/mu_f
     Su_go = rho_g*sigma*Dh/pow(mu_g,2)
 
     dpdz_f = 2*f_f/rho_f*pow(G*(1-x),2)/Dh
     dpdz_g = 2*f_g/rho_g*pow(G*x,2)/Dh
-
 
     if x<=0:
         # Entirely liquid
@@ -979,8 +973,6 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
     
     return dpdz, h
 
-
-
 def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, satTransport=None):
     """
     This function return the pressure gradient for 
@@ -988,7 +980,6 @@ def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_P
     Correlations Based on: Kim and Mudawar (2013) "Universal approach to predicting
     two-phase frictional pressure drop for mini/micro-channel saturated flow boiling 
     """
-    
     #Convert the quality, which might come in as a single numpy float value, to a float
     #With the conversion, >20x speedup in the LockhartMartinelli function, not clear why
     x=float(x)
@@ -1087,8 +1078,7 @@ def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_P
         
     return dpdz
 
-
-    
+ 
 if __name__=='__main__':
     DP_vals_acc=[]
     DP_vals_fric=[]

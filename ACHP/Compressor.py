@@ -1,5 +1,5 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
-#from CoolProp.CoolProp import PropsSI #,T_hp, h_sp
+from __future__ import division
+from CoolProp.CoolProp import PropsSI
 import CoolProp as CP
 
 class CompressorClass():
@@ -164,8 +164,8 @@ if __name__=='__main__':
               'P':[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616,-0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03],
               'Ref':'R134a',
               'Tin_r':280,
-              'pin_r':360109.31, #PropsSI('P','T',279,'Q',1.0,'R134a')
-              'pout_r':1067977.97, #PropsSI('P','T',315,'Q',1.0,'R134a')
+              'pin_r':PropsSI('P','T',279,'Q',1,'R134a'),
+              'pout_r':PropsSI('P','T',315,'Q',1,'R134a'),
               'fp':0.15, #Fraction of electrical power lost as heat to ambient
               'Vdot_ratio': 1.0, #Displacement Scale factor
               'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'

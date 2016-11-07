@@ -7,9 +7,10 @@ from Pump import PumpClass # Secondary loop pump class
 from PHEHX import PHEHXClass
 from scipy.optimize import brent, fsolve 
 #^^ fsolve - roots (multiple variables); brent - root of one variable fct
-from CoolProp.CoolProp import PropsSI #,Tsat        #refrigerant properties
+#from CoolProp.CoolProp import PropsSI #,Tsat        #refrigerant properties
 from FinCorrelations import WavyLouveredFins,FinInputs     #fin correlations
 import numpy as np                  #NumPy is fundamental scientific package                                   
+import CoolProp as CP
 
 class SecondaryCycleClass():
     def __init__(self):
@@ -41,20 +42,43 @@ class SecondaryCycleClass():
         if self.Verbosity>1:
             print 'Inputs: DTevap %7.4f DTcond %7.4f fT_IHX %7.4f'%(DT_evap,DT_cond,Tin_IHX) 
         
+        #AbstractState
+        if hasattr(self,'Backend'): #check if backend is given
+            AS = CP.AbstractState(self.Backend, self.Ref)
+            if hasattr(self,'MassFrac'):
+                AS.set_mass_fractions([self.MassFrac])
+        else: #otherwise, use the defualt backend
+            AS = CP.AbstractState('HEOS', self.Ref)
+            self.Backend = 'HEOS'
+        self.AS = AS
+        #AbstractState for SecLoopFluid
+        if hasattr(self,'Backend_SLF'): #check if backend_SLF is given
+            AS_SLF = CP.AbstractState(self.Backend_SLF, self.SecLoopFluid)
+            if hasattr(self,'MassFrac_SLF'):
+                AS_SLF.set_mass_fractions([self.MassFrac_SLF])
+        else: #otherwise, use the defualt backend
+            AS_SLF = CP.AbstractState('HEOS', self.SecLoopFluid)
+            self.Backend_SLF = 'HEOS'
+        self.AS_SLF = AS_SLF
+        
         """
         The coldest the glycol entering the cooling coil could be would be the 
         """
         self.Tdew_cond=self.Condenser.Fins.Air.Tdb+DT_cond
         self.Tdew_evap=self.CoolingCoil.Fins.Air.Tdb-DT_evap
-        psat_cond=PropsSI('P','T',self.Tdew_cond,'Q',1,self.Ref)
-        psat_evap=PropsSI('P','T',self.Tdew_evap,'Q',1,self.Ref)    
-        self.Tbubble_evap= PropsSI('T','P',psat_evap,'Q',1,self.Ref) #Tsat(self.Ref,psat_evap,0,0)
+        AS.update(CP.QT_INPUTS,1.0,self.Tdew_cond)
+        psat_cond=AS.p() #[Pa]
+        AS.update(CP.QT_INPUTS,1.0,self.Tdew_evap)
+        psat_evap=AS.p() #[Pa]
+        AS.update(CP.PQ_INPUTS,psat_evap,0.0)
+        self.Tbubble_evap=AS.T() #[K]    
         
         params={               #dictionary -> key:value, e.g. 'key':2345,
             'pin_r': psat_evap,   
             'pout_r': psat_cond,
             'Tin_r': self.Tdew_evap+self.Compressor.DT_sh,
-            'Ref':  self.Ref
+            'Ref':  self.Ref,
+            'Backend': self.Backend
         }
         self.Compressor.Update(**params)
         self.Compressor.Calculate()
@@ -63,18 +87,22 @@ class SecondaryCycleClass():
             'mdot_r': self.Compressor.mdot_r,
             'Tin_r': self.Compressor.Tout_r,
             'psat_r': psat_cond,
-            'Ref': self.Ref
+            'Ref': self.Ref,
+            'Backend': self.Backend
         }
         self.Condenser.Update(**params)
         self.Condenser.Calculate()
         
-        hL=PropsSI('H','T',self.Tbubble_evap,'Q',0.0,self.Ref) #*1000
-        hV=PropsSI('H','T',self.Tdew_evap,'Q',1.0,self.Ref) #*1000
+        AS.update(CP.QT_INPUTS,0.0,self.Tbubble_evap)
+        hL=AS.hmass() #[J/kg]
+        AS.update(CP.QT_INPUTS,1.0,self.Tdew_evap)
+        hV=AS.hmass() #[J/kg]
         xin_r=(self.Condenser.hout_r-hL)/(hV-hL)
+        AS_SLF.update(CP.PT_INPUTS,300000,Tin_IHX)
+        h_in = AS_SLF.hmass() #[J/kg]
         params={
             'mdot_h': self.Pump.mdot_g,
-            'hin_h': PropsSI('H','T',Tin_IHX,'P',300000,Cycle.SecLoopFluid), #*1000
-            
+            'hin_h': h_in,
             'hin_c': self.Condenser.hout_r,
             'mdot_c': self.Compressor.mdot_r,
             'pin_c': psat_evap,
@@ -268,7 +296,7 @@ if __name__=='__main__':
         Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.5663
         Cycle.CoolingCoil.Fins.Air.Tmean=299.8
         Cycle.CoolingCoil.Fins.Air.Tdb=299.8
-        Cycle.CoolingCoil.Fins.Air.p=101325                                     #Air Pressure in Pa
+        Cycle.CoolingCoil.Fins.Air.p=101325
         Cycle.CoolingCoil.Fins.Air.RH=0.51
         Cycle.CoolingCoil.Fins.Air.RHmean=0.51
         Cycle.CoolingCoil.Fins.Air.FanPower=438
@@ -282,7 +310,7 @@ if __name__=='__main__':
         Cycle.CoolingCoil.Update(**params)
         
         params={
-            'pin_h':300000,                                                     #pin_h in Pa
+            'pin_h':300000,
             'Ref_c':Cycle.Ref,
             'Ref_h':Cycle.SecLoopFluid,
             'Verbosity':0,
@@ -303,7 +331,7 @@ if __name__=='__main__':
         params={
             'eta':0.5,  #Pump+motor efficiency
             'mdot_g':0.38, #Flow Rate kg/s
-            'pin_g':300000,                                                     #pin_g in Pa
+            'pin_g':300000,
             'Ref_g':Cycle.SecLoopFluid,
             'Verbosity':0,
             }
