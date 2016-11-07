@@ -1,8 +1,4 @@
-'''
-Created on Mar 23, 2015
-
-@author: AmmarBahman
-'''
+'''This code is for secondary loop cycle in AC Mode'''
 
 from Cycle import SecondaryCycleClass 
 
@@ -66,7 +62,7 @@ Cycle.Condenser.Fins.Fins.k_fin=237             #Thermal conductivity of fin mat
 
 Cycle.Condenser.Fins.Air.Vdot_ha=1.7934         #rated volumetric flowrate Cycle.Condenser.Fins.Air.Tmean=308.15
 Cycle.Condenser.Fins.Air.Tdb=308.15             #Dry Bulb Temperature
-Cycle.Condenser.Fins.Air.p=101325                                               #Condenser Air pressure in Pa
+Cycle.Condenser.Fins.Air.p=101325               #Condenser Air pressure in Pa
 Cycle.Condenser.Fins.Air.RH=0.51                #Relative Humidity
 Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=260
@@ -96,7 +92,7 @@ Cycle.CoolingCoil.Fins.Fins.k_fin=237
 Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.56319
 Cycle.CoolingCoil.Fins.Air.Tmean=297.039
 Cycle.CoolingCoil.Fins.Air.Tdb=297.039
-Cycle.CoolingCoil.Fins.Air.p=101325                                             #Cooling Coil Air pressure in Pa
+Cycle.CoolingCoil.Fins.Air.p=101325
 Cycle.CoolingCoil.Fins.Air.RH=0.5
 Cycle.CoolingCoil.Fins.Air.RHmean=0.5
 
@@ -106,7 +102,7 @@ params={
         'Ref_g': Cycle.SecLoopFluid,
         'Backend_g': Cycle.Backend_SLF,
         'MassFrac_g': Cycle.MassFrac_SLF,
-        'pin_g': 200000,                                                        #pin_g in Pa
+        'pin_g': 200000,
         'Verbosity':0,
         'mdot_g':0.38,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
@@ -118,7 +114,7 @@ params={
         'OD_i':0.03415,
         'ID_o':0.045,
         'L':50,
-        'pin_g':300000,                                                         #pin_g in Pa
+        'pin_g':300000,
         'Ref_r':Cycle.Ref,
         'Ref_g':Cycle.SecLoopFluid,
         'Backend_g':Cycle.Backend_SLF,
@@ -128,7 +124,7 @@ params={
 Cycle.CoaxialIHX.Update(**params)
 
 params={
-        'pin_h':300000,                                                         #pin_h in Pa
+        'pin_h':300000,
         'Ref_h':Cycle.SecLoopFluid,
         'Backend_h':Cycle.Backend_SLF,
         'MassFrac_h': Cycle.MassFrac_SLF,
@@ -152,7 +148,7 @@ Cycle.PHEIHX.Update(**params)
 params={
         'eta':0.5, #Pump+motor efficiency
         'mdot_g':0.38, #Flow Rate kg/s
-        'pin_g':300000,                                                         #pin_g in Pa
+        'pin_g':300000,
         'Ref_g':Cycle.SecLoopFluid,
         'Backend_g':Cycle.Backend_SLF,
         'MassFrac_g': Cycle.MassFrac_SLF,
@@ -169,7 +165,7 @@ params={
         'Ref': Cycle.SecLoopFluid,
         'Backend':Cycle.Backend_SLF,
         'MassFrac': Cycle.MassFrac_SLF,
-        'pin': 300000,                                                          #pin in Pa
+        'pin': 300000,
         'h_air':0.0000000001,
         }
 

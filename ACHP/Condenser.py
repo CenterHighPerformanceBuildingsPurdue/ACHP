@@ -1,4 +1,4 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division
 from math import pi,log,exp
 from Correlations import f_h_1phase_Tube,ShahCondensation_Average,LMPressureGradientAvg,TwoPhaseDensity,AccelPressureDrop 
 from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
@@ -88,17 +88,19 @@ class CondenserClass():
                ('FinsType',str,None,None),
                ('mdot_r',float,0.00001,20),
                ('Tin_r',float,200,500),
-               ('psat_r',float,0.01,20000000)              #0.00001,20000 changed to 0.01,20000000
+               ('psat_r',float,0.01,20000000)
                ]
             optFields=['Verbosity','Backend']
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
+        
         #AbstractState
         if hasattr(self,'Backend'): #check if backend is given
             AS = CP.AbstractState(self.Backend, self.Ref)
         else: #otherwise, use the defualt backend
             AS = CP.AbstractState('HEOS', self.Ref)
         self.AS = AS
+        
         # Retrieve some parameters from nested structures 
         # for code compactness
         self.ID=self.Fins.Tubes.ID
@@ -171,8 +173,8 @@ class CondenserClass():
             AS.update(CP.QT_INPUTS, 1.0, self.Tout_r)
             h_v=AS.hmass() #[J/kg]
             s_v=AS.smass() #[J/kg-K]
-            self.hout_r= h_l + self.xout_2phase * (h_v - h_l) #PropsSI('H','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
-            self.sout_r= s_l + self.xout_2phase * (s_v - s_l) #PropsSI('S','T',self.Tout_r,'Q',self.xout_2phase,self.Ref)
+            self.hout_r= h_l + self.xout_2phase * (h_v - h_l)
+            self.sout_r= s_l + self.xout_2phase * (s_v - s_l)
             #Use the effective subcooling
             self.DT_sc=self.DT_sc_2phase
         
@@ -183,7 +185,6 @@ class CondenserClass():
         self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
         
     def _Superheat_Forward(self):
-        
         # **********************************************************************
         #                      SUPERHEATED PART 
         # **********************************************************************
@@ -215,7 +216,7 @@ class CondenserClass():
         
         # Cross-flow in the superheated region.  
         # Using effectiveness-Ntu relationships for cross flow with non-zero Cr.
-        UA_overall = 1. / (1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1. / (self.h_r_superheat * self.A_r_wetted) )
+        UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1 / (self.h_r_superheat * self.A_r_wetted) )
         epsilon_superheat=(Tdew-self.Tin_r)/(self.Tin_a-self.Tin_r)
         Ntu=UA_overall/(self.mdot_da*self.Fins.cp_da)
         if epsilon_superheat>1.0:
@@ -229,7 +230,7 @@ class CondenserClass():
         #Pressure drop calculations for superheated refrigerant
         v_r=1./rho_superheat
         #Pressure gradient using Darcy friction factor
-        dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2.*self.ID) #Pressure gradient
+        dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2*self.ID) #Pressure gradient
         self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
 
@@ -300,6 +301,7 @@ class CondenserClass():
         
         if self.w_subcool<0:
             raise ValueError('w_subcool in Condenser cannot be less than zero')
+        
         #AbstractState
         AS = self.AS
         ## Bubble and dew temperatures (same for fluids without glide)
@@ -386,7 +388,7 @@ def SampleCondenser(T=41.37):
         'Tin_r': T+20+273.15,
         'psat_r': 2500076.19, #PropsSI('P','T',T+273.15,'Q',1.0,'R410A') 
         'Fins': Fins,
-        'FinsType': 'HerringboneFins',                                          #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+        'FinsType': 'HerringboneFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'Verbosity':0,
         'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     }

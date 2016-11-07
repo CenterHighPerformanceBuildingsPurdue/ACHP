@@ -1,9 +1,3 @@
-'''
-Created on Mar 23, 2015
-
-@author: AmmarBahman
-'''
-
 '''This code is for Direct Expansion in Heating Mode'''
 
 from Cycle import DXCycleClass

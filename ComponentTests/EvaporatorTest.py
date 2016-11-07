@@ -1,9 +1,3 @@
-'''
-Created on Mar 21, 2015
-
-@author: AmmarBahman
-'''
-
 from CoolProp.CoolProp import PropsSI
 from FinCorrelations import FinInputs
 from Evaporator import EvaporatorClass
@@ -35,7 +29,7 @@ kwargs={'Ref': 'R410A',
         'mdot_r': 0.0708,
         'psat_r': PropsSI('P','T',282,'Q',1.0,'R410A'),
         'Fins': FinsTubes,
-        'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
+        'FinsType': 'WavyLouveredFins', #WavyLouveredFins, HerringboneFins, PlainFins
         'hin_r': PropsSI('H','P',PropsSI('P','T',282,'Q',1.0,'R410A'),'Q',0.15,'R410A'), #[J/kg]
         'Verbosity': 0,
         'Backend':'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'

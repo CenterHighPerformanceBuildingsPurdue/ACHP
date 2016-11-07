@@ -1,9 +1,3 @@
-'''
-Created on Mar 20, 2015
-
-@author: AmmarBahman
-'''
-
 from CoolProp.CoolProp import PropsSI
 from MicroChannelCondenser import MicroCondenserClass
 from MicroFinCorrelations import MicroFinInputs

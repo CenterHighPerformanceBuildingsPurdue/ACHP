@@ -1,5 +1,4 @@
-from CoolProp.CoolProp import HAPropsSI #HAPropsSI updated from "CoolProp.HumidAirProp" to CoolProp.CoolProp
-#from CoolProp.HumidAirProp import HAPropsSI  
+from CoolProp.CoolProp import HAPropsSI 
 from scipy.optimize import fsolve
 import Correlations
 from math import pi
@@ -10,7 +9,10 @@ import CoolProp as CP
 def DXPreconditioner(Cycle,epsilon=0.96):
     
     #Assume the heat exchangers are highly effective
-    
+    #Condensing heat transfer rate from enthalpies
+    rho_air=1.1
+    Cp_air =1005 #[J/kg/K]
+        
     #AbstractState
     if hasattr(Cycle,'Backend'): #check if backend is given
         AS = CP.AbstractState(Cycle.Backend, Cycle.Ref)
@@ -18,15 +20,13 @@ def DXPreconditioner(Cycle,epsilon=0.96):
         AS = CP.AbstractState('HEOS', Cycle.Ref)
         Cycle.Backend = 'HEOS'
     Cycle.AS = AS
-        
+    
     def OBJECTIVE(x):
         Tevap=x[0]
         Tcond=x[1]
-        #Condensing heat transfer rate from enthalpies
-        rho_air=1.1
         
         #Use fixed effectiveness to get a guess for the condenser capacity
-        Qcond=epsilon*Cycle.Condenser.Fins.Air.Vdot_ha*rho_air*(Cycle.Condenser.Fins.Air.Tdb-Tcond)*1005 #Cp_air =1005J/kg/K  #Cycle.Condenser.Fins.Air.Vdot_ha/rho_air, division is updated with *
+        Qcond=epsilon*Cycle.Condenser.Fins.Air.Vdot_ha*rho_air*(Cycle.Condenser.Fins.Air.Tdb-Tcond)*Cp_air
         
         Cycle.AS.update(CP.QT_INPUTS,1.0,Tevap)
         pevap=Cycle.AS.p() #[pa]
@@ -40,7 +40,7 @@ def DXPreconditioner(Cycle,epsilon=0.96):
         W=Cycle.Compressor.W
         
         # Evaporator fully-dry analysis
-        Qevap_dry=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(Cycle.Evaporator.Fins.Air.Tdb-Tevap)*1005      #updated
+        Qevap_dry=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(Cycle.Evaporator.Fins.Air.Tdb-Tevap)*Cp_air
         
         #Air-side heat transfer UA
         Evap=Cycle.Evaporator
@@ -97,20 +97,22 @@ def DXPreconditioner(Cycle,epsilon=0.96):
     return DT_evap-1, DT_cond+1
 
 def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
-    rho_air=1.1
+    rho_air= 1.1 #[kg/m^2]
+    Cp_air = 1005 #[J/kg-K]
+    
     def OBJECTIVE(x):
         Tevap=x[0]
         Tcond=x[1]
         Tin_CC=x[2]
         if Cycle.Mode=='AC':
             #Condenser heat transfer rate
-            Qcond=epsilon*Cycle.Condenser.Fins.Air.Vdot_ha*rho_air*(Cycle.Condenser.Fins.Air.Tdb-Tcond)*1005        #updated
+            Qcond=epsilon*Cycle.Condenser.Fins.Air.Vdot_ha*rho_air*(Cycle.Condenser.Fins.Air.Tdb-Tcond)*Cp_air
             
             #Compressor power
             Cycle.AS.update(CP.QT_INPUTS,1.0,Tevap)
-            pevap=Cycle.AS.p() #[pa]
+            pevap=Cycle.AS.p() #[Pa]
             Cycle.AS.update(CP.QT_INPUTS,1.0,Tcond)
-            pcond=Cycle.AS.p() #[pa]
+            pcond=Cycle.AS.p() #[Pa]
             Cycle.Compressor.pin_r=pevap
             Cycle.Compressor.pout_r=pcond
             Cycle.Compressor.Tin_r=Tevap+Cycle.Compressor.DT_sh
@@ -118,7 +120,7 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
             Cycle.Compressor.Calculate()
             W=Cycle.Compressor.W
             
-            Qcoolingcoil_dry=epsilon*Cycle.CoolingCoil.Fins.Air.Vdot_ha*rho_air*(Cycle.CoolingCoil.Fins.Air.Tdb-Tin_CC)*1005    #updated
+            Qcoolingcoil_dry=epsilon*Cycle.CoolingCoil.Fins.Air.Vdot_ha*rho_air*(Cycle.CoolingCoil.Fins.Air.Tdb-Tin_CC)*Cp_air
             
             # Air-side heat transfer UA
             CC=Cycle.CoolingCoil
@@ -140,11 +142,11 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
             T_so_a=(UA_a*CC.Tin_a+UA_r*Tout_CC)/(UA_a+UA_r)
             T_so_b=(UA_a*Tout_a+UA_r*Tin_CC)/(UA_a+UA_r)
             
-            Tdewpoint=HAPropsSI('D','T',CC.Fins.Air.Tdb,'P',101325,'R',CC.Fins.Air.RH)  #Updated from HumAir_Single(CC.Fins.Air.Tdb, 101325, 'RH',CC.Fins.Air.RH,'DewPoint')
+            Tdewpoint=HAPropsSI('D','T',CC.Fins.Air.Tdb,'P',101325,'R',CC.Fins.Air.RH)
             #Now calculate the fully-wet analysis
             #Evaporator is bounded by saturated air at the refrigerant temperature.
-            h_ai= HAPropsSI('H','T',CC.Fins.Air.Tdb,'P',101325,'R',CC.Fins.Air.RH)      #Updated from HumAir_Single(CC.Fins.Air.Tdb, 101325, 'RH', CC.Fins.Air.RH,'Enthalpy')
-            h_s_w_o=HAPropsSI('H','T',Tin_CC,'P',101325,'R',1.0)                        #Updated from HumAir_Single(Tin_CC, 101325, 'RH', 1.0,'Enthalpy')
+            h_ai= HAPropsSI('H','T',CC.Fins.Air.Tdb,'P',101325,'R',CC.Fins.Air.RH)
+            h_s_w_o=HAPropsSI('H','T',Tin_CC,'P',101325,'R',1.0)
             Qcoolingcoil_wet=epsilon*CC.Fins.Air.Vdot_ha*rho_air*(h_ai-h_s_w_o)
             
             #Coil is either fully-wet, fully-dry or partially wet, partially dry
@@ -169,7 +171,7 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
         
         elif Cycle.Mode=='HP':
             #Evaporator heat transfer rate
-            Qevap=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(Cycle.Evaporator.Fins.Air.Tdb-Tevap)*1005  #updated
+            Qevap=epsilon*Cycle.Evaporator.Fins.Air.Vdot_ha*rho_air*(Cycle.Evaporator.Fins.Air.Tdb-Tevap)*Cp_air
             
             #Compressor power
             Cycle.AS.update(CP.QT_INPUTS,1.0,Tevap)
@@ -184,7 +186,7 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
             W=Cycle.Compressor.W
             
             #Evaporator will be dry
-            Qcoolingcoil=epsilon*Cycle.CoolingCoil.Fins.Air.Vdot_ha*rho_air*(Tin_CC-Cycle.CoolingCoil.Fins.Air.Tdb)*1005 #updated
+            Qcoolingcoil=epsilon*Cycle.CoolingCoil.Fins.Air.Vdot_ha*rho_air*(Tin_CC-Cycle.CoolingCoil.Fins.Air.Tdb)*Cp_air
             
             #Glycol specifi heat
             Cycle.Pump.AS_g.update(CP.PT_INPUTS,Cycle.Pump.pin_g,Tin_CC)

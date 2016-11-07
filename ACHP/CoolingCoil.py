@@ -1,10 +1,8 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division
 from math import pi
-#from CoolProp.CoolProp import PropsSI
 from Correlations import f_h_1phase_Tube
 from FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
 from matplotlib import docstring
-#from BaseDoc import BaseDocClass
 from DryWetSegment import DWSVals, DryWetSegment
 import CoolProp as CP
 
@@ -17,12 +15,10 @@ class CoolingCoilClass():
         """Load the parameters passed in using the dictionary"""
         self.__dict__.update(kwargs)
     
-    #@docstring.copy_dedent(BaseDocClass.Update) #Use docs from Base Class
     def Update(self,**kwargs):
         """Update the parameters passed in using the dictionary"""
         self.__dict__.update(kwargs)
     
-    #@docstring.copy_dedent(BaseDocClass.OutputList) #Use docs from Base Class
     def OutputList(self):
         return [
             ('Volumetric flow rate','m^3/s',self.Fins.Air.Vdot_ha),
@@ -68,6 +64,7 @@ class CoolingCoilClass():
             AS_g = CP.AbstractState('HEOS', self.Ref_g)
         self.AS_g = AS_g
         
+        #Update
         self.Update()
         
         # Retrieve some parameters from nested structures 
@@ -180,7 +177,7 @@ def TestCase():
     FinsTubes.Air.Vdot_ha=0.5663
     FinsTubes.Air.Tmean=299.8
     FinsTubes.Air.Tdb= 299.8
-    FinsTubes.Air.p=101325              #Air pressure in Pa
+    FinsTubes.Air.p=101325
     FinsTubes.Air.RH=0.51
     FinsTubes.Air.RHmean=0.51
     FinsTubes.Air.FanPower=438
@@ -191,7 +188,7 @@ def TestCase():
     CC.Backend_g = 'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     CC.mdot_g = 0.15
     CC.Tin_g = 278
-    CC.pin_g = 300000                    #Refrigerant vapor pressure in Pa
+    CC.pin_g = 300000
     CC.Verbosity = 3
     
     CC.Calculate()

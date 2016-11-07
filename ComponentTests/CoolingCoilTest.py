@@ -1,9 +1,3 @@
-'''
-Created on Mar 20, 2015
-
-@author: AmmarBahman
-'''
-
 from CoolingCoil import CoolingCoilClass
 from FinCorrelations import FinInputs
 
@@ -65,4 +59,3 @@ print "Cooling Coil Q: " + str(CC2.Q) + " W"
 print "Cooling Coil SHR: " + str(CC2.SHR) + " "
 print "hout_a: " + str(CC2.hout_a) + " "
 print "Tout_a: " + str(CC2.Tout_a) + " "
-

@@ -14,7 +14,6 @@ from scipy.optimize import brentq, fsolve,newton
 
 import CoolProp as CP
 from CoolProp.Plots import PropertyPlot
-#from CoolProp.CoolProp import PropsSI #refrigerant properties
 from FinCorrelations import FinInputs     #fin correlations
 import numpy as np                  #NumPy is fundamental scientific package
 from Correlations import TrhoPhase_ph            
@@ -427,8 +426,8 @@ class SecondaryCycleClass():
             return self.residSL
             
         def PrintDPs():
-            print 'DP_LP :: Input:',self.DP_low,'Pa / Model calc:',self.DP_low_Model,'Pa' #self.DP_low_Model/1000 is updated by removing /1000
-            print 'DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa' #self.DP_high_Model/1000 is updated by removing /1000    
+            print 'DP_LP :: Input:',self.DP_low,'Pa / Model calc:',self.DP_low_Model,'Pa'
+            print 'DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa'   
         
         #Some variables need to be initialized
         self.DP_low=0 #The actual low-side pressure drop to be used in Pa
@@ -468,7 +467,7 @@ class SecondaryCycleClass():
                 OBJECTIVE([self.DT_evap,self.DT_cond,Tin_CC])
                 
                 #Calculate the max error
-                max_error_DP=max([abs(self.DP_low_Model-self.DP_low),abs(self.DP_high_Model-self.DP_high)]) #self.DP_low_Model/1000 and self.DP_high_Model/1000 are updated by removing /1000
+                max_error_DP=max([abs(self.DP_low_Model-self.DP_low),abs(self.DP_high_Model-self.DP_high)])
                 
                 if self.Verbosity>0:
                     PrintDPs()
@@ -487,7 +486,7 @@ class SecondaryCycleClass():
             (self.DT_evap,self.DT_cond,Tin_CC)=MultiDimNewtRaph(OBJECTIVE,[self.DT_evap,self.DT_cond,Tin_CC],dx=0.1)
             
             #Calculate the error
-            max_error_DP=max([abs(self.DP_low_Model-self.DP_low),abs(self.DP_high_Model-self.DP_high)]) #self.DP_low_Model/1000 and self.DP_high_Model/1000 are updated by removing /1000
+            max_error_DP=max([abs(self.DP_low_Model-self.DP_low),abs(self.DP_high_Model-self.DP_high)])
             
             if self.Verbosity>0:
                 PrintDPs()    
@@ -607,7 +606,7 @@ class DXCycleClass():
             h_in = AS.hmass() #[J/kg]
             params={
                 'pin': psat_evap,
-                'hin': h_in, #*1000
+                'hin': h_in,
                 'mdot': self.Compressor.mdot_r,
                 'Ref':  self.Ref,
                 'Backend': self.Backend
@@ -792,17 +791,17 @@ class DXCycleClass():
                 while DP_converged==False:
                     #Actually run the Newton-Raphson solver to get the solution
                     x=Broyden(OBJECTIVE_DXCycle,[DT_evap_init,DT_cond_init])
-                    delta_low=abs(self.DP_low-abs(self.DP_LowPressure)) #/1000)
-                    delta_high=abs(self.DP_high-abs(self.DP_HighPressure)) #/1000)
-                    self.DP_low=abs(self.DP_LowPressure) #/1000
-                    self.DP_high=abs(self.DP_HighPressure) #/1000
+                    delta_low=abs(self.DP_low-abs(self.DP_LowPressure))
+                    delta_high=abs(self.DP_high-abs(self.DP_HighPressure))
+                    self.DP_low=abs(self.DP_LowPressure)
+                    self.DP_high=abs(self.DP_HighPressure)
                     #Update the guess values based on last converged values
                     DT_evap_init=self.DT_evap
                     DT_cond_init=self.DT_cond
                     if delta_low<1 and delta_high<1:
                         DP_converged=True
                     if self.Verbosity>4:
-                        print self.DP_HighPressure,self.DP_LowPressure,'DPHP' #self.DP_HighPressure/1000,self.DP_LowPressure/1000 is updated by removing /1000
+                        print self.DP_HighPressure,self.DP_LowPressure,'DPHP'
                     GoodRun=True
             except AttributeError:
                 # This will be a fatal error !! Should never have attribute error

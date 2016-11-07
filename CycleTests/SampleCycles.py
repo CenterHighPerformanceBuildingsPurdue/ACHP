@@ -57,7 +57,7 @@ def SampleSecondaryLoopSystem():
     #--------------------------------------                                                                                                     
     Cycle.Condenser.Fins.Tubes.NTubes_per_bank=41  #number of tubes per bank=row
     Cycle.Condenser.Fins.Tubes.Nbank=1             #number of baks/rows
-    Cycle.Condenser.Fins.Tubes.Ncircuits=5             #number of baks/rows
+    Cycle.Condenser.Fins.Tubes.Ncircuits=5         #number of baks/rows
     Cycle.Condenser.Fins.Tubes.Ltube=2.286
     Cycle.Condenser.Fins.Tubes.OD=0.007
     Cycle.Condenser.Fins.Tubes.ID=0.0063904
@@ -110,7 +110,7 @@ def SampleSecondaryLoopSystem():
     Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.5663
     Cycle.CoolingCoil.Fins.Air.Tmean=299.8
     Cycle.CoolingCoil.Fins.Air.Tdb=299.8
-    Cycle.CoolingCoil.Fins.Air.p=101325                                         #Air pressure in Pa
+    Cycle.CoolingCoil.Fins.Air.p=101325
     Cycle.CoolingCoil.Fins.Air.RH=0.51
     Cycle.CoolingCoil.Fins.Air.RHmean=0.51
     Cycle.CoolingCoil.Fins.Air.FanPower=438
@@ -118,7 +118,7 @@ def SampleSecondaryLoopSystem():
     params={
         'Ref_g': Cycle.SecLoopFluid,
         'Backend_g': Cycle.Backend_SLF,
-        'pin_g': 200000,                                                        #pin_g in Pa
+        'pin_g': 200000,
         'Verbosity':0,
         'mdot_g':0.38,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
@@ -131,7 +131,7 @@ def SampleSecondaryLoopSystem():
         'OD_i':0.03415,
         'ID_o':0.045,
         'L':50,
-        'pin_g':300000,                                                         #pin_g in Pa
+        'pin_g':300000,
         'Ref_r':Cycle.Ref,
         'Ref_g':Cycle.SecLoopFluid,
         'Backend_g': Cycle.Backend_SLF,
@@ -140,7 +140,7 @@ def SampleSecondaryLoopSystem():
     Cycle.CoaxialIHX.Update(**params)
     
     params={
-        'pin_h':300000,                                                         #pin_h in Pa
+        'pin_h':300000,
         'Ref_h':Cycle.SecLoopFluid,
         'Backend_h': Cycle.Backend_SLF,
         'Ref_c':Cycle.Ref,
@@ -163,7 +163,7 @@ def SampleSecondaryLoopSystem():
     params={
         'eta':0.5,  #Pump+motor efficiency
         'mdot_g':0.38, #Flow Rate kg/s
-        'pin_g':300000,                                                         #pin_g in Pa
+        'pin_g':300000,
         'Ref_g':Cycle.SecLoopFluid,
         'Backend_g': Cycle.Backend_SLF,
         'Verbosity':0,
@@ -178,7 +178,7 @@ def SampleSecondaryLoopSystem():
         'T_air':297,
         'Ref': Cycle.SecLoopFluid,
         'Backend': Cycle.Backend_SLF,
-        'pin': 300000,                                                          #pin in Pa
+        'pin': 300000,
         'h_air':0.0000000001,
     }
     
@@ -304,21 +304,21 @@ def SampleSecondaryLoopHPSystem():
     Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.5663
     Cycle.CoolingCoil.Fins.Air.Tmean=F2K(70)
     Cycle.CoolingCoil.Fins.Air.Tdb=F2K(70)
-    Cycle.CoolingCoil.Fins.Air.p=101325                                         #Air pressure in Pa
+    Cycle.CoolingCoil.Fins.Air.p=101325
     Cycle.CoolingCoil.Fins.Air.RH=0.51
     Cycle.CoolingCoil.Fins.Air.RHmean=0.51
     Cycle.CoolingCoil.Fins.Air.FanPower=438
            
     params={
         'Ref_g': Cycle.SecLoopFluid,
-        'pin_g': 200000,                                                        #pin_g in Pa
+        'pin_g': 200000,
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
     Cycle.CoolingCoil.Update(**params)
     
     params={
-        'pin_c':300000,                                                         #pin_c in Pa
+        'pin_c':300000,
         'Ref_c':Cycle.SecLoopFluid,
         'Ref_h':Cycle.Ref,
         
@@ -339,7 +339,7 @@ def SampleSecondaryLoopHPSystem():
     params={
         'eta':0.5,  #Pump+motor efficiency
         'mdot_g':0.38, #Flow Rate kg/s
-        'pin_g':300000,                                                         #pin_g in Pa
+        'pin_g':300000,
         'Ref_g':Cycle.SecLoopFluid,
         'Backend_g': Cycle.Backend_SLF,
         'Verbosity':0,
@@ -486,7 +486,7 @@ def SampleDXACSystem(Calculate=True):
     Cycle.Evaporator.Fins.Air.Vdot_ha=0.56319
     Cycle.Evaporator.Fins.Air.Tmean=297.039
     Cycle.Evaporator.Fins.Air.Tdb=297.039
-    Cycle.Evaporator.Fins.Air.p=101325                                          #Air pressure in Pa
+    Cycle.Evaporator.Fins.Air.p=101325
     Cycle.Evaporator.Fins.Air.RH=0.5
     Cycle.Evaporator.Fins.Air.RHmean=0.5
     Cycle.Evaporator.Fins.Air.FanPower=438
@@ -593,7 +593,7 @@ def SampleDXHPSystem():
     Cycle.Condenser.Fins.Air.Vdot_ha=0.5663
     Cycle.Condenser.Fins.Air.Tmean=F2K(70)
     Cycle.Condenser.Fins.Air.Tdb=F2K(70)
-    Cycle.Condenser.Fins.Air.p=101325                                           #Air pressure in Pa
+    Cycle.Condenser.Fins.Air.p=101325
     Cycle.Condenser.Fins.Air.RH=0.51
     Cycle.Condenser.Fins.Air.RHmean=0.51
     Cycle.Condenser.Fins.Air.FanPower=438

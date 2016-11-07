@@ -1,9 +1,3 @@
-'''
-Created on Mar 17, 2015
-
-@author: AmmarBahman
-'''
-
 from CoolProp.CoolProp import PropsSI
 from Condenser import CondenserClass
 from FinCorrelations import FinInputs
@@ -35,7 +29,7 @@ params={'Ref': 'R410A',
         'Tin_r': 333.15,
         'psat_r': PropsSI('P','T',323.15,'Q',1.0,'R410A'),
         'Fins': Fins,
-        'FinsType': 'WavyLouveredFins',                                         #WavyLouveredFins, HerringboneFins, PlainFins
+        'FinsType': 'WavyLouveredFins', #WavyLouveredFins, HerringboneFins, PlainFins
         'Verbosity': 0,
         'Backend':'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
