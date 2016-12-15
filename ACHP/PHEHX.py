@@ -419,12 +419,12 @@ class PHEHXClass():
             else:
                 self.DT_sc_h=self.Tbubble_h-self.Tout_h
         
-    def eNTU_CounterFlow(self,Cr,Ntu):
-        """
-        This function returns the effectiveness for counter flow fluids
-        """
-        return ((1 - exp(-Ntu * (1 - Cr))) / 
-            (1 - Cr * exp(-Ntu * (1 - Cr))))
+#     def eNTU_CounterFlow(self,Cr,Ntu):
+#         """
+#         This function returns the effectiveness for counter flow fluids
+#         """
+#         return ((1 - exp(-Ntu * (1 - Cr))) / 
+#             (1 - Cr * exp(-Ntu * (1 - Cr))))
     
     def _OnePhaseH_OnePhaseC_Qimposed(self,Inputs):
         """
@@ -482,7 +482,7 @@ class PHEHXClass():
         Outputs={
             'w': w,
             'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
-            'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
             'Charge_c': Charge_c,
             'Charge_h': Charge_h,
             'DP_h': -PlateOutput_h['DELTAP'],
@@ -510,8 +510,9 @@ class PHEHXClass():
         h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.AS_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
+        cp_c=Inputs['cp_c']
         #Mole mass of refrigerant for Cooper correlation
-        M=AS_c.molar_mass() #[kg/mol]
+        M=AS_c.molar_mass()*1000.0 #[kg/kmol]
         #Reduced pressure for Cooper Correlation
         pcrit_c = AS_c.p_critical() #critical pressure of Ref_c [Pa]
         pstar=Inputs['pin_c']/pcrit_c
@@ -535,7 +536,7 @@ class PHEHXClass():
             UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c_2phase*self.A_c_wetted)+self.PlateThickness/(self.PlateConductivity*self.A_c_wetted))
             C_h=cp_h*self.mdot_h
             
-            Qmax=C_h*(Inputs['Tin_h']-Inputs['Tsat_c'])
+            Qmax=C_h*(Inputs['Tin_h']-Inputs['Tin_c'])
             epsilon=Q/Qmax
             
             if epsilon>=1.0:
@@ -562,6 +563,7 @@ class PHEHXClass():
         Outputs={
             'w':w,
             'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
             'Charge_c': Charge_c,
             'Charge_h': Charge_h,
             'DP_h': -PlateOutput_h['DELTAP'],
@@ -590,11 +592,12 @@ class PHEHXClass():
         h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
         #Use cp calculated from delta h/delta T
         cp_c=Inputs['cp_c']
+        cp_h=Inputs['cp_h']
         UA_total=1/(1/(h_c*self.A_c_wetted)+1/(h_h_2phase*self.A_h_wetted)+self.PlateThickness/(self.PlateConductivity*(self.A_c_wetted+self.A_h_wetted)/2.))
         C_c=cp_c*self.mdot_c
         
         Q=Inputs['Q']
-        Qmax=C_c*(Inputs['Tsat_h']-Inputs['Tin_c'])
+        Qmax=C_c*(Inputs['Tin_h']-Inputs['Tin_c'])
         epsilon=Q/Qmax
         
         #Cr = 0, so NTU is simply
@@ -615,11 +618,12 @@ class PHEHXClass():
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
         DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
+        DP_accel_h=AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
         
         #Pack outputs
         Outputs={
             'w': w,
+            'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
             'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
             'DP_c': -PlateOutput_c['DELTAP'],
             'DP_h': DP_accel_h+DP_frict_h,
@@ -856,7 +860,9 @@ class PHEHXClass():
                         'Tsat_h':self.Tsat_h,
                         'Tmean_c':(Tin_c+Tout_c)/2,
                         'cp_c':(hin_c-hout_c)/(Tin_c-Tout_c),
+                        'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h),
                         'Tin_c':Tin_c,
+                        'Tin_h':Tin_h,
                         'pin_h':self.pin_h,
                         'pin_c':self.pin_c,
                         'Phase_c':Phase_c,
@@ -880,8 +886,10 @@ class PHEHXClass():
                         'xout_c':xout_c,
                         'Tsat_c':self.Tsat_c,
                         'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h),
+                        'cp_c':(hin_c-hout_c)/(Tin_c-Tout_c),
                         'Tmean_h':(Tin_h+Tout_h)/2,
                         'Tin_h':Tin_h,
+                        'Tin_c':Tin_c,
                         'pin_h':self.pin_h,
                         'pin_c':self.pin_c,
                         'Phase_c':Phase_c,
