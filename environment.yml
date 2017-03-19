@@ -1,0 +1,7 @@
+name: achp_build
+dependencies:
+  - numpy
+  - scipy
+  - matplotlib
+  - pip:
+    - CoolProp
