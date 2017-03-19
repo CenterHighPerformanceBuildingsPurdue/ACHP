@@ -6,5 +6,8 @@ dependencies:
   - matplotlib
   - IPython
   - pip:
+    - achp
+    - .
     - CoolProp
     - sphinx
+prefix: .
