@@ -3,3 +3,7 @@ conda:
 
 python:
    setup_py_install: true
+
+python:
+   version: 3.5
+
