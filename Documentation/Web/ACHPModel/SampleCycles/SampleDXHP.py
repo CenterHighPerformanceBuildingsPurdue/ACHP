@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 from ACHP.Cycle import DXCycleClass
-from convert_units import F2K 
+from ACHP.convert_units import F2K 
 
 #Instantiate the class
 Cycle=DXCycleClass()

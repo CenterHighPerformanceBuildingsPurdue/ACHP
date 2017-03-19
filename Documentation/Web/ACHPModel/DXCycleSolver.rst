@@ -115,6 +115,8 @@ The common metrics of system efficiency are
     
     COSP=\frac{\dot Q_{evap}-\dot W_{fan,evap}}{\dot W_{comp}+\dot W_{fan,evap}+\dot W_{fan,cond}}
 
+Minimal working example
+-----------------------
 
 .. literalinclude:: SampleCycles/SampleDXAC.py
     
@@ -123,8 +125,7 @@ which should yield the output, when run, of
 .. ipython::
     :suppress: 
     
-    #This line will take the output from the script and write it to file
-    In [1]: import sys; old=sys.stdout; f=open('ACHPModel/SampleCycles/DXACOutput.txt','w'); sys.stdout=f;execfile('ACHPModel/SampleCycles/SampleDXAC.py'); sys.stdout=old; f.close()
+    In [1]: from ACHP.ACHPTools import redirected_exec; redirected_exec('ACHPModel/SampleCycles/SampleDXAC.py','ACHPModel/SampleCycles/DXACOutput.txt')  
     
 .. literalinclude:: SampleCycles/DXACOutput.txt
      
@@ -193,8 +194,8 @@ which should yield the output, when run, of
     :suppress:
     
     #This line will take the output from the script and write it to file
-    In [1]: import sys; old=sys.stdout; f=open('ACHPModel/SampleCycles/DXHPOutput.txt','w'); sys.stdout=f;execfile('ACHPModel/SampleCycles/SampleDXHP.py'); sys.stdout=old; f.close()
-    
+    In [1]: from ACHP.ACHPTools import redirected_exec; redirected_exec('ACHPModel/SampleCycles/SampleDXHP.py','ACHPModel/SampleCycles/DXHPOutput.txt')
+ 
 .. literalinclude:: SampleCycles/DXHPOutput.txt
 
 Cycle Solver Code Documentation

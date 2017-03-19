@@ -66,7 +66,7 @@ which should yield the output, when run, of
     :suppress:
     
     #This line will take the output from the script and write it to file
-    In [1]: import sys; old=sys.stdout; f=open('ACHPModel/SampleCycles/SLACOutput.txt','w'); sys.stdout=f;execfile('ACHPModel/SampleCycles/SampleSLAC.py'); sys.stdout=old; f.close()
+    In [1]: from ACHP.ACHPTools import redirected_exec; redirected_exec('ACHPModel/SampleCycles/SampleSLAC.py','ACHPModel/SampleCycles/SLACOutput.txt')
     
 .. literalinclude:: SampleCycles/SLACOutput.txt
 

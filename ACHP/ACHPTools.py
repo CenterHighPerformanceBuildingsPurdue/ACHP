@@ -4,7 +4,26 @@ This file holds some functions that don't have any obvious other home
 '''
 import os
 import csv
+import sys
 import numpy as np
+from io import StringIO
+
+# see http://stackoverflow.com/a/14707227/1360263
+from contextlib import contextmanager
+@contextmanager
+def stdout_redirected(new_stdout):
+    save_stdout = sys.stdout
+    sys.stdout = new_stdout
+    try:
+        yield None
+    finally:
+        sys.stdout = save_stdout
+
+def redirected_exec(pyfile, outfile):
+    with open(outfile, "w") as f:
+        with stdout_redirected(f):
+            with open(pyfile, 'r') as fp:    
+                exec(fp.read())
 
 def Write2CSV(Class,file,append=False):
     """
