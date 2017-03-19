@@ -124,11 +124,11 @@ Minimal Component Test:
 .. literalinclude:: ComponentTests/CompressorTest.py
     :language: python
     
-If you open an IPython(x,y) shell in the root of the documentation (folder Documentation/Web relative to the main trunk), and run the commands below, you should get
+If you open an IPython shell in the root of the documentation (folder ``Documentation/Web`` relative to the main trunk), and run the commands below, you should get something like
 
 .. ipython::
 
-    In [1]: execfile('ACHPComponents/ComponentTests/CompressorTest.py')
+    In [1]: %run 'ACHPComponents/ComponentTests/CompressorTest.py'
     
 If not, first stop should be the :ref:`FAQS`
 

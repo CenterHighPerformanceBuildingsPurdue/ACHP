@@ -61,17 +61,17 @@ where all the :math:`x_i` values must be greater than zero.  The evaporator comp
 using the CoolProp property routines.
 
 MCE Sample Code
----------------------
+---------------
 
 Minimal Component Test:
 
 .. literalinclude:: ComponentTests/MCETest.py
 
-If you open an IPython(x,y) shell in the root of the documentation (folder Documentation/Web relative to the main trunk), and run the commands below, you should get
+If you open an IPython shell in the root of the documentation (folder ``Documentation/Web`` relative to the main trunk), and run the commands below, you should get output similar to
 
 .. ipython::
 
-    In [1]: execfile('ACHPComponents/ComponentTests/MCETest.py')
+    In [1]: %run 'ACHPComponents/ComponentTests/MCETest.py'
     
 If not, first stop should be the :ref:`FAQS`
 
