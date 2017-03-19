@@ -3,5 +3,6 @@ dependencies:
   - numpy
   - scipy
   - matplotlib
+  - IPython
   - pip:
     - CoolProp
