@@ -59,11 +59,11 @@ Minimal Example Code
 
 .. literalinclude:: ComponentTests/EvaporatorTest.py
 
-If you open an IPython(x,y) shell in the root of the documentation (folder Documentation/Web relative to the main trunk), and run the commands below, you should get
+If you open an IPython shell in the root of the documentation (folder ``Documentation/Web`` relative to the main trunk), and run the commands below, you should get output something like
 
 .. ipython::
 
-    In [1]: execfile('ACHPComponents/ComponentTests/EvaporatorTest.py')
+    In [1]: %run 'ACHPComponents/ComponentTests/EvaporatorTest.py'
     
 If not, first stop should be the :ref:`FAQS`
 
