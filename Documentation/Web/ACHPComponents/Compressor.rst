@@ -19,7 +19,7 @@ The compressor is modeled based on a 10-coefficient ARI compressor map which is 
     from CoolProp.CoolProp import PropsSI
     from CoolProp.Plots import PropertyPlot
     import pylab
-    PropertyPlot('HEOS','R410A')
+    PropertyPlot('HEOS::R410A',"PH")
     ps=PropsSI('P','T',260,'Q',1,'R410A')/1000.0
     pd=PropsSI('P','T',300,'Q',1,'R410A')/1000.0
     hs=PropsSI('H','T',260,'Q',1,'R410A')/1000.0

@@ -200,7 +200,7 @@ The residuals to driven to zero are therefore an overall energy balance over the
     
 and a three-dimensional solver can be used to drive the norm of :math:`\vec{\Delta}` to sufficiently close to zero by altering :math:`T_{evap}`, :math:`T_{cond}`, and :math:`T_{g,i,cc}`.
 
-The code for the preconditioners can be found in :download:`Preconditioners.py <../../../PyACHP/Preconditioners.py>`
+The code for the preconditioners can be found in :download:`Preconditioners.py <../../../ACHP/Preconditioners.py>`
 
 Nomenclature
 
