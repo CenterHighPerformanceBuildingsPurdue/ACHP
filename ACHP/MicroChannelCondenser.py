@@ -1,11 +1,14 @@
-from __future__ import division
+from __future__ import division, absolute_import, print_function
 from math import pi,log,exp
-from CoolProp.CoolProp import HAPropsSI
-from Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
-from MicroFinCorrelations import MultiLouveredMicroFins, MicroFinInputs, IsFinsClass
+
 from scipy.optimize import brentq, fsolve
-from ACHPTools import ValidateFields
+
+from CoolProp.CoolProp import HAPropsSI
 import CoolProp as CP
+
+from .ACHPTools import ValidateFields
+from .Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
+from .MicroFinCorrelations import MultiLouveredMicroFins, MicroFinInputs, IsFinsClass
 
 class FinVals():
     def __init__(self):
@@ -342,8 +345,8 @@ class MicroCondenserClass():
         self.Charge_2phase = rho_average * self.w_2phase * self.V_r    
         
         if self.Verbosity>7:
-            print '2phase cond resid', self.w_2phase-(1-self.w_superheat)
-            print 'h_r_2phase',self.h_r_2phase
+            print('2phase cond resid', self.w_2phase-(1-self.w_superheat))
+            print('h_r_2phase',self.h_r_2phase)
         
         #Calculate an effective pseudo-subcooling based on the equality
         cp_satL=self.cp_satL
@@ -467,12 +470,12 @@ def SampleMicroCondenser(T=95):
 if __name__=='__main__':
     #This runs if you run this file directly
     MicroCond=SampleMicroCondenser(95)
-    print MicroCond.OutputList()
+    print(MicroCond.OutputList())
     
-    print 'Heat transfer rate in condenser is', MicroCond.Q,'W'
-    print 'Heat transfer rate in condenser (superheat section) is',MicroCond.Q_superheat,'W'
-    print 'Heat transfer rate in condenser (twophase section) is',MicroCond.Q_2phase,'W'
-    print 'Heat transfer rate in condenser (subcooled section) is',MicroCond.Q_subcool,'W'
-    print 'Fraction of circuit length in superheated section is',MicroCond.w_superheat
-    print 'Fraction of circuit length in twophase section is',MicroCond.w_2phase
-    print 'Fraction of circuit length in subcooled section is',MicroCond.w_subcool 
+    print('Heat transfer rate in condenser is', MicroCond.Q,'W')
+    print('Heat transfer rate in condenser (superheat section) is',MicroCond.Q_superheat,'W')
+    print('Heat transfer rate in condenser (twophase section) is',MicroCond.Q_2phase,'W')
+    print('Heat transfer rate in condenser (subcooled section) is',MicroCond.Q_subcool,'W')
+    print('Fraction of circuit length in superheated section is',MicroCond.w_superheat)
+    print('Fraction of circuit length in twophase section is',MicroCond.w_2phase)
+    print('Fraction of circuit length in subcooled section is',MicroCond.w_subcool) 

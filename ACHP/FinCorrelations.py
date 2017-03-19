@@ -1,6 +1,8 @@
+from __future__ import absolute_import
+
 from CoolProp.CoolProp import HAPropsSI
 from math import sqrt,pi,tanh,exp,cos,log
-from ACHPTools import ValidateFields
+from .ACHPTools import ValidateFields
 
 def IsFinsClass(Fins):
     '''
@@ -598,11 +600,11 @@ if __name__=='__main__':
     
     FinsTubes.Validate()
     
-    print FinsTubes  #just print our inputs
+    print(FinsTubes)  #just print our inputs
     WavyLouveredFins(FinsTubes)  #calculate
-    print "Wavy-Louvered fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa" #print some of the results
+    print("Wavy-Louvered fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
     HerringboneFins(FinsTubes) 
-    print "Herringbone Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa" #print some of the results
+    print("Herringbone Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
     PlainFins(FinsTubes) 
-    print "Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa" #print some of the results
-    print "a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots"
+    print("Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
+    print("a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots")

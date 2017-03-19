@@ -1,14 +1,18 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 from math import pi,log,exp
-from CoolProp.CoolProp import PropsSI
-from Correlations import f_h_1phase_Tube,ShahEvaporation_Average, LockhartMartinelli,LMPressureGradientAvg,AccelPressureDrop,TwoPhaseDensity
+
 from scipy.optimize import brentq #solver to find roots (zero points) of functions
 from scipy.interpolate import interp1d
-from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
-from DryWetSegment import DWSVals, DryWetSegment
-from ACHPTools import ValidateFields
 import numpy as np
+
 import CoolProp as CP
+from CoolProp.CoolProp import PropsSI
+
+from .Correlations import f_h_1phase_Tube,ShahEvaporation_Average, LockhartMartinelli,LMPressureGradientAvg,AccelPressureDrop,TwoPhaseDensity
+from .FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
+from .DryWetSegment import DWSVals, DryWetSegment
+from .ACHPTools import ValidateFields
+
 
 class EvaporatorClass():
     def __init__(self,**kwargs):
@@ -220,7 +224,7 @@ class EvaporatorClass():
         self.Q=self.Q_superheat+self.Q_2phase
         self.Charge=self.Charge_superheat+self.Charge_2phase
         if self.Verbosity>4: 
-            print self.Q,"Evaporator.Q"
+            print(self.Q,"Evaporator.Q")
         self.Capacity=self.Q-self.Fins.Air.FanPower
         
         #Sensible heat ratio [-]
@@ -327,7 +331,7 @@ class EvaporatorClass():
         self.DP_r_2phase=DP_frict+DP_accel;
         
         if self.Verbosity>7:
-            print w_2phase,DWS.Q,Q_target,self.xin_r,"w_2phase,DWS.Q,Q_target,self.xin_r"
+            print(w_2phase,DWS.Q,Q_target,self.xin_r,"w_2phase,DWS.Q,Q_target,self.xin_r")
         return DWS.Q-Q_target
     
     def _Superheat_Forward(self,w_superheat):
@@ -447,8 +451,8 @@ if __name__=='__main__':
         h_2p[i]= Evap.h_r_2phase
         h_sh[i]= Evap.h_r_superheat
 
-    print "Demonstrate output list"
-    print Evap.OutputList()
+    print("Demonstrate output list")
+    print(Evap.OutputList())
     
     pylab.plot(T_dews,Q_2p,T_dews,Q_tot)
     pylab.title('Parametric Study With Fixed flowrates - Capacity')

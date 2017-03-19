@@ -5,7 +5,7 @@
    as needed commonly for ACHP'''
 
 #import necessary modules
-from __future__ import division
+from __future__ import division, print_function
 from numpy import array, ones, ndarray
 """##### Array handling (convenience function ####################################"""
 def unitconvert(value,function):
@@ -15,7 +15,7 @@ def unitconvert(value,function):
         try:
             result=ones(len(value))
         except:
-            print value
+            print(value)
             result=ones(value.size)
         for i in range(0,len(value)):
             if type(value[i])!=float:
@@ -147,14 +147,14 @@ def siK2ipK(siKValue):
 if __name__=='__main__':
     #This runs if you run this file directly, shows usage
     x=1 #this is the input value for all the examples below
-    print 'Conversion results for input value',x
-    print ' * Temperature conversions:','  F2K',F2K(x),'  F2C',F2C(x),'  C2K',C2K(x),'  C2F',C2F(x),'  K2C',K2C(x)
-    print ' * Massflow conversions:','  lbh2kgs',lbh2kgs(x),'  lbm2kgs',lbm2kgs(x),'  kgh2kgs',kgh2kgs(x)
-    print ' * Volumetric flow conversions:', '  cfm2cms',cfm2cms(x), 'cms2cfm(x)', cms2cfm(x)
-    print ' * Energy conversions:',  '  kJ2J',kJ2J(x),'  J2kJ',J2kJ(x)
-    print ' * Power conversions','  BTUh2W',BTUh2W(x),'  kW2W',kW2W(x), 'W2BTUh',W2BTUh(x)
-    print ' * Pressure conversions', '  kPa2Pa',kPa2Pa(x),'  MPa2kPa',MPa2kPa(x),'  MPa2Pa',MPa2Pa(x)
-    print ' * Length conversions', '  in2m',in2m(x),'  ft2m',ft2m(x)
-    print ' * Area conversions', '  sqin2sqm',sqin2sqm(x), 'sqm2sqin', sqm2sqin(x)
-    print ' * Composed properties conversions', 'ipK2siK', ipK2siK(x),'siK2ipK',siK2ipK(x)
-    print " * Test for automatic list and array handeling", unitconvert(x,sqin2sqm), unitconvert([x,2*x,3*x],sqin2sqm), unitconvert(array([x,2*x,3*x]),sqin2sqm)
+    print('Conversion results for input value',x)
+    print(' * Temperature conversions:','  F2K',F2K(x),'  F2C',F2C(x),'  C2K',C2K(x),'  C2F',C2F(x),'  K2C',K2C(x))
+    print(' * Massflow conversions:','  lbh2kgs',lbh2kgs(x),'  lbm2kgs',lbm2kgs(x),'  kgh2kgs',kgh2kgs(x))
+    print(' * Volumetric flow conversions:', '  cfm2cms',cfm2cms(x), 'cms2cfm(x)', cms2cfm(x))
+    print(' * Energy conversions:',  '  kJ2J',kJ2J(x),'  J2kJ',J2kJ(x))
+    print(' * Power conversions','  BTUh2W',BTUh2W(x),'  kW2W',kW2W(x), 'W2BTUh',W2BTUh(x))
+    print(' * Pressure conversions', '  kPa2Pa',kPa2Pa(x),'  MPa2kPa',MPa2kPa(x),'  MPa2Pa',MPa2Pa(x))
+    print(' * Length conversions', '  in2m',in2m(x),'  ft2m',ft2m(x))
+    print(' * Area conversions', '  sqin2sqm',sqin2sqm(x), 'sqm2sqin', sqm2sqin(x))
+    print(' * Composed properties conversions', 'ipK2siK', ipK2siK(x),'siK2ipK',siK2ipK(x))
+    print(" * Test for automatic list and array handeling", unitconvert(x,sqin2sqm), unitconvert([x,2*x,3*x],sqin2sqm), unitconvert(array([x,2*x,3*x]),sqin2sqm))

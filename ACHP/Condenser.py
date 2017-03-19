@@ -1,9 +1,11 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 from math import pi,log,exp
-from Correlations import f_h_1phase_Tube,ShahCondensation_Average,LMPressureGradientAvg,TwoPhaseDensity,AccelPressureDrop 
-from FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
+
+from .Correlations import f_h_1phase_Tube,ShahCondensation_Average,LMPressureGradientAvg,TwoPhaseDensity,AccelPressureDrop 
+from .FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
+from .ACHPTools import ValidateFields
+
 from scipy.optimize import brentq
-from ACHPTools import ValidateFields
 import CoolProp as CP
 
 class FinVals():
@@ -283,8 +285,8 @@ class CondenserClass():
         self.Charge_2phase = rho_average * self.w_2phase * self.V_r    
         
         if self.Verbosity>7:
-            print '2phase cond resid', self.w_2phase-(1-self.w_superheat)
-            print 'h_r_2phase',self.h_r_2phase
+            print('2phase cond resid', self.w_2phase-(1-self.w_superheat))
+            print('h_r_2phase',self.h_r_2phase)
         
         #Calculate an effective pseudo-subcooling based on the equality
         #     cp*DT_sc=-dx*h_fg
@@ -399,12 +401,12 @@ def SampleCondenser(T=41.37):
 if __name__=='__main__':
     #This runs if you run this file directly
     Cond=SampleCondenser(43.3)
-    print Cond.OutputList()
+    print(Cond.OutputList())
     
-    print 'Heat transfer rate in condenser is', Cond.Q,'W'
-    print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
-    print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
-    print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
-    print 'Fraction of circuit length in superheated section is',Cond.w_superheat
-    print 'Fraction of circuit length in twophase section is',Cond.w_2phase
-    print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 
+    print('Heat transfer rate in condenser is', Cond.Q,'W')
+    print('Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W')
+    print('Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W')
+    print('Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W')
+    print('Fraction of circuit length in superheated section is',Cond.w_superheat)
+    print('Fraction of circuit length in twophase section is',Cond.w_2phase)
+    print('Fraction of circuit length in subcooled section is',Cond.w_subcool) 

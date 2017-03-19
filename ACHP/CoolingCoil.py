@@ -1,10 +1,10 @@
-from __future__ import division
+from __future__ import division, print_function,absolute_import
 from math import pi
-from Correlations import f_h_1phase_Tube
-from FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
 from matplotlib import docstring
-from DryWetSegment import DWSVals, DryWetSegment
 import CoolProp as CP
+from .Correlations import f_h_1phase_Tube
+from .FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
+from .DryWetSegment import DWSVals, DryWetSegment
 
 class CoolingCoilClass():
     """
@@ -192,7 +192,7 @@ def TestCase():
     CC.Verbosity = 3
     
     CC.Calculate()
-    print CC.OutputList()
+    print(CC.OutputList())
         
 if __name__=='__main__':
     TestCase()

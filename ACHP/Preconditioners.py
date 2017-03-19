@@ -1,10 +1,14 @@
-from CoolProp.CoolProp import HAPropsSI 
-from scipy.optimize import fsolve
-import Correlations
+from __future__ import absolute_import
+
 from math import pi
-from Solvers import MultiDimNewtRaph
+from scipy.optimize import fsolve
 import numpy as np
+
 import CoolProp as CP
+from CoolProp.CoolProp import HAPropsSI 
+
+from .Solvers import MultiDimNewtRaph
+from . import Correlations
 
 def DXPreconditioner(Cycle,epsilon=0.96):
     

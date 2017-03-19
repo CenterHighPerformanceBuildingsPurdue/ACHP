@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 from math import pi,log,sqrt,exp,cos,sin,tan,log10
 from scipy.integrate import quad,quadrature,trapz,simps,fixed_quad
 from scipy.optimize import brentq,fsolve
@@ -1090,9 +1090,9 @@ if __name__=='__main__':
         DP_vals_fric.append(LMPressureGradientAvg(x-0.1,x,AS,0.1,0.01,250,250)*1*1)
         x_vals.append(x)
         
-    print "plot shows accelerational pressure drop as f(x) for 0.1 x segments"
+    print("plot shows accelerational pressure drop as f(x) for 0.1 x segments")
     pylab.plot(x_vals, DP_vals_acc)
     pylab.show()
-    print "plot shows frictional pressure drop as f(x) for 0.1 x segments of a fictional tube with unit length"
+    print("plot shows frictional pressure drop as f(x) for 0.1 x segments of a fictional tube with unit length")
     pylab.plot(x_vals, DP_vals_fric)
     pylab.show()

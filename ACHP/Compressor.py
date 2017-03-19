@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 from CoolProp.CoolProp import PropsSI
 import CoolProp as CP
 
@@ -172,6 +172,6 @@ if __name__=='__main__':
               }
         Comp=CompressorClass(**kwds)
         Comp.Calculate()
-        print Comp.W,'W'
-        print Comp.Vdot_pumped,'m^3/s'
-        print Comp.Q_amb, 'W'
+        print(Comp.W,'W')
+        print(Comp.Vdot_pumped,'m^3/s')
+        print(Comp.Q_amb, 'W')

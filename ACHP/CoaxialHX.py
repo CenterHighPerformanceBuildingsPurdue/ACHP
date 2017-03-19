@@ -1,10 +1,14 @@
-from CoolProp.CoolProp import PropsSI
-from Correlations import f_h_1phase_Annulus,f_h_1phase_Tube,ShahEvaporation_Average
-from Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
+from __future__ import print_function, absolute_import
+
 from math import pi,exp,log
 from scipy.optimize import brentq
 import numpy as np
+
 import CoolProp as CP
+from CoolProp.CoolProp import PropsSI
+
+from .Correlations import f_h_1phase_Annulus,f_h_1phase_Tube,ShahEvaporation_Average
+from .Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
 
 class CoaxialHXClass():
     def __init__(self,**kwargs):
@@ -267,7 +271,7 @@ class CoaxialHXClass():
         self.DP_r_2phase=DP_frict+DP_accel
         
         if self.Verbosity>4:
-            print Q_2phase_eNTU-self.Q_2phase
+            print(Q_2phase_eNTU-self.Q_2phase)
         return Q_2phase_eNTU-self.Q_2phase
         
 if __name__=='__main__':
@@ -305,4 +309,4 @@ if __name__=='__main__':
         QQ.append(IHX.h_r_2phase)#IHX.Q)
         Q1.append(IHX.h_r_superheat)
                   
-        print IHX.Q
+        print(IHX.Q)

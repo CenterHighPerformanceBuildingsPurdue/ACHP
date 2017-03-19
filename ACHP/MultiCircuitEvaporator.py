@@ -1,16 +1,20 @@
-from __future__ import division
+from __future__ import division, absolute_import, print_function
+
 from math import floor,ceil
-from CoolProp.CoolProp import PropsSI
-from FinCorrelations import FinInputs
-from Evaporator import EvaporatorClass
+
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import newton
+
 import copy
 import CoolProp
-from CoolProp.Plots import PropertyPlot
-from scipy.optimize import newton
-from ACHPTools import Write2CSV
 import CoolProp as CP
+from CoolProp.CoolProp import PropsSI
+from CoolProp.Plots import PropertyPlot
+
+from .FinCorrelations import FinInputs
+from .Evaporator import EvaporatorClass
+from .ACHPTools import Write2CSV
 
 #MultiCircuitEvaporator inherits things from the Evaporator base class
 class MultiCircuitEvaporatorClass(EvaporatorClass):
@@ -126,7 +130,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         self.mdot_r=np.atleast_1d(self.mdot_r).tolist()
         
         if Ncircuits != len(self.mdot_r) and len(self.mdot_r)>1:
-            print "Problem with length of vector for mdot_r for MCE"
+            print("Problem with length of vector for mdot_r for MCE")
         else:
             if len(self.mdot_r)==1: #Single value passed in for mdot_r
                 if hasattr(self,'mdot_r_coeffs'):
@@ -169,10 +173,10 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #For backwards compatibility, if the coefficients are provided in the FinInputs class, copy them to the base class
         if hasattr(self.Fins.Air,'Vdot_ha_coeffs'):
             self.Vdot_ha_coeffs=self.Fins.Air.Vdot_ha_coeffs
-            print "Warning: please put the vector Vdot_ha_coeffs in the base MCE class, accesssed as MCE.Vdot_ha_coeffs"
+            print("Warning: please put the vector Vdot_ha_coeffs in the base MCE class, accesssed as MCE.Vdot_ha_coeffs")
             
         if Ncircuits !=len(self.Fins.Air.Vdot_ha) and len(self.Fins.Air.Vdot_ha)>1:
-            print "Problem with length of vector for Vdot_ha for MCE"
+            print("Problem with length of vector for Vdot_ha for MCE")
         else:
             if len(self.Fins.Air.Vdot_ha)==1:
                 if hasattr(self,'Vdot_ha_coeffs'):
@@ -261,7 +265,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #Convert back to a single value for the overall evaporator
         self.Fins.Air.Vdot_ha=float(self.Fins.Air.Vdot_ha[-1])
         if self.Verbosity>0:
-            print chr(127), #progress bar
+            print(chr(127),end='') #progress bar
 
 
 if __name__=='__main__':
@@ -328,19 +332,19 @@ if __name__=='__main__':
     MCE=MultiCircuitEvaporatorClass(**kwargs)
     MCE.Update(**kwargs)
     MCE.Calculate()
-    print 'Q_standard_evap = ' + str(Evap.Q) + ' W'
-    print 'Q_MCE = '+str(MCE.Q)+' W'
-    print 'Heat transfer reduction due to maldisribution'+str((MCE.Q-Evap.Q)*100./Evap.Q)+' %'
+    print('Q_standard_evap = ' + str(Evap.Q) + ' W')
+    print('Q_MCE = '+str(MCE.Q)+' W')
+    print('Heat transfer reduction due to maldisribution'+str((MCE.Q-Evap.Q)*100./Evap.Q)+' %')
 
-    print "demonstrating output list\n",'='*20,'\n'
-    print MCE.OutputList(), '\n', '='*20
+    print("demonstrating output list\n",'='*20,'\n')
+    print(MCE.OutputList(), '\n', '='*20)
 
     csv_file= "Evaporator_MCE.csv"
-    print "\n demonstrating write to csv",csv_file,'\n'
+    print("\n demonstrating write to csv",csv_file,'\n')
     Write2CSV(MCE,open(csv_file,'w'),append=False)
       
-    print "check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1],
-    print np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)])
+    print("check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1],end='')
+    print(np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)]))
 
     # plot maldistribution
     h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
@@ -355,10 +359,10 @@ if __name__=='__main__':
     #plot.figure.show()
     plt.close(plot.figure)
     
-    print  "outlet enthalpies", [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,MCE.Evaps[-1].Ref)
-    print  "outlet superheats", [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))]
+    print("outlet enthalpies", [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,MCE.Evaps[-1].Ref))
+    print("outlet superheats", [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))])
 
-    print "\nrerunning with smaller mass flowrate"
+    print("\nrerunning with smaller mass flowrate")
 
     kwargs={'Ref': 'R410A',
             'Backend':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'

@@ -1,7 +1,7 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 from math import log,exp
 from CoolProp.CoolProp import HAPropsSI, cair_sat
-from FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
+from .FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
 
 class DWSVals():
     """ 
@@ -156,7 +156,7 @@ def DryWetSegment(DWS):
         Ntu_dry = UA / Cmin
         
         if Ntu_dry<0.0000001:
-            print "warning:  NTU_dry in dry wet segment was negative. forced it to positive value of 0.001!"
+            print("warning:  NTU_dry in dry wet segment was negative. forced it to positive value of 0.001!")
             Ntu_dry=0.0000001
 
         # Counterflow effectiveness [-]
@@ -267,7 +267,7 @@ def DryWetSegment(DWS):
                 errorToutr=Tout_r-Tout_r_start;
                     
                 if(iter>500):
-                    print "Superheated region wet analysis T_outr convergence failed"
+                    print("Superheated region wet analysis T_outr convergence failed")
                     DWS.Q=Q_dry;
                     return
                 if iter==1:
@@ -278,7 +278,7 @@ def DryWetSegment(DWS):
                     change=abs(y2/(y2-y1)*(x2-x1))
                     y1=y2; x1=x2; x2=x3
                 if hasattr(DWS,'Verbosity') and DWS.Verbosity>7:
-                    print "Fullwet iter %d Toutr %0.5f dT %g" %(iter,Tout_r,errorToutr)
+                    print("Fullwet iter %d Toutr %0.5f dT %g" %(iter,Tout_r,errorToutr))
                 #Update loop counter
                 iter+=1
                 
@@ -342,7 +342,7 @@ def DryWetSegment(DWS):
                     error=Tout_r-Tout_r_guess
                     
                     if(iter>500):
-                        print "Superheated region wet analysis f_dry convergence failed"
+                        print("Superheated region wet analysis f_dry convergence failed")
                         DWS.Q=Q_dry
                         return
                     if iter==1:
@@ -353,7 +353,7 @@ def DryWetSegment(DWS):
                         change=abs(y2/(y2-y1)*(x2-x1))
                         y1=y2; x1=x2; x2=x3;
                     if hasattr(DWS,'Verbosity') and DWS.Verbosity>7:
-                        print "Partwet iter %d Toutr_guess %0.5f diff %g f_dry: %g"%(iter,Tout_r_guess,error,f_dry)
+                        print("Partwet iter %d Toutr_guess %0.5f diff %g f_dry: %g"%(iter,Tout_r_guess,error,f_dry))
                     #Update loop counter
                     iter+=1
                 

@@ -1,24 +1,26 @@
-from __future__ import division
+from __future__ import division, absolute_import,print_function
 import sys
-from Compressor import CompressorClass  #Compressor
-from Condenser import CondenserClass    #Condenser
-from Evaporator import EvaporatorClass  #Evaporator
-from CoolingCoil import CoolingCoilClass #Cooling Coil
-from MultiCircuitEvaporator import MultiCircuitEvaporatorClass
-from CoaxialHX import CoaxialHXClass #Coaxial internal heat exchanger
-from PHEHX import PHEHXClass #Plate-Heat-Exchanger 
-from LineSet import LineSetClass #Line set class
-from Pump import PumpClass # Secondary loop pump class
+from .Compressor import CompressorClass  #Compressor
+from .Condenser import CondenserClass    #Condenser
+from .Evaporator import EvaporatorClass  #Evaporator
+from .CoolingCoil import CoolingCoilClass #Cooling Coil
+from .MultiCircuitEvaporator import MultiCircuitEvaporatorClass
+from .CoaxialHX import CoaxialHXClass #Coaxial internal heat exchanger
+from .PHEHX import PHEHXClass #Plate-Heat-Exchanger 
+from .LineSet import LineSetClass #Line set class
+from .Pump import PumpClass # Secondary loop pump class
+from .FinCorrelations import FinInputs     #fin correlations
+from .Correlations import TrhoPhase_ph            
+from .Solvers import MultiDimNewtRaph, Broyden
+from .Preconditioners import DXPreconditioner,SecondaryLoopPreconditioner
+
 from scipy.optimize import brentq, fsolve,newton 
 #^^ fsolve - roots (multiple variables); brent - root of one variable fct
 
 import CoolProp as CP
 from CoolProp.Plots import PropertyPlot
-from FinCorrelations import FinInputs     #fin correlations
+
 import numpy as np                  #NumPy is fundamental scientific package
-from Correlations import TrhoPhase_ph            
-from Solvers import MultiDimNewtRaph, Broyden
-from Preconditioners import DXPreconditioner,SecondaryLoopPreconditioner
         
 class SecondaryCycleClass():
     def __init__(self):
@@ -85,7 +87,7 @@ class SecondaryCycleClass():
                 Inlet "glycol" temperature to line set feeding cooling coil   
         """
         if self.Verbosity>1:
-            print 'Inputs: DTevap %7.4f DTcond %7.4f fT_IHX %7.4f'%(DT_evap,DT_cond,Tin_CC) 
+            print('Inputs: DTevap %7.4f DTcond %7.4f fT_IHX %7.4f'%(DT_evap,DT_cond,Tin_CC))
         
         #AbstractState
         if hasattr(self,'Backend'): #check if backend is given
@@ -267,9 +269,9 @@ class SecondaryCycleClass():
             
             
             if self.Verbosity>7:
-                print 'Wcomp % 12.6e Qcond: % 12.6e QPHE %10.4f ' %(self.Compressor.W,self.Condenser.Q,self.IHX.Q)
+                print('Wcomp % 12.6e Qcond: % 12.6e QPHE %10.4f ' %(self.Compressor.W,self.Condenser.Q,self.IHX.Q))
             if self.Verbosity>1:
-                print 'Qres % 12.6e Resid2: % 12.6e ResSL %10.4f  Charge %10.4f SC: %8.4f' %(resid[0],resid[1],self.residSL,self.Charge,self.Condenser.DT_sc)
+                print('Qres % 12.6e Resid2: % 12.6e ResSL %10.4f  Charge %10.4f SC: %8.4f' %(resid[0],resid[1],self.residSL,self.Charge,self.Condenser.DT_sc))
                 
             self.Capacity=self.CoolingCoil.Capacity
             self.COP=self.CoolingCoil.Q/self.Compressor.W
@@ -375,7 +377,7 @@ class SecondaryCycleClass():
             resid[2]=self.residSL
             
             if self.Verbosity>1:
-                print 'Qres % 12.6e Resid2: % 12.6e ResSL %10.4f Charge %10.4f SC: %8.4f' %(resid[0],resid[1],self.residSL,self.Charge,self.DT_sc)
+                print('Qres % 12.6e Resid2: % 12.6e ResSL %10.4f Charge %10.4f SC: %8.4f' %(resid[0],resid[1],self.residSL,self.Charge,self.DT_sc))
                 
             self.Capacity=-self.CoolingCoil.Q+self.CoolingCoil.Fins.Air.FanPower
             self.COP=-self.CoolingCoil.Q/self.Compressor.W
@@ -426,8 +428,8 @@ class SecondaryCycleClass():
             return self.residSL
             
         def PrintDPs():
-            print 'DP_LP :: Input:',self.DP_low,'Pa / Model calc:',self.DP_low_Model,'Pa'
-            print 'DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa'   
+            print('DP_LP :: Input:',self.DP_low,'Pa / Model calc:',self.DP_low_Model,'Pa')
+            print('DP_HP :: Input:',self.DP_high,'Pa / Model calc:',self.DP_high_Model,'Pa')
         
         #Some variables need to be initialized
         self.DP_low=0 #The actual low-side pressure drop to be used in Pa
@@ -471,7 +473,7 @@ class SecondaryCycleClass():
                 
                 if self.Verbosity>0:
                     PrintDPs()
-                    print 'Max pressure drop error [inner loop] is',max_error_DP,'Pa'
+                    print('Max pressure drop error [inner loop] is',max_error_DP,'Pa')
                     
                 #Update the pressure drop terms
                 self.DP_low=self.DP_low_Model #/1000
@@ -480,7 +482,7 @@ class SecondaryCycleClass():
                 iter_inner+=1
                 
             if self.Verbosity > 0:
-                print "Done with the inner loop on pressure drop"
+                print("Done with the inner loop on pressure drop")
                 
             # Use Newton-Raphson solver
             (self.DT_evap,self.DT_cond,Tin_CC)=MultiDimNewtRaph(OBJECTIVE,[self.DT_evap,self.DT_cond,Tin_CC],dx=0.1)
@@ -490,13 +492,13 @@ class SecondaryCycleClass():
             
             if self.Verbosity>0:
                 PrintDPs()    
-                print 'Max pressure drop error [outer loop] is',max_error_DP,'Pa'
+                print('Max pressure drop error [outer loop] is',max_error_DP,'Pa')
         
         if self.Verbosity>1:
-            print 'Capacity: ', self.Capacity
-            print 'COP: ',self.COP
-            print 'COP (w/ both fans): ',self.COSP
-            print 'SHR: ',self.SHR
+            print('Capacity: ', self.Capacity)
+            print('COP: ',self.COP)
+            print('COP (w/ both fans): ',self.COSP)
+            print('SHR: ',self.SHR)
         return
         
 class DXCycleClass():
@@ -558,7 +560,7 @@ class DXCycleClass():
                 Difference in temperature [K] between condenser air inlet temperature and refrigeant dew temperature 
         """
         if self.Verbosity>1:
-            print 'DTevap %7.4f DTcond %7.4f,' %(DT_evap,DT_cond)
+            print('DTevap %7.4f DTcond %7.4f,' %(DT_evap,DT_cond))
         
         #AbstractState
         if hasattr(self,'Backend'): #check if backend is given
@@ -624,7 +626,7 @@ class DXCycleClass():
             self.Compressor.Update(**params)
             self.Compressor.Calculate()
             if self.Verbosity>1:
-                print 'Comp DP L H',self.DP_low,self.DP_high
+                print('Comp DP L H',self.DP_low,self.DP_high)
             
             params={
                 'mdot_r': self.Compressor.mdot_r,
@@ -670,7 +672,7 @@ class DXCycleClass():
                 resid[1]=self.Charge-self.Charge_target
             
             if self.Verbosity>1:
-                print resid
+                print(resid)
             
             self.Capacity=self.Evaporator.Capacity
             self.Power=self.Compressor.W+self.Evaporator.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
@@ -753,7 +755,7 @@ class DXCycleClass():
         else:
             ValueError("DX Cycle mode must be 'AC', or 'HP'")
         if self.Verbosity>1:
-            print 'DTevap %7.4f DTcond %7.4f Qres % 12.6e DTsc: % 12.6e Charge %10.4f SC: %8.4f' %(DT_evap,DT_cond,resid[0],resid[1],self.Charge,self.Condenser.DT_sc)
+            print('DTevap %7.4f DTcond %7.4f Qres % 12.6e DTsc: % 12.6e Charge %10.4f SC: %8.4f' %(DT_evap,DT_cond,resid[0],resid[1],self.Charge,self.Condenser.DT_sc))
         self.DT_evap=DT_evap
         self.DT_cond=DT_cond
         return resid
@@ -801,22 +803,22 @@ class DXCycleClass():
                     if delta_low<1 and delta_high<1:
                         DP_converged=True
                     if self.Verbosity>4:
-                        print self.DP_HighPressure,self.DP_LowPressure,'DPHP'
+                        print(self.DP_HighPressure,self.DP_LowPressure,'DPHP')
                     GoodRun=True
             except AttributeError:
                 # This will be a fatal error !! Should never have attribute error
                 raise 
             except:
-                print "--------------  Exception Caught ---------------- " 
-                print "Error of type",sys.exc_info()[0]," is: " + sys.exc_info()[1].message
+                print("--------------  Exception Caught ---------------- " )
+                print("Error of type",sys.exc_info()[0]," is: " + sys.exc_info()[1].message)
                 raise
         
         if self.Verbosity>0:
-            print 'Capacity: ', self.Capacity
-            print 'COP: ',self.COP
-            print 'COP (w/ both fans): ',self.COSP
-            print 'SHR: ',self.SHR
-            print 'UA_r_evap',self.Evaporator.UA_r
-            print 'UA_a_evap',self.Evaporator.UA_a
-            print 'UA_r_cond',self.Condenser.UA_r
-            print 'UA_a_cond',self.Condenser.UA_a
+            print('Capacity: ', self.Capacity)
+            print('COP: ',self.COP)
+            print('COP (w/ both fans): ',self.COSP)
+            print('SHR: ',self.SHR)
+            print('UA_r_evap',self.Evaporator.UA_r)
+            print('UA_a_evap',self.Evaporator.UA_a)
+            print('UA_r_cond',self.Condenser.UA_r)
+            print('UA_a_cond',self.Condenser.UA_a)

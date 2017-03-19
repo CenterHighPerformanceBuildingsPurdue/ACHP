@@ -1,7 +1,11 @@
-from CoolProp.CoolProp import HAPropsSI 
-from math import sqrt,pi,tanh,exp,cos,log,sin
-from ACHPTools import ValidateFields
+from __future__ import print_function, absolute_import, division
+
 from scipy.optimize import fsolve
+from math import sqrt,pi,tanh,exp,cos,log,sin
+
+from CoolProp.CoolProp import HAPropsSI 
+
+from .ACHPTools import ValidateFields
 
 def IsFinsClass(MicroFins):
     '''
@@ -383,6 +387,6 @@ if __name__=='__main__':
     
     LouversFinsTubes.Validate()
     
-    print LouversFinsTubes  #just print our inputs
+    print(LouversFinsTubes)  #just print our inputs
     MultiLouveredMicroFins(LouversFinsTubes)  #calculate
-    print "Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)+" Pa"
+    print("Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)+" Pa")
