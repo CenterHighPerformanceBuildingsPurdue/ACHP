@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from CoolProp.CoolProp import PropsSI
 from ACHP.FinCorrelations import FinInputs
 from ACHP.Evaporator import EvaporatorClass
@@ -40,7 +42,7 @@ Evap=EvaporatorClass(**kwargs)
 Evap.Update(**kwargs)
 Evap.Calculate()
 
-print 'Evaporator heat transfer rate is',Evap.Q,'W'
-print 'Evaporator capacity (less fan power) is',Evap.Capacity,'W'
-print 'Evaporator fraction of length in two-phase section',Evap.w_2phase,'W'
-print 'Evaporator sensible heat ratio',Evap.SHR
+print('Evaporator heat transfer rate is',Evap.Q,'W')
+print('Evaporator capacity (less fan power) is',Evap.Capacity,'W')
+print('Evaporator fraction of length in two-phase section',Evap.w_2phase,'W')
+print('Evaporator sensible heat ratio',Evap.SHR)

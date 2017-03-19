@@ -11,14 +11,15 @@ Working with the Python Path (aka *Argh!! Why can't Python find my files?*)
 
 One of the biggest hurdles for anyone getting started with Python is dealing with the python path.  (Author's note: I *still* struggle with this!)  Python searches a number of locations when it is looking for a module from an import command.  In a script, if you write::
 
+    from __future__ import print_function
     import sys
-    print sys.path
+    print(sys.path)
     
-it will tell you all the places that Python is looking for your files.  From IPython, you might get an output something like this for the first four entries:
+it will tell you all the places that Python is looking for your files.  From IPython, you might get an output something like this for the first three entries:
 
 .. ipython::
 
-    In [1]: import sys; print sys.path[0:3]
+    In [1]: import sys; print(sys.path[0:3])
 
 If you have multiple copies of a module, it will use the first one it finds as it searches from left to right in the list of folders.
 
@@ -34,7 +35,7 @@ folder with Python 2.6.x.  And if you open an ipython prompt and type
 
 .. ipython::
 
-    In [1]: import CoolProp; print CoolProp.__file__
+    In [1]: import CoolProp; print(CoolProp.__file__)
     
 no errors should be generated, and it will spit out the path to the module files.
     

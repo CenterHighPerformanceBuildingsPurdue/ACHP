@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from ACHP.FinCorrelations import FinInputs
 from ACHP.Evaporator import EvaporatorClass
 from ACHP.MultiCircuitEvaporator import MultiCircuitEvaporatorClass
@@ -41,7 +43,7 @@ kwargs={'Ref': Ref,
         }
 Evap=EvaporatorClass(**kwargs)
 Evap.Calculate()
-print 'Evap Q=' + str(Evap.Q) + ' W'
+print('Evap Q=' + str(Evap.Q) + ' W')
 
 #This uses the multi-circuited evaporator model but with no mal-distribution
 kwargs={'Ref': Ref,
@@ -54,7 +56,7 @@ kwargs={'Ref': Ref,
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()
-print 'MCE Q='+str(MCE.Q)+' W w/o mal-distribution' 
+print('MCE Q='+str(MCE.Q)+' W w/o mal-distribution')
 
 #Not exactly the same since
 # This uses the multi-circuited evaporator model with mal-distribution of 
@@ -72,7 +74,7 @@ kwargs={'Ref': Ref,
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()
-print 'MCE Q='+str(MCE.Q)+' W w/ mal-distribution'
+print('MCE Q='+str(MCE.Q)+' W w/ mal-distribution')
 
 
 #Another way to express air maldirtribution for the last example, 
@@ -89,4 +91,4 @@ kwargs={'Ref': Ref,
         }
 MCE=MultiCircuitEvaporatorClass(**kwargs)
 MCE.Calculate()
-print 'MCE Q='+str(MCE.Q)+' W w/ mal-distribution'
+print('MCE Q='+str(MCE.Q)+' W w/ mal-distribution')

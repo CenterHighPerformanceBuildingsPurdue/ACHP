@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from ACHP.Cycle import DXCycleClass 
 
 #Instantiate the cycle class
@@ -123,6 +125,6 @@ Cycle.LineSetReturn.ID=0.017526
 from time import time
 t1=time()
 Cycle.PreconditionedSolve()
-print 'Took '+str(time()-t1)+' seconds to run Cycle model'
-print 'Cycle COP is '+str(Cycle.COSP)
-print 'Cycle refrigerant charge is '+str(Cycle.Charge)+' kg'
+print('Took '+str(time()-t1)+' seconds to run Cycle model')
+print('Cycle COP is '+str(Cycle.COSP))
+print('Cycle refrigerant charge is '+str(Cycle.Charge)+' kg')

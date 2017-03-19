@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from ACHP.CoolingCoil import CoolingCoilClass
 from ACHP.FinCorrelations import FinInputs
 
@@ -37,9 +39,9 @@ CC.pin_g = 300000                   #Refrigerant vapor pressure in Pa
 CC.Verbosity = 3
 CC.Calculate()
 
-print "Method 1:"
-print "Cooling Coil Q: " + str(CC.Q) + " W"
-print "Cooling Coil SHR: " + str(CC.SHR) + " "
+print("Method 1:")
+print("Cooling Coil Q: " + str(CC.Q) + " W")
+print("Cooling Coil SHR: " + str(CC.SHR) + " ")
 
 # 2. Build a dictionary of values, then use that to initialize the class
 kwds={'Fins':FinsTubes,
@@ -52,6 +54,6 @@ kwds={'Fins':FinsTubes,
 CC2=CoolingCoilClass(**kwds)
 CC2.Calculate()
 
-print "Method 2:"
-print "Cooling Coil Q: " + str(CC2.Q) + " W"
-print "Cooling Coil SHR: " + str(CC2.SHR) + " "
+print("Method 2:")
+print("Cooling Coil Q: " + str(CC2.Q) + " W")
+print("Cooling Coil SHR: " + str(CC2.SHR) + " ")

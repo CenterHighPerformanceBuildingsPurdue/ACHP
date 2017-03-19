@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from ACHP.Cycle import SecondaryCycleClass
 
 # Instantiate the class
@@ -180,6 +182,6 @@ t1=time()
 Cycle.PreconditionedSolve()
 
 #Outputs
-print 'Took '+str(time()-t1)+' seconds to run Cycle model'
-print 'Cycle coefficient of system performance is '+str(Cycle.COSP)
-print 'Cycle refrigerant charge is '+str(Cycle.Charge)+' kg'
+print('Took '+str(time()-t1)+' seconds to run Cycle model')
+print('Cycle coefficient of system performance is '+str(Cycle.COSP))
+print('Cycle refrigerant charge is '+str(Cycle.Charge)+' kg')

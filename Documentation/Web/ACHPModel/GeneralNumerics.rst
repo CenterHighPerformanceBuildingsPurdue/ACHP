@@ -24,11 +24,11 @@ The Scientific Python package includes an implementation of this method, and a s
     
     # newton(function handle, x0), also see 
     # http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.newton.html
-    In [2]: print newton(lambda x: x**2-0.4,1.5)
+    In [2]: newton(lambda x: x**2-0.4,1.5)
     
     # The exact solution - should be the same. 
     # a**b in Python is a to the power of b
-    In [2]: print 0.4**0.5
+    In [2]: 0.4**0.5
 
 which provides a terribly inefficient solution for the square root of 0.4.
 
@@ -62,11 +62,11 @@ and the new midpoint is found from :math:`m=(a+b)/2`.  This method is applied un
     
     # bisect(function handle, a,b), 
     # http://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.bisect.html
-    In [2]: print bisect(lambda x: x**2-0.4,0,4)
+    In [2]: bisect(lambda x: x**2-0.4,0,4)
     
     # The exact solution - should be the same. 
     # a**b in Python is a to the power of b
-    In [2]: print 0.4**0.5
+    In [2]: 0.4**0.5
     
 Brent's Method
 --------------
@@ -213,10 +213,10 @@ which requires the python code
     In [2]: func=lambda x: [x[0]**2-2*x[1]-2, x[0]+x[1]**2-1]
     
     #Actually solve the function    
-    In [2]: x=fsolve(func,[0,0]); print x
+    In [2]: x=fsolve(func,[0,0]); print(x)
     
     #Verify you have the right solution
-    In [2]: print func(x)
+    In [2]: func(x)
 
 .. only:: html
 

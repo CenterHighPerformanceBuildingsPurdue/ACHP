@@ -1,4 +1,5 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division, # Make integer 3/2 give 1.5 in python 2.x
+                       print_function
 import CoolProp as CP
 import numpy as np
 import pylab as pylab
@@ -24,12 +25,12 @@ AS.update(CP.PQ_INPUTS,psat_r,1.0)
 Tdew_r = AS.T() #[K]
 rho_v = AS.rhomass() #[kg/m^3]
 h_v = AS.hmass() #[J/kg]
-print AS.p_critical() #[Pa]
-print Tdew_r,Tbubble_r
-#print PropsSI('H','P',702800,'Q',1.0,Ref)
-print rho_l
+print(AS.p_critical()) #[Pa]
+print(Tdew_r,Tbubble_r)
+#print(PropsSI('H','P',702800,'Q',1.0,Ref))
+print(rho_l)
 h_fg=h_v - h_l
-print "h_fg",h_fg
+print("h_fg",h_fg)
 v_f=1/rho_l  #liquid density [m^3/kg]
 v_g=1/rho_v  #gas density [m^3/kg]
 v_fg=v_g-v_f #difference between the two of them [m^3/kg]

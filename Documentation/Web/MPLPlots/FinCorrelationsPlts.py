@@ -1,4 +1,5 @@
-from __future__ import division #Make integer 3/2 give 1.5 in python 2.x
+from __future__ import division, # Make integer 3/2 give 1.5 in python 2.x
+                       print_function
 from CoolProp.CoolProp import PropsSI
 import numpy as np
 import pylab as pylab
@@ -33,7 +34,7 @@ FinsTubes.Air.RHmean=0.51
 FinsTubes.Air.FanPower=438
 
 FinsTubes.Validate()
-print FinsTubes  #just print our inputs
+print(FinsTubes)  #just print our inputs
 
 #generate data
 V_dots_ha=np.linspace(0.1,1,1000)

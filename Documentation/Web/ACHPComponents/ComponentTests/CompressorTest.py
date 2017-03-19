@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from ACHP.Compressor import CompressorClass
 from CoolProp.CoolProp import PropsSI
 kwds={
@@ -15,7 +17,7 @@ kwds={
 Comp=CompressorClass(**kwds)
 Comp.Calculate()
 
-print 'Electrical power is: ' + str(Comp.W) + ' W'
-print 'Actual mass flow rate is: ' + str(Comp.mdot_r) + ' kg/s'
-print 'Isentropic Efficiency is: ' + str(Comp.eta_oi)
-print 'Discharge Refrigerant Temperature is: ' + str(Comp.Tout_r) + ' K'
+print('Electrical power is: ' + str(Comp.W) + ' W')
+print('Actual mass flow rate is: ' + str(Comp.mdot_r) + ' kg/s')
+print('Isentropic Efficiency is: ' + str(Comp.eta_oi))
+print('Discharge Refrigerant Temperature is: ' + str(Comp.Tout_r) + ' K')
