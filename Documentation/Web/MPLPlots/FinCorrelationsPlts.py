@@ -1,5 +1,5 @@
-from __future__ import division, # Make integer 3/2 give 1.5 in python 2.x
-                       print_function
+from __future__ import division, print_function # Make integer 3/2 give 1.5 in python 2.x
+
 from CoolProp.CoolProp import PropsSI
 import numpy as np
 import pylab as pylab
