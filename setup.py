@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 from distutils.core import setup
 import subprocess,shutil,os,sys
@@ -5,7 +6,7 @@ import setuptools
 
 #you ran the file, you probably wanted to run install, append that command
 if len(sys.argv)==1:
-    print "I think you wanted to install"
+    print("I think you wanted to install")
     sys.argv.append('develop')
 
 setup (name = 'ACHP',
