@@ -1,0 +1,5 @@
+*.pyc
+/Documentation/Web/_build/html
+/Documentation/Web/_build/doctrees
+/Documentation/Web/_build/latex
+/Documentation/Web/_build/plot_directive/MPLPlots
