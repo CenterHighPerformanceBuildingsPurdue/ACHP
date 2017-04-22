@@ -1,7 +1,7 @@
 from __future__ import division, print_function, absolute_import
 from math import pi,log,exp
 
-from ACHP.Correlations import f_h_1phase_Tube
+from ACHP.Correlations import f_h_1phase_Tube, f_h_cp_supercritical
 from ACHP.FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
 from ACHP.ACHPTools import ValidateFields
 
@@ -166,63 +166,6 @@ class CondenserClass():
         self.UA_r=self.hmean_r*self.A_r_wetted
         self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
         
-#     def _Superheat_Forward(self):
-#         # **********************************************************************
-#         #                      SUPERHEATED PART 
-#         # **********************************************************************
-#         #AbstractState
-#         AS = self.AS
-#         #Dew temperature for constant pressure cooling to saturation
-#         Tcr=self.Tcr
-#         #Tbubble=self.Tbubble
-#         
-#         # Average fluid temps are used for the calculation of properties 
-#         # Average temp of refrigerant is average of sat. temp and outlet temp		
-#         # Secondary fluid is air over the fins
-#         self.f_r_superheat, self.h_r_superheat, self.Re_r_superheat=f_h_1phase_Tube(self.mdot_r / self.Ncircuits, self.ID, 
-#             (Tcr+self.Tin_r)/2.0, self.psat_r, self.AS, "Single");
-#         
-#         AS.update(CP.PT_INPUTS, self.psat_r, (Tcr+self.Tin_r)/2)    
-#         cp_r = AS.cpmass() #[J/kg-K]
-#         rho_superheat= AS.rhomass() #[kg/m^3]
-# 
-#         #Compute Fins Efficiency based on FinsType 
-#         if self.FinsType == 'WavyLouveredFins':
-#             WavyLouveredFins(self.Fins)
-#         elif self.FinsType == 'HerringboneFins':
-#             HerringboneFins(self.Fins)
-#         elif self.FinsType == 'PlainFins':
-#             PlainFins(self.Fins)
-#             
-#         self.mdot_da=self.Fins.mdot_da
-#         
-#         # Cross-flow in the superheated region.  
-#         # Using effectiveness-Ntu relationships for cross flow with non-zero Cr.
-#         UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1 / (self.h_r_superheat * self.A_r_wetted) )
-#         epsilon_supercritical=(Tcr-self.Tin_r)/(self.Tin_a-self.Tin_r)
-#         Ntu=UA_overall/(self.mdot_da*self.Fins.cp_da)
-#         if epsilon_supercritical>1.0:
-#             epsilon_supercritical=1.0-1e-12
-#         self.w_supercritical=-log(1-epsilon_supercritical)*self.mdot_r*cp_r/((1-exp(-Ntu))*self.mdot_da*self.Fins.cp_da)
-#               
-#         # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
-#         # Heat is removed here from the refrigerant since it is being cooled
-#         self.Q_superheat = self.mdot_r * cp_r * (Tcr-self.Tin_r)
-# 
-#         #Pressure drop calculations for superheated refrigerant
-#         v_r=1./rho_superheat
-#         #Pressure gradient using Darcy friction factor
-#         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2*self.ID) #Pressure gradient
-#         self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
-#         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
-# 
-#         #Latent heat needed for pseudo-quality calc
-#         AS.update(CP.QT_INPUTS, 0.0, Tbubble)
-#         h_l = AS.hmass() #[J/kg]
-#         AS.update(CP.QT_INPUTS, 1.0, Tdew)
-#         h_v = AS.hmass() #[J/kg]
-#         h_fg = h_v - h_l #[J/kg]
-#         self.xin_r=1.0+cp_r*(self.Tin_r-Tdew)/h_fg
         
     def _Supercritical_Forward(self,Tout_r_cr):
         """
@@ -232,14 +175,8 @@ class CondenserClass():
         #AbstractState
         AS = self.AS
         
-        # This block calculates the average refrigerant heat transfer coefficient
-        self.f_r_supercritical, self.h_r_supercritical, self.Re_r_supercritical=f_h_1phase_Tube(self.mdot_r / self.Ncircuits, self.ID, 
-            (Tout_r_cr+self.Tin_r)/2.0, self.psat_r, self.AS, "Single");
-        #self.h_r_2phase=ShahCondensation_Average(xout_r_2phase,1.0,self.AS,self.G_r,self.ID,self.psat_r,Tbubble,Tdew);
-        
-        AS.update(CP.PT_INPUTS, self.psat_r, (Tout_r_cr+self.Tin_r)/2)    
-        cp_r = AS.cpmass() #[J/kg-K]
-        rho_supercritical= AS.rhomass() #[kg/m^3]
+        # This block calculates the average refrigerant heat transfer coefficient, average friction factor, average specific heat, and average density
+        self.h_r_supercritical, self.f_r_supercritical, cp_r, rho_supercritical = f_h_cp_supercritical(Tout_r_cr, self.Tin_r, self.AS, self.OD, self.ID,  self.mdot_r / self.Ncircuits, self.psat_r);
         
         #Compute Fins Efficiency based on FinsType 
         if self.FinsType == 'WavyLouveredFins':
@@ -257,19 +194,12 @@ class CondenserClass():
         if epsilon_supercritical>1.0:
             epsilon_supercritical=1.0-1e-12
         self.w_supercritical=-log(1-epsilon_supercritical)*self.mdot_r*cp_r/((1-exp(-Ntu))*self.mdot_da*self.Fins.cp_da)
-
+        
         # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
         # Heat is removed here from the refrigerant since it is being cooled
         self.Q_supercritical = self.mdot_r * cp_r * (Tout_r_cr-self.Tin_r)
-        
+
         self.Tout_r_cr=Tout_r_cr
-        
-        # Frictional pressure drop component
-        #DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.AS,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
-        #Accelerational pressure drop component    
-        #DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.AS,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
-        # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
-        #self.DP_r_supercritical=DP_frict+DP_accel
         
         #Pressure drop calculations for supercritical refrigerant
         v_r=1./rho_supercritical
@@ -308,7 +238,6 @@ class CondenserClass():
         # Average fluid temps are used for the calculation of properties 
         # Average temp of refrigerant is average of sat. temp and outlet temp
         # Secondary fluid is air over the fins
-    
         self.f_r_subcool, self.h_r_subcool, self.Re_r_subcool=f_h_1phase_Tube(
           self.mdot_r / self.Ncircuits, self.ID, Tcr-1.0, self.psat_r, self.AS,
           "Single")
@@ -350,34 +279,34 @@ class CondenserClass():
         
 def SampleCondenser():
     Fins=FinInputs()
-    Fins.Tubes.NTubes_per_bank=41       #number of tubes per bank or row
-    Fins.Tubes.Nbank=1                  #number of banks or rows
-    Fins.Tubes.Ncircuits=5              #number of circuits
-    Fins.Tubes.Ltube=2.286              #one tube length
-    Fins.Tubes.OD=0.007
-    Fins.Tubes.ID=0.0063904
-    Fins.Tubes.Pl=0.0191                #distance between center of tubes in flow direction                                                
-    Fins.Tubes.Pt=0.0222                #distance between center of tubes orthogonal to flow direction
+    Fins.Tubes.NTubes_per_bank=18       #number of tubes per bank or row
+    Fins.Tubes.Nbank=3                  #number of banks or rows
+    Fins.Tubes.Ncircuits=1              #number of circuits
+    Fins.Tubes.Ltube=0.61           #one tube length
+    Fins.Tubes.OD=7.9/1000
+    Fins.Tubes.ID=7.5/1000
+    Fins.Tubes.Pl=19/1000                #distance between center of tubes in flow direction                                                
+    Fins.Tubes.Pt=25/1000                #distance between center of tubes orthogonal to flow direction
     
-    Fins.Fins.FPI=25                    #Number of fins per inch
+    Fins.Fins.FPI=1/(1.5/1000/0.0254)   #Number of fins per inch
     Fins.Fins.Pd=0.001                  #2* amplitude of wavy fin
     Fins.Fins.xf=0.001                  #1/2 period of fin
-    Fins.Fins.t=0.00011                 #Thickness of fin material
+    Fins.Fins.t=0.13/1000                #Thickness of fin material
     Fins.Fins.k_fin=237                 #Thermal conductivity of fin material
     
-    Fins.Air.Vdot_ha=1.7934             #rated volumetric flowrate
-    Fins.Air.Tmean=308.15   
-    Fins.Air.Tdb=308.15                 #Dry Bulb Temperature
+    Fins.Air.Vdot_ha=0.281                #rated volumetric flowrate (m^3/s)
+    Fins.Air.Tmean=29.4+273.15   
+    Fins.Air.Tdb=29.4+273.15            #Dry Bulb Temperature
     Fins.Air.p=101325                   #Air pressure in Pa
-    Fins.Air.RH=0.51                    #Relative Humidity
-    Fins.Air.RHmean=0.51
+    Fins.Air.RH=0.5                     #Relative Humidity
+    Fins.Air.RHmean=0.5
     Fins.Air.FanPower=160    
     
     params={
         'Ref': 'R744',
-        'mdot_r': 0.04638,
-        'Tin_r': 402.05,
-        'psat_r': 11473000,
+        'mdot_r': 0.076,
+        'Tin_r': 110+273.15,
+        'psat_r': 11000000,
         'Fins': Fins,
         'FinsType': 'WavyLouveredFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
         'Verbosity':0,
@@ -392,8 +321,10 @@ if __name__=='__main__':
     Cond=SampleCondenser()
     print(Cond.OutputList())
     
-    print('Heat transfer rate in condenser is', Cond.Q,'W')
-    print('Heat transfer rate in condenser (supercritical section) is',Cond.Q_supercritical,'W')
-    print('Heat transfer rate in condenser (supercritical_liquid section) is',Cond.Q_subcool,'W')
+    print('Heat transfer rate in gas cooler is', Cond.Q,'W')
+    print('Heat transfer rate in gas cooler (supercritical section) is',Cond.Q_supercritical,'W')
+    print('Heat transfer rate in gas cooler (supercritical_liquid section) is',Cond.Q_subcool,'W')
     print('Fraction of circuit length in supercritical section is',Cond.w_supercritical)
-    print('Fraction of circuit length in supercritical_liquid section is',Cond.w_subcool) 
+    print('Fraction of circuit length in supercritical_liquid section is',Cond.w_subcool)
+    print('Refrigerant outlet temperature is',Cond.Tout_r-273.15, 'C')
+    print('Air outlet temperature is',Cond.Tout_a-273.15, 'C')
