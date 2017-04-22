@@ -420,12 +420,12 @@ class PHEHXClass():
             else:
                 self.DT_sc_h=self.Tbubble_h-self.Tout_h
         
-    def eNTU_CounterFlow(self,Cr,Ntu):
-        """
-        This function returns the effectiveness for counter flow fluids
-        """
-        return ((1 - exp(-Ntu * (1 - Cr))) / 
-            (1 - Cr * exp(-Ntu * (1 - Cr))))
+#     def eNTU_CounterFlow(self,Cr,Ntu):
+#         """
+#         This function returns the effectiveness for counter flow fluids
+#         """
+#         return ((1 - exp(-Ntu * (1 - Cr))) / 
+#             (1 - Cr * exp(-Ntu * (1 - Cr))))
     
     def _OnePhaseH_OnePhaseC_Qimposed(self,Inputs):
         """
@@ -484,7 +484,7 @@ class PHEHXClass():
         Outputs={
             'w': w,
             'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
-            'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
             'Charge_c': Charge_c,
             'Charge_h': Charge_h,
             'DP_h': -PlateOutput_h['DELTAP'],
@@ -516,7 +516,7 @@ class PHEHXClass():
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
         #Mole mass of refrigerant for Cooper correlation
-        M=AS_c.molar_mass() #[kg/mol]
+        M=AS_c.molar_mass()*1000.0 #[kg/kmol]
         #Reduced pressure for Cooper Correlation
         pcrit_c = AS_c.p_critical() #critical pressure of Ref_c [Pa]
         pstar=Inputs['pin_c']/pcrit_c
@@ -622,7 +622,7 @@ class PHEHXClass():
         #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
         DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
+        DP_accel_h=AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
         
         #Pack outputs
         Outputs={
