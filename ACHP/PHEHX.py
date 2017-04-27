@@ -484,7 +484,7 @@ class PHEHXClass():
         Outputs={
             'w': w,
             'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
-            'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
             'Charge_c': Charge_c,
             'Charge_h': Charge_h,
             'DP_h': -PlateOutput_h['DELTAP'],
@@ -516,7 +516,7 @@ class PHEHXClass():
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
         #Mole mass of refrigerant for Cooper correlation
-        M=AS_c.molar_mass() #[kg/mol]
+        M=AS_c.molar_mass()*1000 #[kg/kmol]
         #Reduced pressure for Cooper Correlation
         pcrit_c = AS_c.p_critical() #critical pressure of Ref_c [Pa]
         pstar=Inputs['pin_c']/pcrit_c
