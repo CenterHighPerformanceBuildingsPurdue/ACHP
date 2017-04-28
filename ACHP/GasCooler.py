@@ -1,8 +1,9 @@
 from __future__ import division, print_function, absolute_import
 from math import pi,log,exp
 
-from ACHP.Correlations import f_h_1phase_Tube, f_h_cp_supercritical
+from ACHP.Correlations import f_h_1phase_Tube, Petterson_supercritical_average
 from ACHP.FinCorrelations import WavyLouveredFins,FinInputs,IsFinsClass, HerringboneFins, PlainFins
+from ACHP.DryWetSegment import DWSVals, DryWetSegment
 from ACHP.ACHPTools import ValidateFields
 
 from scipy.optimize import brentq
@@ -17,6 +18,11 @@ class CondenserClass():
         #Load the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)      
+    
+    def Update(self,**kwargs):
+        #Update the parameters passed in
+        # using the dictionary
+        self.__dict__.update(kwargs)
     
     def OutputList(self):
         """
@@ -69,12 +75,8 @@ class CondenserClass():
             ('Pressure Drop Air-side','Pa',self.Fins.dP_a),
         ]
         
-    def Update(self,**kwargs):
-        #Update the parameters passed in
-        # using the dictionary
-        self.__dict__.update(kwargs)
-        
-    def Calculate(self):
+
+    def Initialize(self):
         #Only validate the first time
         if not hasattr(self,'IsValidated'):
             self.Fins.Validate()
@@ -89,14 +91,14 @@ class CondenserClass():
             optFields=['Verbosity','Backend']
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
-        
+    
         #AbstractState
         if hasattr(self,'Backend'): #check if backend is given
             AS = CP.AbstractState(self.Backend, self.Ref)
         else: #otherwise, use the defualt backend
             AS = CP.AbstractState('HEOS', self.Ref)
         self.AS = AS
-        
+    
         # Retrieve some parameters from nested structures 
         # for code compactness
         self.ID=self.Fins.Tubes.ID
@@ -106,16 +108,15 @@ class CondenserClass():
         self.Nbank=self.Fins.Tubes.Nbank
         self.Ncircuits=self.Fins.Tubes.Ncircuits
         self.Tin_a=self.Fins.Air.Tdb
-
+        
         # Calculate an effective length of circuit if circuits are 
         # not all the same length
         TotalLength=self.Ltube*self.NTubes_per_bank*self.Nbank
         self.Lcircuit=TotalLength/self.Ncircuits
-        
         self.V_r = pi * self.ID**2 / 4.0 * self.Lcircuit * self.Ncircuits
         self.A_r_wetted = pi * self.ID * self.Ncircuits * self.Lcircuit
-        self.G_r = self.mdot_r/(self.Ncircuits*pi*self.ID**2/4.0)    
-        
+        self.G_r = self.mdot_r/(self.Ncircuits*pi*self.ID**2/4.0) 
+         
         # Define known parameters
         AS.update(CP.PT_INPUTS, self.psat_r, self.Tin_r)
         self.hin_r=AS.hmass() #[J/kg]
@@ -126,148 +127,195 @@ class CondenserClass():
         self.Tcr=AS.T_critical() #[K]
         
         
-        #try to run with a full supercritical section from Temperature of Tin_r to Tcr
-        self._Supercritical_Forward(self.Tcr)
-
-        #If we have already used too much of the HX (max possible sum of w is 1.0)
-        if self.w_supercritical>1:
-            #There is no supercritical_liquid portion, solve for outlet Temperature
-            brentq(self._Supercritical_Forward,self.Tcr,self.Tin_r)
-            #Zero out all the supercritical_liquid parameters
-            self.Q_subcool=0.0
-            self.DP_r_subcool=0.0
-            self.Charge_subcool=0.0
-            self.w_subcool=0.0
-            self.h_r_subcool=0.0
-            self.existsSubcooled=False
-        else:
-            #By definition then we have a supercritical_liquid portion, solve for it
-            self.existsSubcooled=True 
-            self._Subcool_Forward()
+        self.Fins.Air.RHmean=self.Fins.Air.RH
         
-        #Overall calculations
-        self.Q=self.Q_supercritical+self.Q_subcool
-        self.DP_r=self.DP_r_supercritical+self.DP_r_subcool
-        self.Charge=self.Charge_supercritical+self.Charge_subcool
-        
-        if self.existsSubcooled==True: #exit at supercritical_liquid region
-            AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
-            self.hout_r=AS.hmass() #[J/kg]
-            self.sout_r=AS.smass() #[J/kg-K]
-        else: #still in supercritical region
-            self.Tout_r=self.Tout_r_cr
-            AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
-            self.hout_r=AS.hmass() #[J/kg]
-            self.sout_r=AS.smass() #[J/kg-K]
-
-        #Calculate the mean outlet air temperature [K]
-        self.Tout_a=self.Tin_a-self.Q/(self.Fins.cp_da*self.Fins.mdot_da)
-        self.hmean_r=self.w_supercritical*self.h_r_supercritical+self.w_subcool*self.h_r_subcool
-        self.UA_r=self.hmean_r*self.A_r_wetted
-        self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
-        
-        
-    def _Supercritical_Forward(self,Tout_r_cr):
-        """
-            Tout_r_cr: Temperature of refrigerant at end of supercritical portion
-                default value is Tcr (full supercritical region)
-        """
-        #AbstractState
-        AS = self.AS
-        
-        # This block calculates the average refrigerant heat transfer coefficient, average friction factor, average specific heat, and average density
-        self.h_r_supercritical, self.f_r_supercritical, cp_r, rho_supercritical = f_h_cp_supercritical(Tout_r_cr, self.Tin_r, self.AS, self.OD, self.ID,  self.mdot_r / self.Ncircuits, self.psat_r);
-        
-        #Compute Fins Efficiency based on FinsType 
+        #Update with user FinType
         if self.FinsType == 'WavyLouveredFins':
             WavyLouveredFins(self.Fins)
         elif self.FinsType == 'HerringboneFins':
             HerringboneFins(self.Fins)
         elif self.FinsType == 'PlainFins':
             PlainFins(self.Fins)
+        
+        self.mdot_ha=self.Fins.mdot_ha #[kg_ha/s]
+        self.mdot_da=self.Fins.mdot_da #[kg_da/s]
+        
+        
+    def Calculate(self):
+        
+        #Initialize
+        self.Initialize()
+        AS = self.AS
+        
+        #assume we have all supercritical region
+        self.Tout_r_cr=self.Tcr
+        #give an intial guess for the inner wall temperature
+        self.T_w = (self.Tout_r_cr+self.Tin_a)/2
+        #If we have already used too much of the HX (max possible sum of w is 1.0)
+        if self._Supercritical_Forward(1.0)>0:
+            self.existsSubcooled=False
+            self.w_supercritical=1.0
+            def OBJECTIVE(Tout_r_cr):
+                self.Tout_r_cr=Tout_r_cr
+                AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r_cr)
+                hout = AS.hmass()
+                Q_target=self.mdot_r*(hout-self.hin_r)
+                self._Supercritical_Forward(self.w_supercritical)
+                return self.Q_supercritical-Q_target
+            brentq(OBJECTIVE,self.Tin_r,self.Tcr)
+            #Zero out all the supercritical_liquid parameters
+            self.Q_subcool=0.0
+            self.DP_r_subcool=0.0
+            self.Charge_subcool=0.0
+            self.w_subcool=0.0
+            self.h_r_subcool=0.0
+            self.Re_r_subcool=0.0
+            self.Tout_a_subcool=0.0
+            self.fdry_subcool=0.0    
+        else:
+            #By definition then we have a supercritical_liquid portion, solve for it
+            self.existsSubcooled=True 
+            self.w_supercritical=brentq(self._Supercritical_Forward,self.Tin_r,self.Tcr)
+            self._Subcool_Forward(1-self.w_supercritical)
             
-        self.mdot_da=self.Fins.mdot_da
+        #Overall calculations
+        self.Q=self.Q_supercritical+self.Q_subcool
+        self.DP_r=self.DP_r_supercritical+self.DP_r_subcool
+        self.Charge=self.Charge_supercritical+self.Charge_subcool
         
-        UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1 / (self.h_r_supercritical * self.A_r_wetted));
-        epsilon_supercritical=(Tout_r_cr-self.Tin_r)/(self.Tin_a-self.Tin_r)
-        Ntu=UA_overall/(self.mdot_da*self.Fins.cp_da)
-        if epsilon_supercritical>1.0:
-            epsilon_supercritical=1.0-1e-12
-        self.w_supercritical=-log(1-epsilon_supercritical)*self.mdot_r*cp_r/((1-exp(-Ntu))*self.mdot_da*self.Fins.cp_da)
+        #Average air outlet temperature (area fraction weighted average) [K]
+        self.Tout_a=self.w_supercritical*self.Tout_a_supercritical+self.w_subcool*self.Tout_a_subcool
         
-        # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
-        # Heat is removed here from the refrigerant since it is being cooled
-        self.Q_supercritical = self.mdot_r * cp_r * (Tout_r_cr-self.Tin_r)
+        #Outlet enthalpy obtained from energy balance
+        self.hout_r=self.hin_r+self.Q/self.mdot_r
+        
+        AS.update(CP.HmassP_INPUTS, self.hout_r, self.psat_r)
+        self.Tout_r = AS.T() #[K]
+        self.sout_r = AS.smass() #[J/kg-K]
 
-        self.Tout_r_cr=Tout_r_cr
+        self.hmean_r=self.w_supercritical*self.h_r_supercritical+self.w_subcool*self.h_r_subcool
+        self.UA_r=self.hmean_r*self.A_r_wetted
+        self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
+
+        
+    def _Supercritical_Forward(self,w_supercritical):
+        # **********************************************************************
+        #                      SUPERCRITICAL PART 
+        # **********************************************************************
+        
+        #AbstractState
+        AS = self.AS
+        
+        DWS=DWSVals() #DryWetSegment structure (only dry-analysis, single phase is used)
+    
+        # Store temporary values to be passed to DryWetSegment
+        DWS.Fins=self.Fins
+        DWS.FinsType = self.FinsType                                            
+        DWS.A_a=self.Fins.A_a*w_supercritical
+        DWS.cp_da=self.Fins.cp_da
+        DWS.eta_a=self.Fins.eta_a
+        DWS.h_a=self.Fins.h_a  #Heat transfer coefficient, not enthalpy
+        DWS.mdot_da=self.mdot_da*w_supercritical
+        DWS.pin_a=self.Fins.Air.p
+
+        DWS.Tin_a=self.Tin_a
+        DWS.RHin_a=self.Fins.Air.RH
+    
+        DWS.Tin_r=self.Tin_r
+        DWS.A_r=self.A_r_wetted*w_supercritical
+        DWS.pin_r=self.psat_r
+        DWS.mdot_r=self.mdot_r
+        DWS.IsTwoPhase=False
+        
+        
+        AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r_cr)
+        hout = AS.hmass() #[J/kg]
+        #Target heat transfer to go from inlet temperature to iterative outlet temperature
+        Q_target=self.mdot_r*(hout-self.hin_r)
+        
+        if Q_target>0:
+            raise ValueError('Q_target in Gas cooler must be negative')
+        
+        # This block calculates the average refrigerant heat transfer coefficient, average friction factor, average specific heat, and average density
+        DWS.h_r, f_r_supercritical, DWS.cp_r, rho_supercritical = Petterson_supercritical_average(self.Tout_r_cr, self.Tin_r, self.T_w, self.AS, self.G_r, self.ID, 0, self.ID/self.Lcircuit, self.mdot_r / self.Ncircuits, self.psat_r, -Q_target/DWS.A_r);
+
+        #Compute Fins Efficiency based on FinsType 
+        DryWetSegment(DWS)
+        
+        self.T_w = DWS.Twall_s #inner surface wall temperature (refrigerant)
+        self.Q_supercritical=DWS.Q
+        self.h_r_supercritical=DWS.h_r
+        self.fdry_supercritical=DWS.f_dry
+        self.Tout_a_supercritical=DWS.Tout_a
         
         #Pressure drop calculations for supercritical refrigerant
         v_r=1./rho_supercritical
         #Pressure gradient using Darcy friction factor
-        dpdz_r=-self.f_r_supercritical*v_r*self.G_r**2/(2*self.ID) #Pressure gradient
-        self.DP_r_supercritical=dpdz_r*self.Lcircuit*self.w_supercritical
+        dpdz_r=-f_r_supercritical*v_r*self.G_r**2/(2*self.ID) #Pressure gradient
+        self.DP_r_supercritical=dpdz_r*self.Lcircuit*w_supercritical
         #charge for the supercritical portion
-        self.Charge_supercritical = self.w_supercritical * self.V_r * rho_supercritical    
+        self.Charge_supercritical = w_supercritical * self.V_r * rho_supercritical
         
         if self.Verbosity>7:
-            print('supercritical cond resid', 1-self.w_supercritical)
-            print('h_r_supercritical',self.h_r_suopercritical)
+            print(w_supercritical,DWS.Q,Q_target,"w_supercritical,DWS.Q,Q_target")
         
-        
-        return 1-self.w_supercritical
+        return DWS.Q-Q_target
     
     
-    def _Subcool_Forward(self):
-        self.w_subcool=1-self.w_supercritical
+    def _Subcool_Forward(self,w_subcool):
+        # **********************************************************************
+        #                      SUPERCRITICAL_LIQUID PART 
+        # **********************************************************************
+        self.w_subcool=w_subcool
         
         if self.w_subcool<0:
-            raise ValueError('w_subcool in Condenser cannot be less than zero')
+            raise ValueError('w_subcool in Gas cooler cannot be less than zero')
         
         #AbstractState
         AS = self.AS
-        ## Bubble and dew temperatures (same for fluids without glide)
-        Tcr=self.Tcr
         
-        # Based on the the construction of the cycle model there is guaranteed to be a 
-        # two-phase portion of the heat exchanger
-        A_a_subcool = self.Fins.A_a * self.w_subcool
-        mdot_da_subcool = self.mdot_da * self.w_subcool
-        A_r_subcool =  self.A_r_wetted * self.w_subcool
+        DWS=DWSVals() #DryWetSegment structure
+    
+        # Store temporary values to be passed to DryWetSegment
+        DWS.A_a=self.Fins.A_a*w_subcool
+        DWS.cp_da=self.Fins.cp_da
+        DWS.eta_a=self.Fins.eta_a
+        DWS.h_a=self.Fins.h_a  #Heat transfer coefficient
+        DWS.mdot_da=self.mdot_da*w_subcool
+        DWS.pin_a=self.Fins.Air.p
+        DWS.Fins=self.Fins
+        DWS.FinsType = self.FinsType           
+    
+        # Inputs on the air side to two phase region are inlet air again
+        DWS.Tin_a=self.Tin_a
+        DWS.RHin_a=self.Fins.Air.RH
+    
+        DWS.Tin_r=self.Tcr
+        DWS.A_r=self.A_r_wetted*w_subcool
+        
+        AS.update(CP.PT_INPUTS, self.psat_r, self.Tcr-1)
+        DWS.cp_r=AS.cpmass() #[J/kg-K] 
+        
+        DWS.pin_r=self.psat_r
+        DWS.mdot_r=self.mdot_r
+        DWS.IsTwoPhase=False
+        
     
         # Friction factor and HTC in the refrigerant portions.
         # Average fluid temps are used for the calculation of properties 
         # Average temp of refrigerant is average of sat. temp and outlet temp
         # Secondary fluid is air over the fins
         self.f_r_subcool, self.h_r_subcool, self.Re_r_subcool=f_h_1phase_Tube(
-          self.mdot_r / self.Ncircuits, self.ID, Tcr-1.0, self.psat_r, self.AS,
+          self.mdot_r / self.Ncircuits, self.ID, self.Tcr-1.0, self.psat_r, self.AS,
           "Single")
         
-        AS.update(CP.PT_INPUTS, self.psat_r, Tcr-1)
-        cp_r = AS.cpmass() #[J/kg-K]
-    
-        # Cross-flow in the subcooled region.
-        R_a=1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a)
-        R_r=1. / (self.h_r_subcool * self.A_r_wetted)
-        UA_subcool = self.w_subcool / (R_a + R_r)
-        Cmin=min([self.mdot_da*self.Fins.cp_da*self.w_subcool,self.mdot_r*cp_r])
-        Cmax=max([self.mdot_da*self.Fins.cp_da*self.w_subcool,self.mdot_r*cp_r])
-        Cr=Cmin/Cmax
-        NTU=UA_subcool/Cmin
+        # Average Refrigerant heat transfer coefficient
+        DWS.h_r=self.h_r_subcool
         
-        if(self.mdot_da*self.Fins.cp_da*self.w_subcool>self.mdot_r*cp_r):
-            #Minimum capacitance rate on refrigerant side
-            epsilon_subcool = 1. - exp(-1. / Cr * (1. - exp(-Cr * NTU)))
-        else:
-            #Minimum capacitance rate on air side
-            epsilon_subcool = 1 / Cr * (1 - exp(-Cr * (1 - exp(-NTU))))
-            
-        # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
-        # Heat is removed here from the refrigerant since it is condensing
-        self.Q_subcool=-epsilon_subcool*Cmin*(Tcr-self.Tin_a)
-        self.DT_sc=-self.Q_subcool/(self.mdot_r*cp_r)
-        self.Tout_r=Tcr-self.DT_sc
+        #Run DryWetSegment
+        DryWetSegment(DWS)
         
-        AS.update(CP.PT_INPUTS, self.psat_r, (Tcr + self.Tout_r) / 2)
+        AS.update(CP.PT_INPUTS, self.psat_r, (self.Tcr + DWS.Tout_r) / 2)
         rho_subcool=AS.rhomass() #[kg/m^3]
         self.Charge_subcool = self.w_subcool * self.V_r * rho_subcool
     
@@ -276,6 +324,14 @@ class CondenserClass():
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_subcool*v_r*self.G_r**2/(2*self.ID)  #Pressure gradient
         self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool
+        
+        # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
+        # Heat is removed here from the refrigerant since it is condensing
+        self.Q_subcool=DWS.Q
+        self.fdry_subcool=DWS.f_dry
+        self.Tout_a_subcool=DWS.Tout_a
+        self.Tout_r=DWS.Tout_r
+
         
 def SampleCondenser():
     Fins=FinInputs()
@@ -305,7 +361,7 @@ def SampleCondenser():
     params={
         'Ref': 'R744',
         'mdot_r': 0.076,
-        'Tin_r': 110+273.15,
+        'Tin_r': 110.6+273.15,
         'psat_r': 11000000,
         'Fins': Fins,
         'FinsType': 'WavyLouveredFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
