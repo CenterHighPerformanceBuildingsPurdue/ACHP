@@ -431,55 +431,99 @@ def ShahCondensation_Average(x_min,x_max,AS,G,D,p,TsatL,TsatV):
         #A single value is given
         return ShahCondensation(x_min,AS,G,D,p)
 
-def f_h_cp_supercritical(Tout,Tin,AS,OD,ID,mdot,p):
-  
-    def SuperCriticalCondensation(T,AS,OD,ID,mdot,p):
+def Petterson_supercritical_average(Tout,Tin,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
+    '''
+    Petterson et al. (2000), Heat transfer and pressure drop for flow supercritical and subcritical CO2 in microchannel tubes
+    All details for this correlation are available in Ding Li Thesis (Appendix B):
+    "INVESTIGATION OF AN EJECTOR-EXPANSION DEVICE IN A TRANSCRITICAL CARBON DIOXIDE CYCLE FOR MILITARY ECU APPLICATIONS" 
+    '''
+
+    def Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
+        AS.update(CP.PT_INPUTS,p,T_w)
+        h_w = AS.hmass() #[J/kg]
+        mu_w = AS.viscosity() #[Pa-s OR kg/m-s]
+        cp_w = AS.cpmass() #[J/kg-K]
+        k_w = AS.conductivity() #[W/m-K]
+        rho_w = AS.rhomass() #[kg/m^3]
+        Pr_w = cp_w * mu_w / k_w #[-]
+        
         AS.update(CP.PT_INPUTS,p,T)
+        h = AS.hmass() #[J/kg]
         mu = AS.viscosity() #[Pa-s OR kg/m-s]
         cp = AS.cpmass() #[J/kg-K]
         k = AS.conductivity() #[W/m-K]
         rho = AS.rhomass() #[kg/m^3]
         Pr = cp * mu / k #[-]
-    
+        
         Dh = OD - ID
         Area=pi*(OD**2-ID**2)/4.0
         u=mdot/(Area*rho)
         Re=rho*u*Dh/mu
-    
-        # Friction factor of Churchill (Darcy Friction factor where f_laminar=64/Re)
-        e_D = 0
-        A = ((-2.457 * log( (7.0 / Re)**(0.9) + 0.27 * e_D)))**16
-        B = (37530.0 / Re)**16
-        f = 8 * ((8/Re)**12.0 + 1 / (A + B)**(1.5))**(1/12)
-    
-        # Heat Transfer coefficient of Gnielinski
-        Nu = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) #[-]
-        h = k*Nu/Dh #W/m^2-K  
+        Re_w=Re#rho_w*u*Dh/mu_w
+        
+        if G > 350:
+            e_D = 0 #smooth pipe
+            f = (-1.8*log(6.9/Re + (1/3.7*e_D)**1.11))**(-2)
+            Nu_m = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) *(1+(D_l)**(2/3))
+            Nu = Nu_m * (Pr/Pr_w)**0.11
+        
+        else: # G<350
+            
+            M = 0.001 #[kg/J]
+            K = 0.00041 #[kg/J]
+            
+            cp_avg = (h-h_w)/(T-T_w)
+            
+            if cp_avg/cp_w <= 1:
+                n = 0.66 - K*(q_flux_w/G)
+            else: #cp_avg/cp_w <1
+                n = 0.9 - K*(q_flux_w/G)
+            
+            f0 = (0.79*log(Re)-1.64)**(-2)
+            
+            g =9.81
+            #coefficient of thermal expansion
+            beta = AS.isobaric_expansion_coefficient() #[1/K]
+            #Grashoff number
+            Gr = g*beta*(T_w-T)*Dh**3/(mu/rho)**2
+            if Gr/Re**2 < 5e-4:
+                f = f0 * (mu_w/mu)**0.22
+            elif  Gr/Re**2 >= 5e-4 and G/Re**2 < 0.3:
+                f = 2.15 * f0 * (mu_w/mu)**0.22 * (Gr/Re)**0.1
+            else: #use f0 for friction factor
+                f = f0
+                
+            Nu_w_ppk = (f0/8)*Re_w*Pr_w/(1.07+12.7*sqrt(f/8)*(Pr_w**(2/3)-1))
+            
+            Nu = Nu_w_ppk * (1-M*q_flux_w/G) * (cp_avg/cp_w)**n
+            
+        h = k*Nu/Dh #[W/m^2-K]
+        
         return (h,f,cp,rho)
-    
-    def SuperCriticalCondensation_h(T,AS,OD,ID,mdot,p):
+
+    def SuperCriticalCondensation_h(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
         '''return h value'''
-        return SuperCriticalCondensation(T,AS,OD,ID,mdot,p)[0]
-    def SuperCriticalCondensation_f(T,AS,OD,ID,mdot,p):
+        return Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)[0]
+    def SuperCriticalCondensation_f(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
         '''return f value'''
-        return SuperCriticalCondensation(T,AS,OD,ID,mdot,p)[1]
-    def SuperCriticalCondensation_cp(T,AS,OD,ID,mdot,p):
+        return Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)[1]
+    def SuperCriticalCondensation_cp(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
         '''return cp value'''
-        return SuperCriticalCondensation(T,AS,OD,ID,mdot,p)[2]
-    def SuperCriticalCondensation_rho(T,AS,OD,ID,mdot,p):
+        return Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)[2]
+    def SuperCriticalCondensation_rho(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
         '''return rho value'''
-        return SuperCriticalCondensation(T,AS,OD,ID,mdot,p)[3]
+        return Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)[3]
             
     if not Tout==Tin:
         #A proper range is given
-        h = quad(SuperCriticalCondensation_h,Tin,Tout,args=(AS,OD,ID,mdot,p))[0]/(Tout-Tin)
-        f = quad(SuperCriticalCondensation_f,Tin,Tout,args=(AS,OD,ID,mdot,p))[0]/(Tout-Tin)
-        cp = quad(SuperCriticalCondensation_cp,Tin,Tout,args=(AS,OD,ID,mdot,p))[0]/(Tout-Tin)
-        rho = quad(SuperCriticalCondensation_rho,Tin,Tout,args=(AS,OD,ID,mdot,p))[0]/(Tout-Tin)
+        h = quad(SuperCriticalCondensation_h,Tin,Tout,args=(T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w))[0]/(Tout-Tin)
+        f = quad(SuperCriticalCondensation_f,Tin,Tout,args=(T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w))[0]/(Tout-Tin)
+        cp = quad(SuperCriticalCondensation_cp,Tin,Tout,args=(T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w))[0]/(Tout-Tin)
+        rho = quad(SuperCriticalCondensation_rho,Tin,Tout,args=(T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w))[0]/(Tout-Tin)
         return (h,f,cp,rho)
     else:
         #A single value is given
-        return SuperCriticalCondensation(Tout,AS,OD,ID,mdot,p)
+        return Petterson_supercritical(Tout,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
     
 def f_h_1phase_Tube(mdot,ID,T, p,AS,Phase='Single'):
     """ 
