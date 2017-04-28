@@ -388,3 +388,4 @@ def DryWetSegment(DWS):
     DWS.hout_a=hout_a
     DWS.hin_a=hin_a
     DWS.Tout_r=Tout_r
+    DWS.Twall_s=Tout_r - Q/UA_i #inner wall temperature for gas cooler model
