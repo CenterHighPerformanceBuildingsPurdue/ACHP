@@ -15,5 +15,6 @@ setup (name = 'ACHP',
        author_email='ian.h.bell@gmail.com',
        url='http://achp.sourceforge.net',
        description = """ACHP - Air Conditioning Heat Pump Model""",
-       packages=['ACHP']
+       packages=['ACHP'],
+       zip_safe=False
        )
