@@ -463,7 +463,7 @@ def Petterson_supercritical_average(Tout,Tin,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
         
         if G > 350:
             e_D = 0 #smooth pipe
-            f = (-1.8*log(6.9/Re + (1/3.7*e_D)**1.11))**(-2)
+            f = (-1.8*log10(6.9/Re + (1/3.7*e_D)**1.11))**(-2)/4
             Nu_m = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) *(1+(D_l)**(2/3))
             Nu = Nu_m * (Pr/Pr_w)**0.11
         
