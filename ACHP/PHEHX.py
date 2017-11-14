@@ -651,6 +651,8 @@ class PHEHXClass():
             AS_c = CP.AbstractState(self.Backend_c, self.Ref_c)
             if hasattr(self,'MassFrac_c'):
                 AS_c.set_mass_fractions([self.MassFrac_c])
+            elif hasattr(self, 'VoluFrac_c'):
+                AS_c.set_volu_fractions([self.VoluFrac_c])
         else: #otherwise, use the defualt backend
             AS_c = CP.AbstractState('HEOS', self.Ref_c)
         self.AS_c =AS_c
@@ -658,6 +660,8 @@ class PHEHXClass():
             AS_h = CP.AbstractState(self.Backend_h, self.Ref_h)
             if hasattr(self,'MassFrac_h'):
                 AS_h.set_mass_fractions([self.MassFrac_h])
+            elif hasattr(self, 'VoluFrac_h'):
+                AS_h.set_volu_fractions([self.VoluFrac_h])
         else: #otherwise, use the defualt backend
             AS_h = CP.AbstractState('HEOS', self.Ref_h)
         self.AS_h =AS_h
