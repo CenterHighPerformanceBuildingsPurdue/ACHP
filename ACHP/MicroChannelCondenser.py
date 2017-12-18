@@ -1,14 +1,11 @@
-from __future__ import division, absolute_import, print_function
+from __future__ import division, print_function, absolute_import
 from math import pi,log,exp
-
-from scipy.optimize import brentq, fsolve
-
 from CoolProp.CoolProp import HAPropsSI
+from ACHP.Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
+from ACHP.MicroFinCorrelations import MultiLouveredMicroFins, MicroFinInputs, IsFinsClass
+from scipy.optimize import brentq, fsolve
+from ACHP.ACHPTools import ValidateFields
 import CoolProp as CP
-
-from .ACHPTools import ValidateFields
-from .Correlations import f_h_1phase_MicroTube,KM_Cond_Average,TwoPhaseDensity,AccelPressureDrop 
-from .MicroFinCorrelations import MultiLouveredMicroFins, MicroFinInputs, IsFinsClass
 
 class FinVals():
     def __init__(self):
@@ -45,6 +42,7 @@ class MicroCondenserClass():
             ('Tube thickness','m',self.Fins.Tubes.tw),
             ('Wall port thickness','m',self.Fins.Tubes.twp),
             ('Channel aspect ratio','-',self.Fins.Tubes.beta),
+            ('Tube Conductivity','W/m-K',self.Fins.Tubes.kw),
             ('Fins per inch','1/in',self.Fins.Fins.FPI),
             ('Fin length','m',self.Fins.Fins.Lf),
             ('Fin thickness','m',self.Fins.Fins.t),
@@ -52,6 +50,7 @@ class MicroCondenserClass():
             ('Louver angle','degree',self.Fins.Louvers.Lalpha),
             ('Louver pitch','m',self.Fins.Louvers.lp),
             ('Louver cut length','m',self.Fins.Llouv),
+            ('Fins Type','-',self.FinsType),
             ('Q Total','W',self.Q),
             ('Q Superheat','W',self.Q_superheat),
             ('Q Two-Phase','W',self.Q_2phase),
@@ -72,7 +71,7 @@ class MicroCondenserClass():
             ('Wetted Area Fraction Superheat','-',self.w_superheat),
             ('Wetted Area Fraction Two-phase','-',self.w_2phase),
             ('Wetted Area Fraction Subcool','-',self.w_subcool),
-            ('Mean Air HTC','W/m^2-K',self.Fins.h_a),
+            ('Mean Air HTC','W/m^2-K',self.Fins.h_a*self.h_a_tuning),
             ('Surface Effectiveness','-',self.Fins.eta_a),
             ('Air-side area (fin+tubes)','m^2',self.Fins.A_a),
             ('Mass Flow rate of Dry Air','kg/s',self.Fins.mdot_da),
@@ -93,22 +92,26 @@ class MicroCondenserClass():
         if not hasattr(self,'IsValidated'):
             self.Fins.Validate()
             reqFields=[
-               ('Ref',str,None,None),
                ('Fins',IsFinsClass,None,None),
+               ('FinsType',str,None,None),
                ('mdot_r',float,0.00001,20),
                ('Tin_r',float,200,500),
                ('psat_r',float,0.01,20000000)
                ]
-            optFields=['Verbosity','Backend']
+            optFields=['Verbosity','AS','h_a_tuning','h_tp_tuning','DP_tuning']
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
         
+        #set tuning factors to 1 in case not given by user
+        if not hasattr(self,'h_a_tuning'):
+            self.h_a_tuning = 1
+        if not hasattr(self,'h_tp_tuning'):
+            self.h_tp_tuning = 1
+        if not hasattr(self,'DP_tuning'):
+            self.DP_tuning = 1
+            
         #AbstractState
-        if hasattr(self,'Backend'): #check if backend is given
-            AS = CP.AbstractState(self.Backend, self.Ref)
-        else: #otherwise, use the defualt backend
-            AS = CP.AbstractState('HEOS', self.Ref)
-        self.AS = AS
+        AS = self.AS
         
         # Retrieve some parameters from nested structures 
         # for code compactness
@@ -123,7 +126,7 @@ class MicroCondenserClass():
         self.b=self.Fins.Tubes.b            #tube spacing
         self.tw=self.Fins.Tubes.tw          #tube thickness
         self.Npass=self.Fins.Tubes.Npass    #Number of passes on ref-side (per bank)
-        self.kw=self.Fins.Fins.k_fin        #thermal conductivity of tube wall (assume same material as the fin)
+        self.kw=self.Fins.Tubes.kw          #thermal conductivity of tube wall
         self.Nports=self.Fins.Tubes.Nports  #Number of rectangular ports
         self.twp=self.Fins.Tubes.twp        #Port wall thickness
         self.beta=self.Fins.Tubes.beta      #channel (port) aspect ratio (=width/height)
@@ -185,6 +188,7 @@ class MicroCondenserClass():
         #Overall calculations
         self.Q=self.Q_superheat+self.Q_2phase+self.Q_subcool
         self.DP_r=self.DP_r_superheat+self.DP_r_2phase+self.DP_r_subcool
+        self.DP_r=self.DP_r*self.DP_tuning #correcting the pressure drop
         self.Charge=self.Charge_2phase+self.Charge_subcool+self.Charge_superheat
         
         #define known parameters
@@ -213,7 +217,7 @@ class MicroCondenserClass():
         self.Tout_a=self.Tin_a-self.Q/(self.Fins.cp_da*self.Fins.mdot_da)
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat+self.w_subcool*self.h_r_subcool
         self.UA_r=self.hmean_r*self.A_r_wetted
-        self.UA_a=self.Fins.h_a*self.Fins.A_a*self.Fins.eta_a
+        self.UA_a=(self.Fins.h_a*self.h_a_tuning)*self.Fins.A_a*self.Fins.eta_a
         self.UA_w=1/self.Rw
         
         #Upadte air-side pressure drop based on the outlet air temperature
@@ -263,14 +267,15 @@ class MicroCondenserClass():
         AS.update(CP.PT_INPUTS, self.psat_r, (Tdew+self.Tin_r)/2)    
         cp_r = AS.cpmass() #[J/kg-K]
 
-        #Compute Fins Efficiency based on FinsType 
-        MultiLouveredMicroFins(self.Fins)
+        #Compute Fins Efficiency based on FinsType
+        if self.FinsType == 'MultiLouveredMicroFins': 
+            MultiLouveredMicroFins(self.Fins)
             
         self.mdot_da=self.Fins.mdot_da
         
         # Cross-flow in the superheated region.  
         # Using effectiveness-Ntu relationships for cross flow with non-zero Cr.
-        UA_overall = 1. / (1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1. / (self.h_r_superheat * self.A_r_wetted) + self.Rw)
+        UA_overall = 1. / (1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a * self.h_a_tuning) + 1. / (self.h_r_superheat * self.A_r_wetted) + self.Rw)
         epsilon_superheat=(Tdew-self.Tin_r)/(self.Tin_a-self.Tin_r)
         Ntu=UA_overall/(self.mdot_da*self.Fins.cp_da)
         if epsilon_superheat>1.0:
@@ -287,7 +292,7 @@ class MicroCondenserClass():
         v_r=1./rho_superheat;
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2.*self.Dh) #Pressure gradient
-        self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat*self.Nports
+        self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
 
         #Latent heat needed for pseudo-quality calc
@@ -322,9 +327,9 @@ class MicroCondenserClass():
         # a quality of 1.0 and the outlet quality
         DPDZ_frict_2phase, h_r_2phase =KM_Cond_Average(xout_r_2phase,1.0,self.AS,self.G_r,self.Dh,Tbubble,Tdew,self.psat_r,self.beta)
         
-        self.h_r_2phase=h_r_2phase
+        self.h_r_2phase=h_r_2phase*self.h_tp_tuning
 
-        UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a) + 1 / (self.h_r_2phase * self.A_r_wetted) + self.Rw);
+        UA_overall = 1 / (1 / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a * self.h_a_tuning) + 1 / (self.h_r_2phase * self.A_r_wetted) + self.Rw);
         self.epsilon_2phase=1-exp(-UA_overall/(self.mdot_da*self.Fins.cp_da));
         self.w_2phase=-self.mdot_r*h_fg*(1.0-xout_r_2phase)/(self.mdot_da*self.Fins.cp_da*(self.Tin_a-Tsat_r)*self.epsilon_2phase);
 
@@ -335,9 +340,9 @@ class MicroCondenserClass():
         self.xout_2phase=xout_r_2phase
         
         # Frictional pressure drop component
-        DP_frict=DPDZ_frict_2phase*self.Lcircuit*self.w_2phase*self.Nports
+        DP_frict=DPDZ_frict_2phase*self.Lcircuit*self.w_2phase
         #Accelerational pressure drop component    
-        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.AS,self.G_r,Tbubble,Tdew)*self.Lcircuit*self.w_2phase*self.Nports
+        DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.AS,self.G_r,Tbubble,Tdew,slipModel='Zivi')*self.Lcircuit*self.w_2phase
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
     
@@ -345,8 +350,8 @@ class MicroCondenserClass():
         self.Charge_2phase = rho_average * self.w_2phase * self.V_r    
         
         if self.Verbosity>7:
-            print('2phase cond resid', self.w_2phase-(1-self.w_superheat))
-            print('h_r_2phase',self.h_r_2phase)
+            print ('2phase cond resid', self.w_2phase-(1-self.w_superheat))
+            print ('h_r_2phase',self.h_r_2phase)
         
         #Calculate an effective pseudo-subcooling based on the equality
         cp_satL=self.cp_satL
@@ -388,7 +393,7 @@ class MicroCondenserClass():
         cp_r = AS.cpmass() #[J/kg-K]
     
         # Cross-flow in the subcooled region.
-        R_a=1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a)
+        R_a=1. / (self.Fins.eta_a * self.Fins.h_a * self.Fins.A_a * self.h_a_tuning)
         R_r=1. / (self.h_r_subcool * self.A_r_wetted)
         UA_subcool = self.w_subcool / (R_a + R_r + self.Rw)
         Cmin=min([self.mdot_da*self.Fins.cp_da*self.w_subcool,self.mdot_r*cp_r])
@@ -421,9 +426,9 @@ class MicroCondenserClass():
         v_r=1/rho_subcool
         #Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_subcool*v_r*self.G_r**2/(2*self.Dh)  #Pressure gradient
-        self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool*self.Nports
+        self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool
         
-def SampleMicroCondenser(T=95):
+def SampleMicroCondenser(AS,T=95):
     Fins=MicroFinInputs()
     Fins.Tubes.NTubes=61.354           #Number of tubes (per bank for now!)
     Fins.Tubes.Nbank=1                 #Number of banks (set to 1 for now!)
@@ -436,6 +441,7 @@ def SampleMicroCondenser(T=95):
     Fins.Tubes.tw=0.0003               #Tube wall thickness     
     Fins.Tubes.twp=0.0003              #Port (channel) wall thickness     
     Fins.Tubes.beta=1                  #Port (channel) aspect ratio (=width/height)
+    Fins.Tubes.kw=117                  #wall thermal conductivity
     
     Fins.Fins.FPI=11.0998              #Fin per inch
     Fins.Fins.Lf=0.0333                #Fin length
@@ -455,13 +461,16 @@ def SampleMicroCondenser(T=95):
     Fins.Louvers.Llouv=0.005737        #Louver cut length
     
     params={
-        'Ref': 'R410A',
+        'AS': AS,
         'mdot_r': 0.0683,
         'Tin_r': T+273.15,
         'psat_r': 3500000, 
         'Fins': Fins,
+        'FinsType': 'MultiLouveredMicroFins',
         'Verbosity':0,
-        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+        'h_a_tuning':1,
+        'h_tp_tuning':1,
+        'DP_tuning':1
     }
     MicroCond=MicroCondenserClass(**params)
     MicroCond.Calculate()
@@ -469,13 +478,15 @@ def SampleMicroCondenser(T=95):
     
 if __name__=='__main__':
     #This runs if you run this file directly
-    MicroCond=SampleMicroCondenser(95)
-    print(MicroCond.OutputList())
-    
-    print('Heat transfer rate in condenser is', MicroCond.Q,'W')
-    print('Heat transfer rate in condenser (superheat section) is',MicroCond.Q_superheat,'W')
-    print('Heat transfer rate in condenser (twophase section) is',MicroCond.Q_2phase,'W')
-    print('Heat transfer rate in condenser (subcooled section) is',MicroCond.Q_subcool,'W')
-    print('Fraction of circuit length in superheated section is',MicroCond.w_superheat)
-    print('Fraction of circuit length in twophase section is',MicroCond.w_2phase)
-    print('Fraction of circuit length in subcooled section is',MicroCond.w_subcool) 
+    Ref = 'R410A'
+    Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS = CP.AbstractState(Backend, Ref) #Abstract State        
+    MicroCond=SampleMicroCondenser(AS, 95)
+    #print (MicroCond.OutputList())
+    print ('Heat transfer rate in condenser is', MicroCond.Q,'W')
+    print ('Heat transfer rate in condenser (superheat section) is',MicroCond.Q_superheat,'W')
+    print ('Heat transfer rate in condenser (twophase section) is',MicroCond.Q_2phase,'W')
+    print ('Heat transfer rate in condenser (subcooled section) is',MicroCond.Q_subcool,'W')
+    print ('Fraction of circuit length in superheated section is',MicroCond.w_superheat)
+    print ('Fraction of circuit length in twophase section is',MicroCond.w_2phase)
+    print ('Fraction of circuit length in subcooled section is',MicroCond.w_subcool) 

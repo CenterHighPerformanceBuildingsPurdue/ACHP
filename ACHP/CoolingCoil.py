@@ -1,10 +1,9 @@
-from __future__ import division, print_function,absolute_import
-from math import pi
-from matplotlib import docstring
+from __future__ import division, print_function, absolute_import
+from math import pi,log
+from ACHP.Correlations import f_h_1phase_Tube
+from ACHP.FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs
+from ACHP.DryWetSegment import DWSVals, DryWetSegment
 import CoolProp as CP
-from .Correlations import f_h_1phase_Tube
-from .FinCorrelations import WavyLouveredFins,HerringboneFins, PlainFins, FinInputs 
-from .DryWetSegment import DWSVals, DryWetSegment
 
 class CoolingCoilClass():
     """
@@ -56,14 +55,20 @@ class CoolingCoilClass():
      
     def Initialize(self):
         #AbstractState
-        if hasattr(self,'Backend_g'): #check if backend is given
-            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
-            if hasattr(self,'MassFrac_g'):
-                AS_g.set_mass_fractions([self.MassFrac_g])
-        else: #otherwise, use the defualt backend
-            AS_g = CP.AbstractState('HEOS', self.Ref_g)
-        self.AS_g = AS_g
+        AS_g = self.AS_g
+        if hasattr(self,'MassFrac_g'):
+            AS_g.set_mass_fractions([self.MassFrac_g])
+        elif hasattr(self, 'VoluFrac_g'):
+            AS_g.set_volu_fractions([self.VoluFrac_g])
         
+        #set tuning factors to 1 in case not given by user
+        if not hasattr(self,'h_a_tuning'):
+            self.h_a_tuning = 1
+        if not hasattr(self,'h_g_tuning'):
+            self.h_g_tuning = 1
+        if not hasattr(self,'DP_tuning'):
+            self.DP_tuning = 1
+            
         #Update
         self.Update()
         
@@ -78,6 +83,7 @@ class CoolingCoilClass():
         self.Tin_a=self.Fins.Air.Tdb
         self.pin_a=self.Fins.Air.p
         self.RHin_a=self.Fins.Air.RH
+        self.kw=self.Fins.Tubes.kw          #thermal conductivity of tube wall
         
         # Calculate an effective length of circuit if circuits are 
         # not all the same length
@@ -85,6 +91,9 @@ class CoolingCoilClass():
         self.Lcircuit=TotalLength/self.Ncircuits
         # Wetted area on the glycol side
         self.A_g_wetted=self.Ncircuits*pi*self.ID*self.Lcircuit
+        
+        # Thermal resistance at the wall
+        self.Rw = log(self.OD/self.ID)/(2*pi*self.kw*self.Lcircuit*self.Ncircuits)
         
         # Evaluate the air-side heat transfer and pressure drop
         if self.FinsType == 'WavyLouveredFins':
@@ -109,7 +118,7 @@ class CoolingCoilClass():
         DWS.A_a=self.Fins.A_a
         DWS.cp_da=self.Fins.cp_da
         DWS.eta_a=self.Fins.eta_a
-        DWS.h_a=self.Fins.h_a  #Heat transfer coefficient
+        DWS.h_a=self.Fins.h_a*self.h_a_tuning  #Heat transfer coefficient
         DWS.mdot_da=self.Fins.mdot_da
         DWS.pin_a=self.Fins.Air.p
         DWS.Tin_a=self.Tin_a
@@ -119,6 +128,8 @@ class CoolingCoilClass():
     
         DWS.Tin_r=self.Tin_g
         DWS.A_r=self.A_g_wetted
+        DWS.Rw=self.Rw
+        
         AS_g.update(CP.PT_INPUTS, self.pin_g, (self.Tin_g+DWS.Tin_a)/2.0)
         DWS.cp_r=AS_g.cpmass() #[J/kg-K]
         DWS.pin_r=self.pin_g
@@ -130,7 +141,7 @@ class CoolingCoilClass():
             (self.Tin_g+DWS.Tin_a)/2.0, self.pin_g, self.AS_g, "Single");
         
         # Average Refrigerant heat transfer coefficient
-        DWS.h_r=self.h_g
+        DWS.h_r=self.h_g*self.h_g_tuning
         
         #Run DryWetSegment
         DryWetSegment(DWS)
@@ -147,7 +158,7 @@ class CoolingCoilClass():
         DP_g=dp_dz_g*self.Lcircuit
     
         self.f_dry=DWS.f_dry
-        self.DP_g=DP_g
+        self.DP_g=DP_g*self.DP_tuning
         self.Q=DWS.Q
         self.Tout_g=DWS.Tout_r
         self.Tout_a=DWS.Tout_a
@@ -156,7 +167,7 @@ class CoolingCoilClass():
         self.SHR=self.Fins.cp_da*(DWS.Tout_a-DWS.Tin_a)/(DWS.hout_a-DWS.hin_a)
         self.Capacity=DWS.Q-self.Fins.Air.FanPower
 
-def TestCase():
+def TestCase(AS_g):
     CC=CoolingCoilClass()
     FinsTubes=FinInputs()
     FinsTubes.Tubes.NTubes_per_bank=32
@@ -167,7 +178,8 @@ def TestCase():
     FinsTubes.Tubes.ID=0.0089154
     FinsTubes.Tubes.Pl=0.0254
     FinsTubes.Tubes.Pt=0.0219964
-    
+    FinsTubes.Tubes.kw=237                  #wall thermal conductivity (i.e pipe material)
+
     FinsTubes.Fins.FPI=14.5
     FinsTubes.Fins.Pd=0.001
     FinsTubes.Fins.xf=0.001
@@ -184,15 +196,17 @@ def TestCase():
         
     CC.Fins = FinsTubes
     CC.FinsType = 'WavyLouveredFins'    #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-    CC.Ref_g = 'Water'
-    CC.Backend_g = 'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    CC.AS_g = AS_g
     CC.mdot_g = 0.15
     CC.Tin_g = 278
     CC.pin_g = 300000
     CC.Verbosity = 3
     
     CC.Calculate()
-    print(CC.OutputList())
+    print (CC.OutputList())
         
 if __name__=='__main__':
-    TestCase()
+    Ref_g = 'Water'
+    Backend_g = 'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS_g = CP.AbstractState(Backend_g, Ref_g)
+    TestCase(AS_g)

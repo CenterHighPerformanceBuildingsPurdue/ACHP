@@ -1,7 +1,8 @@
 from __future__ import division, print_function, absolute_import
 from math import log,exp
 from CoolProp.CoolProp import HAPropsSI, cair_sat
-from .FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
+from ACHP.FinCorrelations import WavyLouveredFins, HerringboneFins, PlainFins
+from ACHP.MicroFinCorrelations import MultiLouveredMicroFins
 
 class DWSVals():
     """ 
@@ -19,7 +20,7 @@ def DryWetSegment(DWS):
     """
     
     #List of required parameters
-    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','mdot_r','Fins','FinsType']
+    RequiredParameters=['Tin_a','h_a','cp_da','eta_a','A_a','pin_a','RHin_a','Tin_r','pin_r','h_r','cp_r','A_r','Rw','mdot_r','Fins','FinsType']
     
     #Check that all the parameters are included, raise exception otherwise
     for param in RequiredParameters:
@@ -28,7 +29,11 @@ def DryWetSegment(DWS):
     
     #Retrieve values from structures defined above
     Tin_a=DWS.Tin_a
-    h_a=DWS.h_a
+    if DWS.h_a<0.000000001:
+        print ("Warning: Dws.h_a was constrained to 0.001, original value: ", DWS.h_a)
+        h_a=0.000000001
+    else:
+        h_a=DWS.h_a
     cp_da=DWS.cp_da
     eta_a=DWS.eta_a  #from fin correlations, overall airside surface effectiveness
     A_a=DWS.A_a
@@ -38,11 +43,16 @@ def DryWetSegment(DWS):
 
     Tin_r=DWS.Tin_r
     pin_r=DWS.pin_r
-    h_r=DWS.h_r
+    if DWS.h_r<0.000000001:
+        print ("Warning: Dws.h_r was constrained to 0.001, original value: ", DWS.h_r)
+        h_r=0.000000001
+    else:
+        h_r=DWS.h_r
     cp_r=DWS.cp_r
     A_r=DWS.A_r
     mdot_r=DWS.mdot_r
-
+    Rw=DWS.Rw
+    
     #Calculate the dewpoint (amongst others)
     omega_in=HAPropsSI('W','T',Tin_a,'P',pin_a,'R',RHin_a)
     Tdp=HAPropsSI('D','T',Tin_a,'P',pin_a,'W',omega_in)
@@ -52,6 +62,8 @@ def DryWetSegment(DWS):
     UA_i=h_r*A_r #[W/K], from Shah or f_h_1phase_Tube-fct -> Correlations.py
     # External UA between wall and free stream
     UA_o=eta_a*h_a*A_a #[W/K], from fin correlations
+    # wall UA
+    UA_w=1/Rw
     # Internal Ntu
     Ntu_i=UA_i/(mdot_r*cp_r)   #[-]
     # External Ntu (multiplied by eta_a since surface is finned and has lower effectiveness)
@@ -59,14 +71,14 @@ def DryWetSegment(DWS):
     
 
     if DWS.IsTwoPhase: #(Two-Phase analysis)
-        UA=1/(1/(h_a*A_a*eta_a)+1/(h_r*A_r)); #overall heat transfer coefficient
+        UA=1/(1/(h_a*A_a*eta_a)+1/(h_r*A_r)+1/UA_w); #overall heat transfer coefficient
         Ntu_dry=UA/(mdot_da*cp_da); #Number of transfer units
         epsilon_dry=1-exp(-Ntu_dry);  #since Cr=0, e.g. see Incropera - Fundamentals of Heat and Mass Transfer, 2007, p. 690
         Q_dry=epsilon_dry*mdot_da*cp_da*(Tin_a-Tin_r);
         Tout_a=Tin_a-Q_dry/(mdot_da*cp_da); #outlet temperature, dry fin
 
-        T_so_a=(UA_o*Tin_a+UA_i*Tin_r)/(UA_o+UA_i); #inlet surface temperature
-        T_so_b=(UA_o*Tout_a+UA_i*Tin_r)/(UA_o+UA_i);  #outlet surface temperature
+        T_so_a=(UA_o*Tin_a+UA_i*Tin_r)/(UA_o+UA_i); #inlet surface temperature (neglect wall thermal conductance)
+        T_so_b=(UA_o*Tout_a+UA_i*Tin_r)/(UA_o+UA_i);  #outlet surface temperature (neglect wall thermal conductance)
 
         if T_so_b>Tdp:
             #All dry, since surface at outlet dry
@@ -112,6 +124,8 @@ def DryWetSegment(DWS):
                 HerringboneFins(DWS.Fins)
             elif DWS.FinsType == 'PlainFins':
                 PlainFins(DWS.Fins)
+            elif DWS.FinsType == 'MultiLouveredMicroFins':
+                MultiLouveredMicroFins(DWS.Fins)
             
             eta_a_wet=DWS.Fins.eta_a_wet
             UA_o=eta_a_wet*h_a*A_a
@@ -120,7 +134,7 @@ def DryWetSegment(DWS):
             # Wet analysis overall Ntu for two-phase refrigerant
             # Minimum capacitance rate is by definition on the air side
             # Ntu_wet is the NTU if the entire two-phase region were to be wetted
-            UA_wet=1/(c_s/UA_i+cp_da/UA_o)
+            UA_wet=1/(c_s/UA_i+cp_da/UA_o+c_s/UA_w)
             Ntu_wet=UA_wet/(mdot_da)
             # Wet effectiveness [-]
             epsilon_wet=1-exp(-(1-f_dry)*Ntu_wet)
@@ -146,7 +160,7 @@ def DryWetSegment(DWS):
             
     else: #(Single-Phase analysis)
         #Overall UA
-        UA = 1 / (1 / (UA_i) + 1 / (UA_o));
+        UA = 1 / (1 / (UA_i) + 1 / (UA_o) + 1 / (UA_w));
         # Min and max capacitance rates [W/K]
         Cmin = min([cp_r * mdot_r, cp_da * mdot_da])
         Cmax = max([cp_r * mdot_r, cp_da * mdot_da])
@@ -179,9 +193,9 @@ def DryWetSegment(DWS):
         Tout_r=Tin_r+Q_dry/(mdot_r*cp_r)
         # Dry-analysis air outlet enthalpy from energy balance [J/kg]
         hout_a=hin_a-Q_dry/mdot_da
-        # Dry-analysis surface outlet temp [K]
+        # Dry-analysis surface outlet temp [K] (neglect wall thermal conductance)
         Tout_s=(UA_o*Tout_a_dry+UA_i*Tin_r)/(UA_o+UA_i)
-        # Dry-analysis surface inlet temp [K]
+        # Dry-analysis surface inlet temp [K] (neglect wall thermal conductance)
         Tin_s=(UA_o*Tin_a+UA_i*Tout_r)/(UA_o+UA_i)
         # Dry-analysis outlet refrigerant temp [K]
         Tout_r_dry=Tout_r
@@ -227,13 +241,15 @@ def DryWetSegment(DWS):
                     HerringboneFins(DWS.Fins)
                 elif DWS.FinsType == 'PlainFins':
                     PlainFins(DWS.Fins)
+                elif DWS.FinsType == 'MultiLouveredMicroFins':
+                    MultiLouveredMicroFins(DWS.Fins)
                 # Effective humid air mass flow ratio
                 m_star=mdot_da/(mdot_r*(cp_r/c_s))
                 #compute the new Ntu_owet
                 Ntu_owet = eta_a*h_a*A_a/(mdot_da*cp_da)
                 m_star = min([cp_r * mdot_r/c_s, mdot_da])/max([cp_r * mdot_r/c_s, mdot_da])
                 mdot_min = min([cp_r * mdot_r/c_s, mdot_da])
-                # Wet-analysis overall Ntu [-]
+                # Wet-analysis overall Ntu [-] (neglect wall thermal conductance)
                 Ntu_wet=Ntu_o/(1+m_star*(Ntu_owet/Ntu_i))
                 if(cp_r * mdot_r> c_s * mdot_da):
                     Ntu_wet=Ntu_o/(1+m_star*(Ntu_owet/Ntu_i))
@@ -252,9 +268,9 @@ def DryWetSegment(DWS):
                 # Water outlet saturated surface enthalpy [J/kg_da]
                 h_s_w_o=HAPropsSI('H','T',Tout_r, 'P',pin_a, 'R', 1.0) #[J/kg_da]
                 #Local UA* and c_s
-                UA_star = 1/(cp_da/eta_a/h_a/A_a+cair_sat((Tin_a+Tout_r)/2.0)*1000/h_r/A_r)
+                UA_star = 1/(cp_da/(eta_a*h_a*A_a)+cair_sat((Tin_a+Tout_r)/2.0)*1000*(1/(h_r*A_r)+1/UA_w))
                 # Wet-analysis surface temperature [K]
-                Tin_s = Tout_r + UA_star/h_r/A_r*(hin_a-h_s_w_o)
+                Tin_s = Tout_r + UA_star/(h_r*A_r)*(hin_a-h_s_w_o)
                 # Wet-analysis saturation enthalpy [J/kg_da]
                 h_s_s_e=hin_a+(hout_a-hin_a)/(1-exp(-Ntu_owet))
                 # Surface effective temperature [K]

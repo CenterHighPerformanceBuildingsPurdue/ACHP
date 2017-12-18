@@ -39,7 +39,10 @@ def TrhoPhase_ph(AS,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
     #Check if it is supercritical
     pcrit = AS.p_critical() #[pa]
     if p>pcrit:
-        return None,None,'Supercritical'
+        AS.update(CP.HmassP_INPUTS,h,p)
+        T=AS.T() #[K]
+        rho=AS.rhomass() #[kg/m^3]
+        return T,rho,'Supercritical'
     else: #It is not supercritical
         if rhosatL==None:
             AS.update(CP.QT_INPUTS,0.0,Tbubble)
@@ -105,7 +108,7 @@ def TwoPhaseDensity(AS,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
             alpha_average=-(C*(log( ((xmax-1.0)*C-xmax)/((xmin-1.0)*C-xmin) )+xmax-xmin)-xmax+xmin)/(C**2-2*C+1)/(xmax-xmin)
     return alpha_average*rhog + (1-alpha_average)*rhof
 
-def AccelPressureDrop(x_min,x_max,AS,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,slipModel='Zivi'):
+def AccelPressureDrop(x_min,x_max,AS,G,Tbubble,Tdew,D=None,rhosatL=None,rhosatV=None,slipModel='Zivi'):
     """
     Accelerational pressure drop
     
@@ -126,23 +129,53 @@ def AccelPressureDrop(x_min,x_max,AS,G,Tbubble,Tdew,rhosatL=None,rhosatV=None,sl
         AS.update(CP.QT_INPUTS,0.0,Tbubble)
         rhosatL=AS.rhomass() #[kg/m^3]
         
-    def f(x,rhoL,rhoV):
+    def f(x,AS,G,D,Tbubble,Tdew,rhoL,rhoV):
         if abs(x)<1e-12:
             return 1/rhosatL
         elif abs(1-x)<1e-12:
             return 1/rhosatV
         else:
-            if slipModel=='Zivi':
+            if slipModel=='Premoli':
+                S=Premoli(x,AS,G,D,Tbubble,Tdew,rhoL,rhoV)
+            elif slipModel=='Zivi':
                 S=pow(rhoL/rhoV,1/3)
             elif slipModel=='Homogeneous':
                 S=1
             else:
-                raise ValueError("slipModel must be either 'Zivi' or 'Homogeneous'")
+                raise ValueError("slipModel must be either 'Premoli', 'Zivi' or 'Homogeneous'")
             alpha=1/(1+S*rhoV/rhoL*(1-x)/x)
             return x**2/rhoV/alpha+(1-x)**2/rhoL/(1-alpha)
     
-    return G**2*(f(x_min,rhosatL,rhosatV)-f(x_max,rhosatL,rhosatV))
-        
+    return G**2*(f(x_min,AS,G,D,Tbubble,Tdew,rhosatL,rhosatV)-f(x_max,AS,G,D,Tbubble,Tdew,rhosatL,rhosatV))
+
+def Premoli(x,AS,G,D,Tbubble,Tdew,rhoL=None,rhoV=None):
+    '''
+    return Premoli (1970) slip flow factor
+    function copied from ACMODEL souce code
+    same correlations can be found in the Appendix A2 of Petterson (2000)
+    '''
+    if rhoL==None or rhoV==None:
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        rhoV=AS.rhomass() #[kg/m^3]
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        rhoL=AS.rhomass() #[kg/m^3]
+    
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)   
+    muL=AS.viscosity() #[Pa-s]
+    psat=AS.p() #[Pa]
+    AS.update(CP.PQ_INPUTS,psat,x)
+    sigma=AS.surface_tension() #[N/m]
+    
+    PI1=rhoV/rhoL
+    We=pow(G,2)*D/(sigma*rhoL)
+    Re_L=G*D/muL
+    F_1=1.578*pow(Re_L,-0.19)*pow(PI1,-0.22)
+    F_2=0.0273*We*pow(Re_L,-0.51)*pow(PI1,0.08)
+    Y=(x/(1-x))*1/PI1
+    S=1+F_1*pow((Y/(1+F_2*Y)-F_2*Y),0.5)
+    
+    return S
+           
 def LMPressureGradientAvg(x_min,x_max,AS,G,D,Tbubble,Tdew,C=None,satTransport=None):
     """
     Returns the average pressure gradient between qualities of x_min and x_max.
@@ -375,7 +408,7 @@ def ShahEvaporation_Average(x_min,x_max,AS,G,D,p,q_flux,Tbubble,Tdew):
         return psi * h_L #[W/m^2-K]
     
     #Calculate h over the range of x
-    x=np.linspace(x_min,x_max,30)
+    x=np.linspace(x_min,x_max,100)
     h=np.zeros_like(x)
     for i in range(len(x)):
         h[i]=ShahEvaporation(x[i])
@@ -388,6 +421,120 @@ def ShahEvaporation_Average(x_min,x_max,AS,G,D,p,q_flux,Tbubble,Tdew):
         #Use Simpson's rule to carry out numerical integration to get average
         return simps(h,x)/(x_max-x_min)
 
+def KandlikarEvaporation_average(x_min,x_max,AS,G,D,p,q_flux,Tbubble,Tdew):
+    """
+    Kandlikar (1990) recommended by Petterson et al. (2000) for CO2, Heat transfer and pressure drop for flow supercritical and subcritical CO2 in microchannel tubes
+    All details for this correlation are available in Ding Li Thesis (Appendix C):
+    "INVESTIGATION OF AN EJECTOR-EXPANSION DEVICE IN A TRANSCRITICAL CARBON DIOXIDE CYCLE FOR MILITARY ECU APPLICATIONS"
+    
+    Returns the average heat transfer coefficient between qualities of x_min and x_max.
+    
+    Required parameters:
+    * x_min : The minimum quality for the range [-]
+    * x_max : The maximum quality for the range [-]
+    * AS : AbstractState with the refrigerant name and backend
+    * G : Mass flux [kg/m^2/s]
+    * D : Diameter of tube [m]
+    * p : Pressure [Pa]
+    * q_flux : Heat transfer flux [W/m^2]
+    * Tbubble : Bubblepoint temperature of refrigerant [K]
+    * Tdew : Dewpoint temperature of refrigerant [K]
+    """
+    # ********************************
+    #        Necessary Properties
+    # ********************************
+    AS.update(CP.QT_INPUTS,0.0,Tbubble)
+    rho_f = AS.rhomass() #[kg/m^3]
+    mu_f = AS.viscosity() #[Pa-s OR kg/m-s]
+    cp_f = AS.cpmass() #[J/kg-K]
+    k_f = AS.conductivity() #[W/m-K]
+    h_l = AS.hmass() #[J/kg]
+    
+    AS.update(CP.QT_INPUTS,1.0,Tdew)
+    rho_g = AS.rhomass() #[kg/m^3]
+    mu_g = AS.viscosity() #[Pa-s OR kg/m-s] 
+    cp_g = AS.cpmass() #[J/kg-K]
+    k_g = AS.conductivity() #[W/m-K]
+    h_v = AS.hmass() #[J/kg]
+
+    h_fg = h_v - h_l #[J/kg]
+    Pr_f = cp_f * mu_f / k_f #[-]
+    Pr_g = cp_g * mu_g / k_g #[-]
+
+    g_grav = 9.81 #[m/s^2]
+
+    # Petterson evaporation correlation
+    Fr_L = G**2 / (rho_f*rho_f * g_grav * D) #[-]
+    Bo = q_flux / (G * h_fg) #[-]
+    
+    if Bo < 0:
+        raise ValueError('Heat flux for Petterson Evaporation must be positive')
+    
+    F_fl = 1 #Forster and Zuber multiplier depend on fluid type. CO2 is not available, therefore F_fl=1 (for water) is selected.
+    
+    #Kandlikar correlation constants for CO2
+    c_c_1 = 1.1360
+    c_c_2 = -0.9
+    c_c_3 = 667.2
+    c_c_4 = 0.7
+    c_n_1 = 0.6683
+    c_n_2 = -0.2
+    c_n_3 = 1058.0
+    c_n_4 = 0.7
+    if Fr_L > 0.4:    
+        c_c_5 = 0.0
+        c_n_5 = 0.0
+    else:
+        c_c_5 = 0.3
+        c_n_5 = 0.3
+    
+    #Pure vapor single-phase heat transfer coefficient
+    h_g = 0.023 * (G*D/mu_g)**(0.8) * Pr_g**(0.4) * k_g / D #[W/m^2-K]    
+    
+    def KandlikarEvaporation(x):
+        if abs(1-x)<5*machine_eps:
+            return h_g
+            
+        #If the quality is above 0.999, linearly interpolate to avoid division by zero
+        if x>0.999:
+            h_1=KandlikarEvaporation(1.0) #Fully fry
+            h_999=KandlikarEvaporation(0.999) #At a quality of 0.999
+            return (h_1-h_999)/(1.0-0.999)*(x-0.999)+h_999 #Linear interpolation
+        if abs(x)<5*machine_eps:
+            h_L = 0.023 * (G*(1 - x)*D/mu_f)**(0.8) * Pr_f**(0.4) * k_f / D #[W/m^2-K]
+            return h_L
+        else:
+            h_L = 0.023 * (G*(1 - x)*D/mu_f)**(0.8) * Pr_f**(0.4) * k_f / D #[W/m^2-K]
+        
+        Co = (1 / x - 1)**(0.8) * (rho_g / rho_f)**(0.5) #[-]
+        
+        #HTC due to convective boiling 
+        h_c = h_L*(c_c_1*pow(Co, c_c_2)*pow((25.0*Fr_L), c_c_5) + c_c_3*pow(Bo, c_c_4)*F_fl)
+        #HTC due to nucleate boiling
+        h_n = h_L*(c_n_1*pow(Co, c_n_2)*pow((25.0*Fr_L), c_n_5) + c_n_3*pow(Bo, c_n_4)*F_fl)
+
+        #This was found in ACCO2 model, however Petterson (2000) recommends to take the max of h_n and h_c
+        #if (Co < 0.65):
+        #    h = h_c
+        #else:
+        #    h = h_n
+        h = max(h_c,h_n)
+        return h
+            
+    #Calculate h over the range of x
+    x=np.linspace(x_min,x_max,100)
+    h=np.zeros_like(x)
+    for i in range(len(x)):
+        h[i]=KandlikarEvaporation(x[i])
+    
+    #if x_min == x_max, or they are really really close to being the same
+    if abs(x_max-x_min)<5*machine_eps:
+        #return just one of the edge values
+        return h[0]
+    else:
+        #Use Simpson's rule to carry out numerical integration to get average
+        return simps(h,x)/(x_max-x_min)
+    
 def LongoCondensation(x_avg,G,dh,AS,TsatL,TsatV):
     
     AS.update(CP.QT_INPUTS,1.0,TsatV)
@@ -455,11 +602,16 @@ def Petterson_supercritical_average(Tout,Tin,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
         rho = AS.rhomass() #[kg/m^3]
         Pr = cp * mu / k #[-]
         
-        Dh = OD - ID
-        Area=pi*(OD**2-ID**2)/4.0
-        u=mdot/(Area*rho)
-        Re=rho*u*Dh/mu
-        Re_w=Re#rho_w*u*Dh/mu_w
+        if mdot == 0: #For the case of Michro-channel
+            Dh = OD
+            Re=G*Dh/mu
+            Re_w=G*Dh/mu_w
+        else: #for the case of fin-and-tube
+            Dh = OD - ID
+            Area=pi*(OD**2-ID**2)/4.0
+            u=mdot/(Area*rho)
+            Re=rho*u*Dh/mu
+            Re_w=Re#rho_w*u*Dh/mu_w
         
         if G > 350:
             e_D = 0 #smooth pipe
@@ -750,6 +902,13 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         return Outputs
 
 def Cooper_PoolBoiling(pstar,Rp,q,M):
+    """
+    Cooper M.G., 1984, "Heat flow rates in saturated nucleate boiling - A wide-ranging 
+    examination using reduced properties. Advances in Heat Transfer. Vol. 16, 
+    Eds. J.P. Harnett and T.F. Irvine Jr., Academic Press, Orlando, Florida. pp 157-239"
+    
+    Rp : surface roughness in microns
+    """
     return 55*pstar**(0.12-0.2*log10(Rp))*(-log10(pstar))**(-0.55)*q**(0.67)*M**(-0.5)
 
 def KandlikarPHE(AS,xmean,G,D,q,Tbubble,Tdew):
@@ -806,7 +965,7 @@ def Bertsch_MC(x,AS,G,Dh,q_flux,L,Tbubble,Tdew):
     pr=p/pc
     M=AS.molar_mass() #molar mass [kg/mol]
     
-    AS.update(CP.QT_INPUTS,1.0,(Tbubble+Tdew)/2)
+    AS.update(CP.PQ_INPUTS,p,x)
     sig = AS.surface_tension() #surface tension [N/m]
     g=9.81
 
@@ -837,7 +996,7 @@ def Bertsch_MC_Average(x_min,x_max,AS,G,Dh,q_flux,L,TsatL,TsatV):
     '''
     if not x_min==x_max:
         #A proper range is given
-        return quad(Bertsch_MC,x_min,x_max,args=(AS,G,Dh,q_flux,L))[0]/(x_max-x_min)
+        return quad(Bertsch_MC,x_min,x_max,args=(AS,G,Dh,q_flux,L,TsatL,TsatV))[0]/(x_max-x_min)
     else:
         #A single value is given
         return Bertsch_MC(x_min,AS,G,Dh,q_flux,L,TsatL,TsatV)
@@ -882,7 +1041,7 @@ def f_h_1phase_MicroTube(G, Dh, T, p, AS, Phase='Single'):
     h = k*Nu/Dh #W/m^2-K
     return (f, h, Re)
 
-def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
+def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,C=None,satTransport=None):
     """
     Returns the average pressure gradient and average heat transfer coefficient
     between qualities of x_min and x_max.
@@ -905,7 +1064,7 @@ def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
     """
     
     def KMFunc(x):
-        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(AS,G,Dh,x,Tbubble,Tdew,p,beta,satTransport)
+        dpdz, h = Kim_Mudawar_condensing_DPDZ_h(AS,G,Dh,x,Tbubble,Tdew,p,beta,C,satTransport)
         return dpdz , h
     
     ## Use Simpson's Rule to calculate the average pressure gradient
@@ -924,10 +1083,9 @@ def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
         AS.update(CP.QT_INPUTS,1.0,Tdew)
         satTransport['rho_g']=AS.rhomass() #[kg/m^3]
         satTransport['mu_g']=AS.viscosity() #[Pa-s OR kg/m-s]
-
         
         #Calculate Dp and h over the range of xx
-        xx=np.linspace(x_min,x_max,30)
+        xx=np.linspace(x_min,x_max,100)
         DP=np.zeros_like(xx)
         h=np.zeros_like(xx)
         for i in range(len(xx)):
@@ -937,12 +1095,12 @@ def KM_Cond_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,satTransport=None):
         #Use Simpson's rule to carry out numerical integration to get average DP and average h
         if abs(x_max-x_min)<5*machine_eps:
             #return just one of the edge values
-            return DP[0], h[0]
+            return -DP[0], h[0]
         else:
             #Use Simpson's rule to carry out numerical integration to get average DP and average h
             return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
-    
-def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTransport=None):
+        
+def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, C=None, satTransport=None):
     """
     This function return the pressure gradient and heat transfer coefficient for 
     two phase fluid inside Micro-channel tube while CONDENSATION
@@ -977,8 +1135,8 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
         cp_f=satTransport['cp_f']
         k_f=satTransport['k_f']
     
-    AS.update(CP.QT_INPUTS,1.0,(Tbubble+Tdew)/2.0)
-    sigma = AS.surface_tension() #surface tesnion [N/m]
+    AS.update(CP.PQ_INPUTS,p,x)
+    sigma=AS.surface_tension() #surface tesnion [N/m]
     
     Pr_f = cp_f * mu_f / k_f #[-]
     
@@ -1014,7 +1172,7 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
     dpdz_f = 2*f_f/rho_f*pow(G*(1-x),2)/Dh
     dpdz_g = 2*f_g/rho_g*pow(G*x,2)/Dh
 
-    if x<=0:
+    if x<=0:    
         # Entirely liquid
         dpdz = dpdz_f
         AS.update(CP.QT_INPUTS,0.0,Tbubble)
@@ -1029,29 +1187,35 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
         h = f_h_1phase_MicroTube(G, Dh, Tdew, psat, AS, Phase='SatVap')[1]
         return dpdz, h
     
-    X_squared = dpdz_f/dpdz_g
+    X = sqrt(dpdz_f/dpdz_g)
 
-    # Find the C coefficient
-    if (Re_f<2000 and Re_g<2000):
-        C = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)   
-    elif (Re_f<2000 and Re_g>=2000):
-        C = 0.0015*pow(Re_fo,0.59)*pow(Su_go,0.19)*pow(rho_f/rho_g,0.36)
-    elif (Re_f>=2000 and Re_g<2000):
-        C = 8.7e-4*pow(Re_fo,0.17)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.14)
-    elif (Re_f>=2000 and Re_g>=2000):
-        C = 0.39*pow(Re_fo,0.03)*pow(Su_go,0.10)*pow(rho_f/rho_g,0.35)
+    # Find the C coefficient (Calculate C if not passed, otherwise use the set value of C)
+    if C==None:
+        if (Re_f<2000 and Re_g<2000):
+            C = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)   
+        elif (Re_f<2000 and Re_g>=2000):
+            C = 0.0015*pow(Re_fo,0.59)*pow(Su_go,0.19)*pow(rho_f/rho_g,0.36)
+        elif (Re_f>=2000 and Re_g<2000):
+            C = 8.7e-4*pow(Re_fo,0.17)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.14)
+        elif (Re_f>=2000 and Re_g>=2000):
+            C = 0.39*pow(Re_fo,0.03)*pow(Su_go,0.10)*pow(rho_f/rho_g,0.35)
+    else:
+        pass
     
     # Two-phase multiplier
-    phi_f_square = 1.0 + C/sqrt(X_squared) + 1.0/X_squared
-    phi_g_square = 1.0 + C*sqrt(X_squared) + X_squared
+    phi_f_square = 1.0 + C/X + 1.0/X**2
+    phi_g_square = 1.0 + C*X + X**2
+    
     # Find Condensing pressure drop griendient  
     if dpdz_g*phi_g_square > dpdz_f*phi_f_square:
         dpdz=dpdz_g*phi_g_square
     else:
         dpdz=dpdz_f*phi_f_square
     
-    # Lockhart-Martinelli paramter
-    Xtt = pow(mu_f/mu_g,0.1) * pow((1-x)/x,0.9) * pow(rho_g/rho_f,0.5)
+    #Use calculated Lockhart-Martinelli parameter 
+    Xtt = X
+    # Simplified Lockhart-Martinelli paramter from Kim & Mudawar (2013) "Universal approach to predict HTC for condensing mini/micro-channel flow" 
+    #Xtt = pow(mu_f/mu_g,0.1) * pow((1-x)/x,0.9) * pow(rho_g/rho_f,0.5)
     
     # Modified Weber number
     if (Re_f <= 1250):
@@ -1067,12 +1231,81 @@ def Kim_Mudawar_condensing_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, satTrans
     
     return dpdz, h
 
-def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, satTransport=None):
+def KM_Evap_Average(x_min,x_max,AS,G,Dh,Tbubble,Tdew,p,beta,q_fluxH,PH_PF=1,C=None,satTransport=None):
     """
-    This function return the pressure gradient for 
+    Returns the average pressure gradient and average heat transfer coefficient
+    between qualities of x_min and x_max.
+    for Kim&Mudawar two-phase evaporation in mico-channel HX 
+    
+    To obtain the pressure gradient for a given value of x, pass it in as x_min and x_max
+    
+    Required parameters:
+    * x_min : The minimum quality for the range [-]
+    * x_max : The maximum quality for the range [-]
+    * AS : AbstractState with the refrigerant name and backend
+    * G : Mass flux [kg/m^2/s]
+    * Dh : Hydraulic diameter of tube [m]
+    * Tbubble : Bubblepoint temperature of refrigerant [K]
+    * Tdew : Dewpoint temperature of refrigerant [K]
+    * p : pressure [Pa]
+    * beta: channel aspect ratio (=width/height)
+    * q_fluxH: heat flux [W/m^2]
+    * PH_PF: ratio of PH over PF where PH: heated perimeter of channel, PF: wetted perimeter of channel
+    
+    Optional parameters:
+    * satTransport : A dictionary with the keys 'mu_f','mu_g,'rho_f','rho_g', 'sigma' for the saturation properties.  So they can be calculated once and passed in for a slight improvement in efficiency 
+    """
+    
+    def KMFunc(x):
+        dpdz, h = Kim_Mudawar_boiling_DPDZ_h(AS,G,Dh,x,Tbubble,Tdew,p,beta,q_fluxH,PH_PF,C,satTransport)
+        return dpdz , h
+    
+    ## Use Simpson's Rule to calculate the average pressure gradient
+    ## Can't use adapative quadrature since function is not sufficiently smooth
+    ## Not clear why not sufficiently smooth at x>0.9
+    if x_min==x_max:
+        return KMFunc(x_min)
+    else:
+        #Calculate the tranport properties once
+        satTransport={}
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        satTransport['rho_f']=AS.rhomass() #[kg/m^3]
+        satTransport['mu_f']=AS.viscosity() #[Pa-s OR kg/m-s]
+        h_f=AS.hmass() #[J/kg]
+        satTransport['cp_f']=AS.cpmass() #[J/kg-K]
+        satTransport['k_f']=AS.conductivity() #[W/m-K]
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        satTransport['rho_g']=AS.rhomass() #[kg/m^3]
+        satTransport['mu_g']=AS.viscosity() #[Pa-s OR kg/m-s]
+        h_g=AS.hmass() #[J/kg]
+        satTransport['h_fg'] = h_g - h_f #[J/kg]
+        
+        #Calculate Dp and h over the range of xx
+        xx=np.linspace(x_min,x_max,100)
+        DP=np.zeros_like(xx)
+        h=np.zeros_like(xx)
+        for i in range(len(xx)):
+            DP[i]=KMFunc(xx[i])[0]
+            h[i]=KMFunc(xx[i])[1]
+        
+        #Use Simpson's rule to carry out numerical integration to get average DP and average h
+        if abs(x_max-x_min)<5*machine_eps:
+            #return just one of the edge values
+            return -DP[0], h[0]
+        else:
+            #Use Simpson's rule to carry out numerical integration to get average DP and average h
+            return -simps(DP,xx)/(x_max-x_min), simps(h,xx)/(x_max-x_min)
+        
+def Kim_Mudawar_boiling_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_PF=1, C=None, satTransport=None):
+    """
+    This function return the pressure gradient and heat transfer coefficient for 
     two phase fluid inside Micro-channel tube while BOILING (EVAPORATION)
-    Correlations Based on: Kim and Mudawar (2013) "Universal approach to predicting
-    two-phase frictional pressure drop for mini/micro-channel saturated flow boiling 
+    
+    Correlations of DPDZ Based on: Kim and Mudawar (2013) "Universal approach to predicting
+    two-phase frictional pressure drop for mini/micro-channel saturated flow boiling"
+    
+    Correlations of HTC Based on: Kim and Mudawar (2013) "Universal approach to predicting
+    saturated flow boiling heat transfer in mini/micro-channels - Part II. Two-heat heat transfer coefficient"
     """
     #Convert the quality, which might come in as a single numpy float value, to a float
     #With the conversion, >20x speedup in the LockhartMartinelli function, not clear why
@@ -1083,12 +1316,14 @@ def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_P
         AS.update(CP.QT_INPUTS,0.0,Tbubble)
         rho_f=AS.rhomass() #[kg/m^3]
         mu_f=AS.viscosity() #[Pa-s OR kg/m-s]
-        h_L=AS.hmass() #[J/kg]
+        h_f=AS.hmass() #[J/kg]
+        cp_f=AS.cpmass() #[J/kg-K]
+        k_f=AS.conductivity() #[W/m-K]
         AS.update(CP.QT_INPUTS,1.0,Tdew)
         rho_g=AS.rhomass() #[kg/m^3]
         mu_g=AS.viscosity() #[Pa-s OR kg/m-s]
-        h_V=AS.hmass() #[J/kg]
-        h_fg = h_V - h_L #[J/kg]
+        h_g=AS.hmass() #[J/kg]
+        h_fg = h_g - h_f #[J/kg]
     else:
         #Pull out of the dictionary
         rho_f=satTransport['rho_f']
@@ -1096,13 +1331,18 @@ def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_P
         mu_f=satTransport['mu_f']
         mu_g=satTransport['mu_g']
         h_fg=satTransport['h_fg']
+        cp_f=satTransport['cp_f']
+        k_f=satTransport['k_f']
     
+    pc=AS.p_critical() #critical pressure [Pa]
+    pr=p/pc #reducred pressure [-]
     AS.update(CP.PQ_INPUTS,p,x)
     sigma = AS.surface_tension() #surface tesnion [N/m]
 
     Re_f = G*(1-x)*Dh/mu_f
     Re_g = G*x*Dh/mu_g
-
+    Pr_f = cp_f*mu_f/k_f
+    
     if x==1: #No liquid
         f_f = 0 #Just to be ok until next step
     elif (Re_f<2000): #Laminar
@@ -1128,49 +1368,69 @@ def Kim_Mudawar_boiling_DPDZ(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH_P
     Re_fo = G*Dh/mu_f
     Su_go = rho_g*sigma*Dh/pow(mu_g,2)
 
-    dpdz_f = -2*f_f/rho_f*pow(G*(1-x),2)/Dh
-    dpdz_g = -2*f_g/rho_g*pow(G*x,2)/Dh
+    dpdz_f = 2*f_f/rho_f*pow(G*(1-x),2)/Dh
+    dpdz_g = 2*f_g/rho_g*pow(G*x,2)/Dh
     
     if x<=0:
         # Entirely liquid
         dpdz = dpdz_f
-        return dpdz
+        AS.update(CP.QT_INPUTS,0.0,Tbubble)
+        psat = AS.p() #pressure [Pa]
+        h = f_h_1phase_MicroTube(G, Dh, Tbubble, psat, AS, Phase='SatLiq')[1]
+        return dpdz, h
     if x>=1:
         #Entirely vapor
         dpdz = dpdz_g
-        return dpdz
+        AS.update(CP.QT_INPUTS,1.0,Tdew)
+        psat = AS.p() #pressure [Pa]
+        h = f_h_1phase_MicroTube(G, Dh, Tdew, psat, AS, Phase='SatVap')[1]
+        return dpdz, h
     
-    X_squared = dpdz_f/dpdz_g
-
-    # Find the C coefficient
-    if (Re_f<2000 and Re_g<2000):
-        Cnon_boiling = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)   
-    elif (Re_f<2000 and Re_g>=2000):
-        Cnon_boiling = 0.0015*pow(Re_fo,0.59)*pow(Su_go,0.19)*pow(rho_f/rho_g,0.36)
-    elif (Re_f>=2000 and Re_g<2000):
-        Cnon_boiling = 8.7e-4*pow(Re_fo,0.17)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.14)
-    elif (Re_f>=2000 and Re_g>=2000):
-        Cnon_boiling = 0.39*pow(Re_fo,0.03)*pow(Su_go,0.10)*pow(rho_f/rho_g,0.35)
-        
+    X = sqrt(dpdz_f/dpdz_g)
+    
     We_fo = G*G*Dh/rho_f/sigma
     Bo = q_fluxH/(G*h_fg)
-        
-    if (Re_f >= 2000):
-        C = Cnon_boiling*(1+60*pow(We_fo,0.32)*pow(Bo*PH_PF,0.78))  
+    
+    # Find the C coefficient (Calculate C if not passed, otherwise use the set value of C)
+    if C==None:
+        # Calculate C (non boiling)
+        if (Re_f<2000 and Re_g<2000):
+            Cnon_boiling = 3.5e-5*pow(Re_fo,0.44)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.48)   
+        elif (Re_f<2000 and Re_g>=2000):
+            Cnon_boiling = 0.0015*pow(Re_fo,0.59)*pow(Su_go,0.19)*pow(rho_f/rho_g,0.36)
+        elif (Re_f>=2000 and Re_g<2000):
+            Cnon_boiling = 8.7e-4*pow(Re_fo,0.17)*pow(Su_go,0.50)*pow(rho_f/rho_g,0.14)
+        elif (Re_f>=2000 and Re_g>=2000):
+            Cnon_boiling = 0.39*pow(Re_fo,0.03)*pow(Su_go,0.10)*pow(rho_f/rho_g,0.35)
+        # Calculate actual C  
+        if (Re_f >= 2000):
+            C = Cnon_boiling*(1+60*pow(We_fo,0.32)*pow(Bo*PH_PF,0.78))  
+        else:
+            C = Cnon_boiling*(1+530*pow(We_fo,0.52)*pow(Bo*PH_PF,1.09))
     else:
-        C = Cnon_boiling*(1+530*pow(We_fo,0.52)*pow(Bo*PH_PF,1.09))
+        pass
     
     #Two-phase multiplier
-    phi_f_square = 1 + C/sqrt(X_squared) + 1/X_squared
-    phi_g_square = 1 + C*sqrt(X_squared) + X_squared
+    phi_f_square = 1 + C/X + 1/X**2
+    phi_g_square = 1 + C*X + X**2
     
     #Find Boiling pressure drop griendient  
     if dpdz_g*phi_g_square > dpdz_f*phi_f_square:
         dpdz=dpdz_g*phi_g_square
     else:
         dpdz=dpdz_f*phi_f_square
-        
-    return dpdz
+    
+    #Use calculated Lockhart-Martinelli parameter 
+    Xtt = X
+    #Simplified X_tt from Kim and Mudawar (2013) "Universal approach to predicting .... Part II. Two-phase heat transfer coefficient"
+    #Xtt = pow(mu_f/mu_g,0.1)*pow((1-x)/x,0.9)*pow(rho_g/rho_f,0.5)
+    
+    #Pre-dryout saturated flow boiling Heat transfer coefficient
+    h_nb = (2345*pow(Bo*PH_PF,0.7)*pow(pr,0.38)*pow(1-x,-0.51))*(0.023*pow(Re_f,0.8)*pow(Pr_f,0.4)*k_f/Dh)
+    h_cb = (5.2*pow(Bo*PH_PF,0.08)*pow(We_fo,-0.54) + 3.5*pow(1/Xtt,0.94)*pow(rho_g/rho_f,0.25))*(0.023*pow(Re_f,0.8)*pow(Pr_f,0.4)*k_f/Dh)
+    h = pow(h_nb**2 +h_cb**2,0.5)
+    
+    return dpdz, h
 
  
 if __name__=='__main__':
