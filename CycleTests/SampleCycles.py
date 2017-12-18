@@ -234,9 +234,9 @@ def SampleSecondaryLoopHPSystem():
     Cycle.Backend_SLF = 'INCOMP'
     Cycle.IHXType = 'PHE'
     Cycle.Mode = 'HP'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -429,9 +429,9 @@ def SampleDXACSystem(Calculate=True):
     Cycle.TestName='DXAC-0014'  #this and the two next lines can be used to specify exact test conditions
     Cycle.TestDescription='shows application of DXAC system'
     Cycle.TestDetails='This is the sample cycle for the DXAC system which can be modified for other systems'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary'')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -615,9 +615,9 @@ def SampleDXHPSystem():
     Cycle.Charge_target = 3.3
     Cycle.Mode='HP' 
     Cycle.Ref='R410A'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
