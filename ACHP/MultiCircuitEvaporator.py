@@ -260,7 +260,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #Convert back to a single value for the overall evaporator
         self.Fins.Air.Vdot_ha=float(self.Fins.Air.Vdot_ha[-1])
         if self.Verbosity>0:
-            print (chr(127)) #progress bar
+            print (chr(127),end='') #progress bar
 
 
 if __name__=='__main__':
