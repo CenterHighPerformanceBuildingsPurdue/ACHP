@@ -1,19 +1,28 @@
 '''This code is for Direct Expansion in Cooling Mode'''
 
-from Cycle import DXCycleClass 
+from ACHP.Cycle import DXCycleClass 
+from ACHP.Plots import PlotsClass
 
 #Instantiate the cycle class
 Cycle=DXCycleClass()
 
 #--------------------------------------
-# Cycle parameters
+#         Cycle parameters
 #--------------------------------------
 Cycle.Verbosity = 0 #the idea here is to have different levels of debug output 
 Cycle.ImposedVariable = 'Subcooling'
+Cycle.CycleType = 'DX'
 Cycle.DT_sc_target = 7.0
 Cycle.Mode='AC'
 Cycle.Ref='R410A'
 Cycle.Backend='TTSE&HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+Cycle.Oil = 'POE32'
+Cycle.shell_pressure = 'low-pressure'
+Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
+Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
+Cycle.Update()
 
 #--------------------------------------
 #       Compressor parameters
@@ -26,9 +35,11 @@ params={
         'M':M,
         'P':P,
         'Ref':Cycle.Ref, #Refrigerant
-        'Backend':Cycle.Backend, #Backend for refrigerant properties calculation 
+        'Oil':Cycle.Oil, #Compressor lubricant oil
+        'shell_pressure':Cycle.shell_pressure, #Compressor shell pressure
         'fp':0.0, #Fraction of electrical power lost as heat to ambient 
         'Vdot_ratio': 1.0, #Displacement Scale factor
+        'V_oil_sump':0, #Volume of oil in the sump
         'Verbosity': 0, # How verbose should the debugging be [0-10]
         }
 
@@ -45,6 +56,7 @@ Cycle.Condenser.Fins.Tubes.OD=0.00913
 Cycle.Condenser.Fins.Tubes.ID=0.00849
 Cycle.Condenser.Fins.Tubes.Pl=0.0191                #distance between center of tubes in flow direction 
 Cycle.Condenser.Fins.Tubes.Pt=0.0254                #distance between center of tubes orthogonal to flow direction
+Cycle.Condenser.Fins.Tubes.kw=237                   #wall thermal conductivity (i.e pipe material)
 
 Cycle.Condenser.Fins.Fins.FPI=25                    #Number of fins per inch
 Cycle.Condenser.Fins.Fins.Pd=0.001                  #2* amplitude of wavy fin
@@ -61,8 +73,6 @@ Cycle.Condenser.Fins.Air.RHmean=0.51
 Cycle.Condenser.Fins.Air.FanPower=260
 
 Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
-Cycle.Condenser.Ref=Cycle.Ref
-Cycle.Condenser.Backend=Cycle.Backend              #Backend for refrigerant properties calculation
 Cycle.Condenser.Verbosity=0
 
 #--------------------------------------
@@ -76,6 +86,7 @@ Cycle.Evaporator.Fins.Tubes.ID=0.00849
 Cycle.Evaporator.Fins.Tubes.Pl=0.0191
 Cycle.Evaporator.Fins.Tubes.Pt=0.0254
 Cycle.Evaporator.Fins.Tubes.Ncircuits=5
+Cycle.Evaporator.Fins.Tubes.kw=237                   #wall thermal conductivity (i.e pipe material)
 
 Cycle.Evaporator.Fins.Fins.FPI=14.5
 Cycle.Evaporator.Fins.Fins.Pd=0.001
@@ -92,10 +103,16 @@ Cycle.Evaporator.Fins.Air.RHmean=0.5
 Cycle.Evaporator.Fins.Air.FanPower=438
 
 Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
-Cycle.Evaporator.Ref=Cycle.Ref
-Cycle.Evaporator.Backend=Cycle.Backend              #Backend for refrigerant properties calculation
 Cycle.Evaporator.Verbosity=0
-Cycle.Evaporator.DT_sh=5
+Cycle.Evaporator.DT_sh=5                    #target superheat
+
+# ----------------------------------
+#       Expanison device Parameters
+# ----------------------------------
+params={
+        'ExpType':'Ideal',     #expansion device type
+    }
+Cycle.ExpDev.Update(**params)
 
 # ----------------------------------
 #       Line Set Parameters
@@ -106,23 +123,45 @@ params={
         't_insul':0.02,
         'k_insul':0.036,
         'T_air':297,
-        'Ref': Cycle.Ref,
-        'Backend':Cycle.Backend,
         'h_air':0.0000000001,
+        'LineSetOption': 'On'
         }
 
-Cycle.LineSetSupply.Update(**params)
-Cycle.LineSetReturn.Update(**params)
-Cycle.LineSetSupply.OD=0.009525
-Cycle.LineSetSupply.ID=0.007986
-Cycle.LineSetReturn.OD=0.01905
-Cycle.LineSetReturn.ID=0.017526
+Cycle.LineSetLiquid.Update(**params)
+Cycle.LineSetSuction.Update(**params)
+Cycle.LineSetLiquid.OD=0.009525
+Cycle.LineSetLiquid.ID=0.007986
+Cycle.LineSetSuction.OD=0.01905
+Cycle.LineSetSuction.ID=0.017526
+
+# ----------------------------------
+# ----------------------------------
+#       Line Set Discharge Parameters
+# ----------------------------------
+# ----------------------------------
+params={
+        'L':0.3,                #tube length in m
+        'k_tube':0.19,
+        't_insul':0, #no insulation
+        'k_insul':0.036,
+        'T_air':297,
+        'h_air':0.0000000001,
+        'LineSetOption': 'Off'
+        }
+  
+Cycle.LineSetDischarge.Update(**params)
+Cycle.LineSetDischarge.OD=0.009525
+Cycle.LineSetDischarge.ID=0.007986
 
 
 #Now solve
 from time import time
 t1=time()
 Cycle.PreconditionedSolve()
-print 'Took '+str(time()-t1)+' seconds to run Cycle model'
-print 'Cycle COP is '+str(Cycle.COSP)
-print 'Cycle refrigerant charge is '+str(Cycle.Charge)+' kg'
+print ('Took '+str(time()-t1)+' seconds to run Cycle model')
+print ('Cycle COP is '+str(Cycle.COSP))
+print ('Cycle refrigerant charge is '+str(Cycle.Charge)+' kg')
+#Now do cycle plotting
+plot = PlotsClass()
+plot.TSOverlay(Cycle)
+plot.PHOverlay(Cycle)
