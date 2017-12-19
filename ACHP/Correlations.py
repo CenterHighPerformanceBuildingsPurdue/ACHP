@@ -623,6 +623,7 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     Exchangers by Holger Martin DOI: 10.1007/978-3-540-77877-6_66 Springer Verlag
     Outputs: for JustGeo=True >> Ap, Vchannel, Aflow, Dh, PHI
              for JustGeo=False >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
+             
     ::
         =============================        
         ||   __               __    ||
