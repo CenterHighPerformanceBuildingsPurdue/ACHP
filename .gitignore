@@ -1,8 +1,3 @@
 *.pyc
 /Documentation/Web/_build
 ACHP/__pycache__
-dist
-build
-ACHP.egg-info
-.idea
-.vscode
