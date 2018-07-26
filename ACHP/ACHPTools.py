@@ -6,6 +6,7 @@ import os
 import csv
 import sys
 import numpy as np
+
 from io import StringIO
 
 # see http://stackoverflow.com/a/14707227/1360263
@@ -171,10 +172,10 @@ def print_dict(dict_inp):
     #print fict as given by function
     # Get_dict_write
     for key in dict_inp:
-        print(key,":",end='')
+        print (key,":",end='')
         for keyword in dict_inp[key]:
-            print(" > "+keyword+" < ",end='')
-        print("<<<")
+            print (" > "+keyword+" < ",end='')
+        print ("<<<")
 
 
 def ValidateFields(d,reqFields,optFields=None):
@@ -228,7 +229,7 @@ def get_svn_revision(path=None):
     if path is None:
         path = "C:/Users/BACHC/Desktop/achp/trunk/PyACHP"
     entries_path = '%s/.svn/entries' % path
-    print(entries_path)
+    print (entries_path)
 
     if os.path.exists(entries_path):
         entries = open(entries_path, 'r').read()
@@ -244,7 +245,7 @@ def get_svn_revision(path=None):
             from xml.dom import minidom
             dom = minidom.parse(entries_path)
             rev = dom.getElementsByTagName('entry')[0].getAttribute('revision')
-    print("Warning! This ACHP version tool gives only main revision number - update working copy before usage!")
+    print ("Warning! This ACHP version tool gives only main revision number - update working copy before usage!")
     if rev:
         return u'SVN-%s' % rev
     return u'SVN-unknown'
@@ -300,8 +301,8 @@ def smooth_curve(curve_data,N_smooth,exp_max=-1,shift_0=0,fix_first_nonzero=Fals
     return a_v
     
 if __name__=='__main__':
-    print(get_svn_revision(None))
-    print(' ')
+    print (get_svn_revision(None))  
+    print (' ')
     
 if __name__=='__main__':
     #show how to use curve smoothing
@@ -320,6 +321,6 @@ if __name__=='__main__':
     
     #subsample to get smaller array
     l =np.array([1, 2, 3, 4,5,6])
-    print(subsample(l, 2))
-    print(subsample(l, 3))
-    print(subsample(l, 4))
+    print (subsample(l, 2))
+    print (subsample(l, 3))
+    print (subsample(l, 4))

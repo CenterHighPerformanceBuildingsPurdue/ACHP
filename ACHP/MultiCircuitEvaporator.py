@@ -1,20 +1,15 @@
-from __future__ import division, absolute_import, print_function
-
+from __future__ import division, print_function, absolute_import
 from math import floor,ceil
-
+from CoolProp.CoolProp import PropsSI
+from ACHP.FinCorrelations import FinInputs
+from ACHP.Evaporator import EvaporatorClass
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import newton
-
 import copy
 import CoolProp
+from scipy.optimize import newton
+from ACHP.ACHPTools import Write2CSV
 import CoolProp as CP
-from CoolProp.CoolProp import PropsSI
-from CoolProp.Plots import PropertyPlot
-
-from .FinCorrelations import FinInputs
-from .Evaporator import EvaporatorClass
-from .ACHPTools import Write2CSV
 
 #MultiCircuitEvaporator inherits things from the Evaporator base class
 class MultiCircuitEvaporatorClass(EvaporatorClass):
@@ -102,19 +97,18 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
 
     def Calculate(self):
         #AbstractState
-        if hasattr(self,'Backend'): #check if backend is given
-            AS = CP.AbstractState(self.Backend, self.Ref)
-        else: #otherwise, use the defualt backend
-            AS = CP.AbstractState('HEOS', self.Ref)
-        self.AS = AS
+        AS = self.AS
         
         #Check that the length of lists of mdot_r and FinsTubes.Air.Vdot_ha 
         #match the number of circuits or are all equal to 1 (standard evap)
         Ncircuits=int(self.Fins.Tubes.Ncircuits)
-        
+
         # Make Ncircuits copies of evaporator classes defined 
         #  by the inputs to the MCE superclass
         EvapDict=self.__dict__
+        #Delete AbstractState class from dictionary to avoid problem with deepcopy. However, AS can still be used later (see line 218)
+        del EvapDict['AS'] 
+        
         self.Evaps=[]
         for i in range(Ncircuits):
             # Make a deep copy to break all the links between the Fins structs
@@ -124,13 +118,13 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
             E=EvaporatorClass(**ED)
             #Add to list of evaporators
             self.Evaps.append(E)
-            
+        
         #Upcast single values to lists, and convert numpy arrays to lists
         self.Fins.Air.Vdot_ha=np.atleast_1d(self.Fins.Air.Vdot_ha).tolist()
         self.mdot_r=np.atleast_1d(self.mdot_r).tolist()
         
         if Ncircuits != len(self.mdot_r) and len(self.mdot_r)>1:
-            print("Problem with length of vector for mdot_r for MCE")
+            print ("Problem with length of vector for mdot_r for MCE")
         else:
             if len(self.mdot_r)==1: #Single value passed in for mdot_r
                 if hasattr(self,'mdot_r_coeffs'):
@@ -173,10 +167,10 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #For backwards compatibility, if the coefficients are provided in the FinInputs class, copy them to the base class
         if hasattr(self.Fins.Air,'Vdot_ha_coeffs'):
             self.Vdot_ha_coeffs=self.Fins.Air.Vdot_ha_coeffs
-            print("Warning: please put the vector Vdot_ha_coeffs in the base MCE class, accesssed as MCE.Vdot_ha_coeffs")
+            print ("Warning: please put the vector Vdot_ha_coeffs in the base MCE class, accesssed as MCE.Vdot_ha_coeffs")
             
         if Ncircuits !=len(self.Fins.Air.Vdot_ha) and len(self.Fins.Air.Vdot_ha)>1:
-            print("Problem with length of vector for Vdot_ha for MCE")
+            print ("Problem with length of vector for Vdot_ha for MCE")
         else:
             if len(self.Fins.Air.Vdot_ha)==1:
                 if hasattr(self,'Vdot_ha_coeffs'):
@@ -221,6 +215,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         for i in range(Ncircuits):
             self.Evaps[i].Fins.Tubes.Ncircuits=1
             #Actually run each Evaporator
+            self.Evaps[i].AS = AS
             self.Evaps[i].Calculate()
             
         #Collect the outputs from each of the evaporators individually
@@ -265,7 +260,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #Convert back to a single value for the overall evaporator
         self.Fins.Air.Vdot_ha=float(self.Fins.Air.Vdot_ha[-1])
         if self.Verbosity>0:
-            print(chr(127),end='') #progress bar
+            print (chr(127),end='') #progress bar
 
 
 if __name__=='__main__':
@@ -282,6 +277,7 @@ if __name__=='__main__':
     FinsTubes.Tubes.ID=0.0089154
     FinsTubes.Tubes.Pl=0.0254
     FinsTubes.Tubes.Pt=0.0219964
+    FinsTubes.Tubes.kw=237
     
     FinsTubes.Fins.FPI=14.5
     FinsTubes.Fins.Pd=0.001
@@ -296,94 +292,102 @@ if __name__=='__main__':
     FinsTubes.Air.RH=0.51
     FinsTubes.Air.RHmean=0.51
     FinsTubes.Air.FanPower=438
-        
+    
+    #Abstract State
+    Ref = 'R410A'
+    Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS = CP.AbstractState(Backend, Ref)
+    
     Tdew=282.0
-    kwargs={'Ref': 'R410A',
+    kwargs={'AS': AS,
             'mdot_r': 0.0708,
-            'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
+            'psat_r': PropsSI('P','T',Tdew,'Q',1.0,Ref),
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins', #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,'R410A'),'Q',0.15,'R410A'),
+            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,Ref),'Q',0.15,Ref),
             'Verbosity': 0,
-            'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+            'h_a_tuning':1,
+            'h_tp_tuning':1,
+            'DP_tuning':1,
     }
-    
+     
     Evap=EvaporatorClass(**kwargs)
     Evap.Update(**kwargs)
     Evap.Calculate()
     
     Tdew=282.0
-    kwargs={'Ref': 'R410A',
-            'Backend':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    kwargs={'AS': AS,
             'mdot_r':  0.0708,
             'mdot_r_coeffs':[0.1,0.1,0.3,0.31,0.19],   #Mass flow distribution at distributor
             'mdot_v_coeffs':[0.2,0.2,0.2,0.2,0.2],   #Quality distribution at distributor
             'Vdot_ha_coeffs':[0.2,0.2,0.2,0.2,0.2],  #airside flow distribution
-            'psat_r': PropsSI('P','T',Tdew,'Q',1.0,'R410A'),
+            'psat_r': PropsSI('P','T',Tdew,'Q',1.0,Ref),
             'Fins': FinsTubes,
             'FinsType': 'WavyLouveredFins',                                  
-            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,'R410A'),'Q',0.15,'R410A'),
+            'hin_r': PropsSI('H','P',PropsSI('P','T',Tdew,'Q',1.0,Ref),'Q',0.15,Ref),
             'Verbosity':0,
             'TestName':'MCE-0014',
             'TestDescription':'shows application of MCE',
-            'TestDetails':'This is the sample multi circuited evaporator'
+            'TestDetails':'This is the sample multi circuited evaporator',
+            'h_a_tuning':1,
+            'h_tp_tuning':1,
+            'DP_tuning':1,
     }
     
     MCE=MultiCircuitEvaporatorClass(**kwargs)
     MCE.Update(**kwargs)
     MCE.Calculate()
-    print('Q_standard_evap = ' + str(Evap.Q) + ' W')
-    print('Q_MCE = '+str(MCE.Q)+' W')
-    print('Heat transfer reduction due to maldisribution'+str((MCE.Q-Evap.Q)*100./Evap.Q)+' %')
+    print ('Q_standard_evap = ' + str(Evap.Q) + ' W')
+    print ('Q_MCE = '+str(MCE.Q)+' W')
+    print ('Heat transfer reduction due to maldisribution'+str((MCE.Q-Evap.Q)*100./Evap.Q)+' %')
 
-    print("demonstrating output list\n",'='*20,'\n')
-    print(MCE.OutputList(), '\n', '='*20)
+    print ("demonstrating output list\n",'='*20,'\n')
+    print (MCE.OutputList(), '\n', '='*20)
 
     csv_file= "Evaporator_MCE.csv"
-    print("\n demonstrating write to csv",csv_file,'\n')
-    Write2CSV(MCE,open(csv_file,'w'),append=False)
+    print ("\n demonstrating write to csv",csv_file,'\n')
+    #Write2CSV(MCE,open(csv_file,'w'),append=False)
       
-    print("check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1],end='')
-    print(np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)]))
+    print ("check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1],end='')
+    print (np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)]))
 
     # plot maldistribution
-    h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
-    p = MCE.psat_r*(1+0*h)
-    plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
-    plot.calc_isolines(CoolProp.iQ, num=2)
-    plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
-    plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
-    plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
-    plt.legend(loc= 'best', numpoints=1)
-    plot.savefig('MultiCircuitEvaporator_py_example.pdf')
-    #plot.figure.show()
-    plt.close(plot.figure)
+    # h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
+    # p = MCE.psat_r*(1+0*h)
+    # plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
+    # plot.calc_isolines(CoolProp.iQ, num=2)
+    # plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
+    # plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
+    # plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
+    # plt.legend(loc= 'best', numpoints=1)
+    # plot.savefig('MultiCircuitEvaporator_py_example.pdf')
+    # plot.figure.show()
+    # plt.close(plot.figure)
     
-    print("outlet enthalpies", [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,MCE.Evaps[-1].Ref))
-    print("outlet superheats", [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))])
+    print  ("outlet enthalpies", [MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))], MCE.hout_r, PropsSI('H','T',MCE.Evaps[-1].Tdew_r,'Q',1,Ref))
+    print  ("outlet superheats", [MCE.Evaps[i].DT_sh_calc for i in range(len(MCE.Evaps))])
 
-    print("\nrerunning with smaller mass flowrate")
+    print ("\nrerunning with smaller mass flowrate")
 
-    kwargs={'Ref': 'R410A',
-            'Backend':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
-            'mdot_r':  0.05,
-            'TestDescription':'shows application of MCE',
-            'TestDetails':'Reduced mass flowrate'
-    }
-    
-    MCE.Update(**kwargs)
-    MCE.Calculate()
-    Write2CSV(MCE,open(csv_file,'a'),append=True) #does
+#     kwargs={'AS': AS,
+#             'mdot_r':  0.05,
+#             'TestDescription':'shows application of MCE',
+#             'TestDetails':'Reduced mass flowrate'
+#     }
+#     
+#     MCE.Update(**kwargs)
+#     MCE.Calculate()
+#     Write2CSV(MCE,open(csv_file,'a'),append=True) #does
 
     # plot maldistribution
-    h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
-    p = MCE.psat_r*np.ones_like(h)
-    plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
-    plot.calc_isolines(CoolProp.iQ, num=2)
-    plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
-    plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
-    plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
-    plt.legend(loc= 'best', numpoints=1)
-    plot.savefig('MultiCircuitEvaporator_py_example_reduced_flowrate.pdf')
-    #plt.show()
-    plt.close(plot.figure)
+    # h = np.array([MCE.Evaps[i].hout_r for i in range(len(MCE.Evaps))])
+    # p = MCE.psat_r*np.ones_like(h)
+    # plot = PropertyPlot('HEOS::R410A', 'PH', unit_system='KSI')
+    # plot.calc_isolines(CoolProp.iQ, num=2)
+    # plot.axis.plot(MCE.hin_r/1000,MCE.psat_r/1000,'>', label= 'Inlet')
+    # plot.axis.plot(h/1000,p/1000,'x', label= 'Individual circuit exits')
+    # plot.axis.plot(MCE.hout_r/1000,MCE.psat_r/1000,'o', label= 'Overall exit')
+    # plt.legend(loc= 'best', numpoints=1)
+    # plot.savefig('MultiCircuitEvaporator_py_example_reduced_flowrate.pdf')
+    # plt.show()
+    # plt.close(plot.figure)

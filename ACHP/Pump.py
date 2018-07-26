@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 import CoolProp as CP
 
 class PumpClass():
@@ -29,13 +29,11 @@ class PumpClass():
         
     def Calculate(self):
         #AbstractState
-        if hasattr(self,'Backend_g'): #check if backend is given
-            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
-            if hasattr(self,'MassFrac_g'):
-                AS_g.set_mass_fractions([self.MassFrac_g])
-        else: #otherwise, use the defualt backend
-            AS_g = CP.AbstractState('HEOS', self.Ref_g)
-        self.AS_g = AS_g
+        AS_g = self.AS_g
+        if hasattr(self,'MassFrac_g'):
+            AS_g.set_mass_fractions([self.MassFrac_g])
+        elif hasattr(self, 'VoluFrac_SLF'):
+            AS_g.set_volu_fractions([self.VoluFrac_g])
         
         AS_g.update(CP.PT_INPUTS, self.pin_g, self.Tin_g)
         rho=AS_g.rhomass() #[kg/m^3]
