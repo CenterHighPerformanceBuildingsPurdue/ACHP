@@ -7,7 +7,7 @@ from math import pi,exp,log,sqrt,tan,cos,sin
 class ExpDevClass():
     """
      Expansion device model
-     base on the work developed by Bo Shen in ACMODEL
+     based on the work developed by Bo Shen in ACMODEL
     """
     def __init__(self,**kwargs):
         #Load the parameters passed in
