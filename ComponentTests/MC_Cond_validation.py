@@ -1,7 +1,9 @@
+from __future__ import division, print_function, absolute_import
+import CoolProp as CP
 from CoolProp.CoolProp import PropsSI
-from MicroChannelCondenser import MicroCondenserClass
-from MicroFinCorrelations import MicroFinInputs
-from convert_units import in2m, mm2m, cfm2cms, F2K, kPa2Pa, C2K
+from ACHP.MicroChannelCondenser import MicroCondenserClass
+from ACHP.MicroFinCorrelations import MicroFinInputs
+from ACHP.convert_units import in2m, mm2m, cfm2cms, F2K, kPa2Pa, C2K
 
 Fins=MicroFinInputs()
 Fins.Tubes.NTubes=30               #Number of tubes (per bank for now!)
@@ -15,6 +17,7 @@ Fins.Tubes.b=in2m(0.488)           #Tube spacing
 Fins.Tubes.tw=in2m(0.015)          #Tube wall thickness
 Fins.Tubes.twp=in2m(0.016)         #Port (channel) wall thickness     
 Fins.Tubes.beta=1.7675             #Port (channel) aspect ratio (=width/height)
+Fins.Tubes.kw=237                  #Wall thermal conductivity
 
 Fins.Fins.FPI=13                   #Fin per inch
 Fins.Fins.Lf=in2m(1)               #Fin length = tube outside width in this HX
@@ -30,26 +33,30 @@ Fins.Air.FanPower=855              #Fan power, Watts
 Fins.Louvers.Lalpha=25             ##estimated## #Louver angle, in degree
 Fins.Louvers.lp=mm2m(1.12)         ##measured## #Louver pitch
 
+Ref = 'R407C'
+Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+AS = CP.AbstractState(Backend, Ref)
+
 params={
-        'Ref': 'R407C',
+        'AS': AS,
         'mdot_r': 0.04472,
         'Tin_r': C2K(110),
         'psat_r': kPa2Pa(3108), 
         'Fins': Fins,
+        'FinsType': 'MultiLouveredMicroFins',
         'Verbosity':0,
-        'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 
 
 Cond=MicroCondenserClass(**params)
 Cond.Calculate()
 
-print 'Heat transfer rate in condenser is', Cond.Q,'W'
-print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
-print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
-print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
-print 'Fraction of circuit length in superheated section is',Cond.w_superheat
-print 'Fraction of circuit length in twophase section is',Cond.w_2phase
-print 'Fraction of circuit length in subcooled section is',Cond.w_subcool
-for id, unit, value in Cond.OutputList():
-    print str(id) + ' = ' + str(value) + ' ' + str(unit)
+print ('Heat transfer rate in condenser is', Cond.Q,'W')
+print ('Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W')
+print ('Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W')
+print ('Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W')
+print ('Fraction of circuit length in superheated section is',Cond.w_superheat)
+print ('Fraction of circuit length in twophase section is',Cond.w_2phase)
+print ('Fraction of circuit length in subcooled section is',Cond.w_subcool)
+# for id, unit, value in Cond.OutputList():
+#     print (str(id) + ' = ' + str(value) + ' ' + str(unit))

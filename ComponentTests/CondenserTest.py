@@ -1,6 +1,8 @@
+from __future__ import division, print_function, absolute_import
+import CoolProp as CP
 from CoolProp.CoolProp import PropsSI
-from Condenser import CondenserClass
-from FinCorrelations import FinInputs
+from ACHP.Condenser import CondenserClass
+from ACHP.FinCorrelations import FinInputs
 
 Fins=FinInputs()
 Fins.Tubes.NTubes_per_bank=41   #number of tubes per bank or row
@@ -11,6 +13,7 @@ Fins.Tubes.OD=0.007
 Fins.Tubes.ID=0.0063904
 Fins.Tubes.Pl=0.0191            #distance between center of tubes in flow direction 
 Fins.Tubes.Pt=0.0222            #distance between center of tubes orthogonal to flow direction
+Fins.Tubes.kw=237               #Wall thermal conductivity
 
 Fins.Fins.FPI=25                #Number of fins per inch
 Fins.Fins.Pd=0.001              #2* amplitude of wavy fin
@@ -24,23 +27,26 @@ Fins.Air.p=101325               #Air pressure in Pa
 Fins.Air.RH=0.51                #Relative Humidity
 Fins.Air.FanPower=160
 
-params={'Ref': 'R410A',
+Ref = 'R410A'
+Backend = 'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+AS = CP.AbstractState(Backend, Ref)
+
+params={'AS': AS,
         'mdot_r': 0.0708,
         'Tin_r': 333.15,
-        'psat_r': PropsSI('P','T',323.15,'Q',1.0,'R410A'),
+        'psat_r': PropsSI('P','T',323.15,'Q',1.0,Ref),
         'Fins': Fins,
         'FinsType': 'WavyLouveredFins', #WavyLouveredFins, HerringboneFins, PlainFins
         'Verbosity': 0,
-        'Backend':'TTSE&HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
         }
 
 Cond=CondenserClass(**params)
 Cond.Calculate()
 
-print 'Heat transfer rate in condenser is', Cond.Q,'W'
-print 'Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W'
-print 'Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W'
-print 'Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W'
-print 'Fraction of circuit length in superheated section is',Cond.w_superheat
-print 'Fraction of circuit length in twophase section is',Cond.w_2phase
-print 'Fraction of circuit length in subcooled section is',Cond.w_subcool 
+print ('Heat transfer rate in condenser is', Cond.Q,'W')
+print ('Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W')
+print ('Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W')
+print ('Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W')
+print ('Fraction of circuit length in superheated section is',Cond.w_superheat)
+print ('Fraction of circuit length in twophase section is',Cond.w_2phase)
+print ('Fraction of circuit length in subcooled section is',Cond.w_subcool) 
