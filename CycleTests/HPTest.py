@@ -1,5 +1,5 @@
 '''This code is for Direct Expansion in Heating Mode'''
-
+from __future__ import division, print_function, absolute_import
 from ACHP.Cycle import DXCycleClass
 from ACHP.convert_units import F2K 
 
@@ -7,7 +7,9 @@ from ACHP.convert_units import F2K
 Cycle=DXCycleClass()
 
 #--------------------------------------
+#--------------------------------------
 # Cycle parameters
+#--------------------------------------
 #--------------------------------------
 Cycle.Verbosity = 0 #the idea here is to have different levels of debug output 
 Cycle.ImposedVariable = 'Subcooling' #or it could be 'Charge' 
@@ -25,8 +27,11 @@ Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type 
 Cycle.Update()
     
 #--------------------------------------
+#--------------------------------------
 #       Compressor parameters
 #--------------------------------------
+#--------------------------------------
+
 #A few 3 ton cooling capacity compressor maps
 M=[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02,7.90E-05,-5.73E-05,1.79E-04,-8.08E-05]
 P=[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616,-0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03]
@@ -45,8 +50,10 @@ params={
 Cycle.Compressor.Update(**params)
 
 #--------------------------------------
+#--------------------------------------
 # Condenser parameters 
 #-------------------------------------- 
+#--------------------------------------
 Cycle.Condenser.Fins.Tubes.NTubes_per_bank=32
 Cycle.Condenser.Fins.Tubes.Nbank=3
 Cycle.Condenser.Fins.Tubes.Ncircuits=6
@@ -75,7 +82,9 @@ Cycle.Condenser.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, Herringb
 Cycle.Condenser.Verbosity=0
 
 #--------------------------------------
+#--------------------------------------
 # Evaporator parameters
+#--------------------------------------
 #--------------------------------------
 Cycle.Evaporator.Fins.Tubes.NTubes_per_bank=41 #number of tubes per bank=row 
 Cycle.Evaporator.Fins.Tubes.Nbank=1 #number of banks/rows
@@ -105,17 +114,21 @@ Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, Herring
 Cycle.Evaporator.Verbosity=0
 Cycle.Evaporator.DT_sh=5            #target superheat
 
-# ----------------------------------
-#       Expanison device Parameters
-# ----------------------------------
+#--------------------------------------
+#--------------------------------------
+# Expansion device parameters
+#--------------------------------------
+#--------------------------------------
 params={
         'ExpType':'Ideal',     #expansion device type
     }
 Cycle.ExpDev.Update(**params)
 
-# ----------------------------------
-# Line Set parameters
-# ----------------------------------
+#--------------------------------------
+#--------------------------------------
+# Lineset parameters
+#--------------------------------------
+#--------------------------------------
 params={
         'L':7.6,
         'k_tube':0.19,
@@ -133,11 +146,11 @@ Cycle.LineSetDischarge.ID=0.017526
 Cycle.LineSetLiquid.OD=0.009525
 Cycle.LineSetLiquid.ID=0.007986
 
-# ----------------------------------
-# ----------------------------------
-#       Line Set Suction Parameters
-# ----------------------------------
-# ----------------------------------
+#--------------------------------------
+#--------------------------------------
+# Lineset suction parameters
+#--------------------------------------
+#--------------------------------------
 params={
         'L':0.3,                #tube length in m
         'k_tube':0.19,
@@ -152,12 +165,12 @@ Cycle.LineSetSuction.Update(**params)
 Cycle.LineSetSuction.OD=0.009525
 Cycle.LineSetSuction.ID=0.007986
 
-#Now solve
+# Now solve
 from time import time
 t1=time()
 Cycle.PreconditionedSolve()
 
-#Outputs
+# Outputs
 print ('Took '+str(time()-t1)+' seconds to run Cycle model')
 print ('Cycle coefficient of system performance is '+str(Cycle.COSP))
 print ('Cycle refrigerant charge is '+str(Cycle.Charge)+' kg')

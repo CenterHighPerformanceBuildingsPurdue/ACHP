@@ -1,14 +1,15 @@
 '''This code is for secondary loop cycle in AC Mode'''
-
+from __future__ import division, print_function, absolute_import
 from ACHP.Cycle import SecondaryCycleClass 
 
 #Instantiate the class
 Cycle=SecondaryCycleClass()
 
 #--------------------------------------
+#--------------------------------------
 # Cycle parameters
 #--------------------------------------
-
+#--------------------------------------
 Cycle.Verbosity = 0 #the idea here is to have different levels of debug output
 Cycle.ImposedVariable = 'Subcooling' #or this could be 'Charge' for imposed charge
 Cycle.DT_sc_target = 7.0
@@ -31,11 +32,11 @@ Cycle.Update()
 
 #--------------------------------------
 #--------------------------------------
-#       Compressor parameters
+# Compressor parameters
 #--------------------------------------
 #--------------------------------------
 
-#A 3 ton cooling capacity compressor map
+# A 3 ton cooling capacity compressor map
 if Cycle.Ref=='R410A':
     M=[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02, 7.90E-05,-5.73E-05,1.79E-04,-8.08E-05]
     P=[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616, -0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03]
@@ -55,7 +56,9 @@ params={
 Cycle.Compressor.Update(**params)
 
 #--------------------------------------
+#--------------------------------------
 # Condenser parameters
+#--------------------------------------
 #--------------------------------------
 Cycle.Condenser.Fins.Tubes.NTubes_per_bank=24   #number of tubes per bank=row
 Cycle.Condenser.Fins.Tubes.Nbank=1              #number of banks/rows
@@ -84,7 +87,9 @@ Cycle.Condenser.FinsType= 'WavyLouveredFins'                   #Choose fin Type:
 Cycle.Condenser.Verbosity=0
 
 #--------------------------------------
-# Cooling Coil parameters
+#--------------------------------------
+# Cooling coil parameters
+#--------------------------------------
 #--------------------------------------
 Cycle.CoolingCoil.Fins.Tubes.NTubes_per_bank=32
 Cycle.CoolingCoil.Fins.Tubes.Nbank=3
@@ -147,6 +152,11 @@ params={
         }
 Cycle.PHEIHX.Update(**params)
 
+#--------------------------------------
+#--------------------------------------
+# Pump parameters
+#--------------------------------------
+#--------------------------------------
 params={
         'eta':0.5, #Pump+motor efficiency
         'mdot_g':0.38, #Flow Rate kg/s
@@ -155,6 +165,11 @@ params={
         }
 Cycle.Pump.Update(**params)
 
+#--------------------------------------
+#--------------------------------------
+# Linsets parameters
+#--------------------------------------
+#--------------------------------------
 params={
         'L':5,
         'k_tube':0.19,
@@ -172,12 +187,12 @@ Cycle.LineSetSupply.ID=0.007986
 Cycle.LineSetReturn.OD=0.01905
 Cycle.LineSetReturn.ID=0.017526
 
-#Now solve
+# Now solve
 from time import time 
 t1=time()
 Cycle.PreconditionedSolve()
 
-#Outputs
+# Outputs
 print ('Took '+str(time()-t1)+' seconds to run Cycle model')
 print ('Cycle coefficient of system performance is '+str(Cycle.COSP))
 print ('Cycle refrigerant charge is '+str(Cycle.Charge)+' kg')
