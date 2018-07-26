@@ -773,8 +773,9 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     Based on the single-phase pressure drop and heat transfer correlations
     in VDI Heat Atlas Chapter N6: Pressure Drop and Heat Transfer in Plate Heat 
     Exchangers by Holger Martin DOI: 10.1007/978-3-540-77877-6_66 Springer Verlag
-    Outputs: for JustGeo=False >> Ap, Vchannel, Aflow, Dh, PHI
-             for JustGeop=True >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
+    Outputs: for JustGeo=True >> Ap, Vchannel, Aflow, Dh, PHI
+             for JustGeo=False >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
+             
     ::
         =============================        
         ||   __               __    ||
