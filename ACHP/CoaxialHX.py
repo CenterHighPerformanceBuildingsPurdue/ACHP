@@ -1,14 +1,11 @@
 from __future__ import print_function, absolute_import
-
+from CoolProp.CoolProp import PropsSI
+from ACHP.Correlations import f_h_1phase_Annulus,f_h_1phase_Tube,ShahEvaporation_Average
+from ACHP.Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
 from math import pi,exp,log
 from scipy.optimize import brentq
 import numpy as np
-
 import CoolProp as CP
-from CoolProp.CoolProp import PropsSI
-
-from .Correlations import f_h_1phase_Annulus,f_h_1phase_Tube,ShahEvaporation_Average
-from .Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
 
 class CoaxialHXClass():
     def __init__(self,**kwargs):
@@ -74,20 +71,24 @@ class CoaxialHXClass():
         
     def Calculate(self):
         #AbstractState (Ref)
-        if hasattr(self,'Backend_r'): #check if backend is given
-            AS_r = CP.AbstractState(self.Backend_r, self.Ref_r)
-        else: #otherwise, use the defualt backend
-            AS_r = CP.AbstractState('HEOS', self.Ref_r)
-        self.AS_r = AS_r
+        AS_r = self.AS_r
         #AbstractState (Glycol)
-        if hasattr(self,'Backend_g'): #check if backend is given
-            AS_g = CP.AbstractState(self.Backend_g, self.Ref_g)
-            if hasattr(self,'MassFrac_g'):
-                AS_g.set_mass_fractions([self.MassFrac_g])
-        else: #otherwise, use the defualt backend
-            AS_g = CP.AbstractState('HEOS', self.Ref_g)
-        self.AS_g = AS_g
-        
+        AS_g = self.AS_g
+        if hasattr(self,'MassFrac_g'):
+            AS_g.set_mass_fractions([self.MassFrac_g])
+        elif hasattr(self, 'VoluFrac_g'):
+            AS_g.set_volu_fractions([self.VoluFrac_g])
+                
+        #set tuning factors to 1 in case not given by user
+        if not hasattr(self,'h_g_tuning'):
+            self.h_g_tuning = 1
+        if not hasattr(self,'h_tp_tuning'):
+            self.h_tp_tuning = 1
+        if not hasattr(self,'DP_g_tuning'):
+            self.DP_g_tuning = 1
+        if not hasattr(self,'DP_r_tuning'):
+            self.DP_r_tuning = 1
+            
         #Update the parameters
         self.Update()
         
@@ -129,6 +130,7 @@ class CoaxialHXClass():
         #Mean values for the glycol side based on average of inlet temperatures
         Tavg_g=(self.Tsat_r+self.Tin_g)/2.0
         self.f_g,self.h_g,self.Re_g=f_h_1phase_Annulus(self.mdot_g, self.ID_o, self.OD_i, Tavg_g, self.pin_g, self.AS_g)
+        self.h_g = self.h_g * self.h_g_tuning #correct h_g with tuning factor
         
         AS_g.update(CP.PT_INPUTS,self.pin_g,Tavg_g)
         self.cp_g=AS_g.cpmass() #[J/kg-K]
@@ -136,7 +138,7 @@ class CoaxialHXClass():
         
         #Glycol pressure drop
         dpdz_g=-self.f_g*v_g*self.G_g**2/(2.*self.Dh_g) #Pressure gradient
-        self.DP_g=dpdz_g*self.L
+        self.DP_g=dpdz_g*self.L*self.DP_g_tuning
         
         def OBJECTIVE(w_superheat):
             """Nested function for driving the Brent's method solver"""
@@ -182,7 +184,7 @@ class CoaxialHXClass():
         self.Q=self.Q_2phase+self.Q_superheat
         self.Tout_g=self.Tin_g-self.Q/(self.cp_g*self.mdot_g)
         
-        self.DP_r=self.DP_r_2phase+self.DP_r_superheat
+        self.DP_r=(self.DP_r_2phase+self.DP_r_superheat)*self.DP_r_tuning
         
         if existsSuperheat==True:
             AS_r.update(CP.PT_INPUTS,self.pin_r,self.Tout_r)
@@ -194,13 +196,13 @@ class CoaxialHXClass():
             self.hout_r=AS_r.hmass() #[J/kg]
             self.sout_r=AS_r.smass() #[J/kg-K]
         
-        #Dummy variables for the subcooled section which doesn't exist
-        self.Q_subcool=0.0
-        self.DP_r_subcool=0.0
-        self.h_r_subcool=0.0
-        self.Re_r_subcool=0.0
-        self.Charge_r_subcool=0.0
-        self.w_subcool=0.0
+#         #Dummy variables for the subcooled section which doesn't exist
+#         self.Q_subcool=0.0
+#         self.DP_r_subcool=0.0
+#         self.h_r_subcool=0.0
+#         self.Re_r_subcool=0.0
+#         self.Charge_r_subcool=0.0
+#         self.w_subcool=0.0
         
     def _Superheat_Forward(self,w_superheat):
         # Superheated portion
@@ -251,8 +253,9 @@ class CoaxialHXClass():
         # Heat flux in 2phase section (for Shah correlation) [W/m^2]
         q_flux=self.Q_2phase/(w_2phase*self.A_r_wetted)
         #
-        self.h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.AS_r,
+        h_r_2phase=ShahEvaporation_Average(self.xin_r,1.0,self.AS_r,
                     self.G_r,self.Dh_r,self.pin_r,q_flux,self.Tbubble_r,self.Tdew_r)
+        self.h_r_2phase = h_r_2phase * self.h_tp_tuning
         UA_2phase=w_2phase/(1/(self.h_g*self.A_g_wetted)+1/(self.h_r_2phase*self.A_r_wetted)+self.Rw)
         C_g=self.cp_g*self.mdot_g
         Ntu_2phase=UA_2phase/(C_g)
@@ -271,7 +274,7 @@ class CoaxialHXClass():
         self.DP_r_2phase=DP_frict+DP_accel
         
         if self.Verbosity>4:
-            print(Q_2phase_eNTU-self.Q_2phase)
+            print (Q_2phase_eNTU-self.Q_2phase)
         return Q_2phase_eNTU-self.Q_2phase
         
 if __name__=='__main__':
@@ -279,11 +282,19 @@ if __name__=='__main__':
     TT=[]
     QQ=[]
     Q1=[]
+    #refrigerant Abstract State
+    Ref_r = 'R290'
+    Backend_r = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS_r = CP.AbstractState(Backend_r, Ref_r)
+    #glycol Abstract State
+    Ref_g = 'Water'
+    Backend_g = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS_g = CP.AbstractState(Backend_g, Ref_g)
     for Tdew_evap in np.linspace(270,290.4):
         Tdew_cond=317.73
 #        Tdew_evap=285.42
-        pdew_cond=PropsSI('P','T',Tdew_cond,'Q',1.0,'R290')
-        h=PropsSI('H','T',Tdew_cond-7,'P',pdew_cond,'R290') #*1000
+        pdew_cond=PropsSI('P','T',Tdew_cond,'Q',1.0,Ref_r)
+        h=PropsSI('H','T',Tdew_cond-7,'P',pdew_cond,Ref_r)
         params={
                 'ID_i':0.0278,      #inner tube, Internal Diameter (ID)
                 'OD_i':0.03415,     #inner tube, Outer Diameter (OD)
@@ -292,15 +303,17 @@ if __name__=='__main__':
                 'mdot_r':0.040,
                 'mdot_g':0.38,
                 'hin_r':h,
-                'pin_r':PropsSI('P','T',Tdew_evap,'Q',1.0,'R290'),
+                'pin_r':PropsSI('P','T',Tdew_evap,'Q',1.0,Ref_r),
                 'pin_g':300000,     #pin_g in Pa
                 'Tin_g':290.52,
-                'Ref_r':'R290',
-                'Backend_r':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
-                'Ref_g':'Water',
-                'Backend_g':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+                'AS_r':AS_r, #abstract state of refigerant
+                'AS_g':AS_g, #abstract state of glycol
                 'Verbosity':0,
-                'Conductivity' : 237 #[W/m-K]
+                'Conductivity' : 237, #[W/m-K]
+                'h_g_tuning':1,
+                'h_tp_tuning':1,
+                'DP_g_tuning':1,
+                'DP_r_tuning':1
                 }
         IHX=CoaxialHXClass(**params)
         IHX.Calculate()
@@ -309,4 +322,4 @@ if __name__=='__main__':
         QQ.append(IHX.h_r_2phase)#IHX.Q)
         Q1.append(IHX.h_r_superheat)
                   
-        print(IHX.Q)
+        print (IHX.Q)

@@ -7,7 +7,7 @@ from scipy.optimize import brentq
 import numpy as np
 import pylab
 
-from .Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
+from ACHP.Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
 
 class PHEHXClass():
     """
@@ -108,7 +108,7 @@ class PHEHXClass():
         
         #AbstractState
         AS_h = self.AS_h
-        AS_c =self.AS_c
+        AS_c = self.AS_c
         
         #Inlet phases
         self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
@@ -298,11 +298,13 @@ class PHEHXClass():
         self.DP_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','DP_c'))
         self.DP_subcooled_c=sum(collect(cellList,'Phase_c','Subcooled','DP_c'))
         self.DP_c=self.DP_superheated_c+self.DP_2phase_c+self.DP_subcooled_c
+        self.DP_c=self.DP_c*self.DP_cold_tuning #correct the pressure drop on the cold side
         
         self.DP_superheated_h=sum(collect(cellList,'Phase_h','Superheated','DP_h'))
         self.DP_2phase_h=sum(collect(cellList,'Phase_h','TwoPhase','DP_h'))
         self.DP_subcooled_h=sum(collect(cellList,'Phase_h','Subcooled','DP_h'))
         self.DP_h=self.DP_superheated_h+self.DP_2phase_h+self.DP_subcooled_h
+        self.DP_h=self.DP_h*self.DP_hot_tuning #correct the pressure drop on the hot side
         
         self.Charge_superheated_c=sum(collect(cellList,'Phase_c','Superheated','Charge_c'))
         self.Charge_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','Charge_c'))
@@ -526,13 +528,29 @@ class PHEHXClass():
         """
         The Cooper Pool boiling relationship is a function of the heat flux, 
         therefore the heat flux must be iteratively determined
+        
+        According to Cleasson J. PhD Thesis "Thermal and Hydraulic Performance
+        of Compact Brazed Plate Heat Exchangers Operating a Evaporators in Domestic
+        Heat Pumps", KTH, 2004, pp. 98: the saturated nucleate pool boiling 
+        correlation by Cooper (1984) works rather well at varying conditions, 
+        if multiplied by a factor C=1.5.
+        
+        To this end, a tuning coefficient, i.e. h_tp_cold_tuninig, is added to the
+        Cooper pool boiling correlation.
+        
         """
         while abs(change)>1e-6:
             q_flux=Q/(w*self.A_c_wetted)
-            
-            #Heat transfer coefficient from Cooper Pool Boiling
-            h_c_2phase=Cooper_PoolBoiling(pstar,1.0,q_flux,M) #1.5 correction factor comes from Claesson Thesis on plate HX
-            
+
+            if hasattr(self,'Rp'): #check if surface roughness is given
+                Rp = self.Rp
+            else: #otherwise, use the default surface roughness
+                Rp = 1.0
+
+            #Heat transfer coefficient from Cooper Pool Boiling with
+            #correction for the two-phase zone of the cold side
+            h_c_2phase=self.h_tp_cold_tuning*Cooper_PoolBoiling(pstar,Rp,q_flux,M) 
+             
             G=self.mdot_c/self.A_c_flow
             Dh=self.Dh_c
             x=(Inputs['xin_c']+Inputs['xout_c'])/2
@@ -594,6 +612,8 @@ class PHEHXClass():
         AS_c = self.AS_c
         
         h_h_2phase=LongoCondensation((Inputs['xout_h']+Inputs['xin_h'])/2,self.mdot_h/self.A_h_flow,self.Dh_h,self.AS_h,self.Tbubble_h,self.Tdew_h);
+        h_h_2phase = h_h_2phase*self.h_tp_hot_tuning #correct the convection heat transfer of the two-phase of the hot side
+        
         h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
         #Use cp calculated from delta h/delta T
         cp_c=Inputs['cp_c']
@@ -647,25 +667,28 @@ class PHEHXClass():
         Hot: Glycol
         """
         #AbstractState
-        if hasattr(self,'Backend_c'): #check if backend is given
-            AS_c = CP.AbstractState(self.Backend_c, self.Ref_c)
-            if hasattr(self,'MassFrac_c'):
-                AS_c.set_mass_fractions([self.MassFrac_c])
-            elif hasattr(self, 'VoluFrac_c'):
-                AS_c.set_volu_fractions([self.VoluFrac_c])
-        else: #otherwise, use the defualt backend
-            AS_c = CP.AbstractState('HEOS', self.Ref_c)
-        self.AS_c =AS_c
-        if hasattr(self,'Backend_h'): #check if backend is given
-            AS_h = CP.AbstractState(self.Backend_h, self.Ref_h)
-            if hasattr(self,'MassFrac_h'):
-                AS_h.set_mass_fractions([self.MassFrac_h])
-            elif hasattr(self, 'VoluFrac_h'):
-                AS_h.set_volu_fractions([self.VoluFrac_h])
-        else: #otherwise, use the defualt backend
-            AS_h = CP.AbstractState('HEOS', self.Ref_h)
-        self.AS_h =AS_h
-            
+        AS_c = self.AS_c
+        if hasattr(self,'MassFrac_c'):
+            AS_c.set_mass_fractions([self.MassFrac_c])
+        elif hasattr(self, 'VoluFrac_c'):
+            AS_c.set_volu_fractions([self.VoluFrac_c])
+        
+        AS_h = self.AS_h
+        if hasattr(self,'MassFrac_h'):
+            AS_h.set_mass_fractions([self.MassFrac_h])
+        elif hasattr(self, 'VoluFrac_h'):
+            AS_h.set_volu_fractions([self.VoluFrac_h])
+        
+        #set tuning factors to 1 in case not given by user
+        if not hasattr(self,'h_tp_cold_tuning'):
+            self.h_tp_cold_tuning = 1
+        if not hasattr(self,'h_tp_hot_tuning'):
+            self.h_tp_hot_tuning = 1
+        if not hasattr(self,'DP_hot_tuning'):
+            self.DP_hot_tuning = 1
+        if not hasattr(self,'DP_cold_tuning'):
+            self.DP_cold_tuning = 1    
+        
         # Allocate channels between hot and cold streams
         if not hasattr(self,'MoreChannels') or self.MoreChannels not in ['Hot','Cold']:
             raise KeyError("MoreChannels not found, options are 'Hot' or 'Cold'")
@@ -920,19 +943,26 @@ class PHEHXClass():
         self.PostProcess(self.cellList)
         
 def WyattPHEHX():
-        
-    Tdew=PropsSI('T','P',962833,'Q',1.0,'R134a')
+    #Abstract State        
+    Ref_c = 'R134a'
+    Backend_c = 'HEOS'
+    AS_c = CP.AbstractState(Backend_c, Ref_c)
+    Ref_h = 'Water'
+    Backend_h = 'HEOS'
+    AS_h = CP.AbstractState(Backend_h, Ref_h)
+    
+    Tdew=PropsSI('T','P',962833,'Q',1.0,Ref_c)
     params={
-        'Ref_c':'R134a',
+        'AS_c':AS_c,
         'mdot_c':0.073,
         'pin_c':962833,
-        'hin_c':PropsSI('H','T',Tdew,'Q',0.0,'R134a'), #[J/kg-K]
+        'hin_c':PropsSI('H','T',Tdew,'Q',0.0,Ref_c), #[J/kg-K]
         'xin_c':0.0,
         
-        'Ref_h':'Water',
+        'AS_h':AS_h,
         'mdot_h':100.017,
-        'pin_h':PropsSI('P','T',115.5+273.15,'Q',1,'Water'),
-        'hin_h':PropsSI('H','T',115.5+273.15,'Q',1,'Water'), #[J/kg-K]
+        'pin_h':PropsSI('P','T',115.5+273.15,'Q',1,Ref_h),
+        'hin_h':PropsSI('H','T',115.5+273.15,'Q',1,Ref_h), #[J/kg-K]
         
         #Geometric parameters
         'Bp' : 0.119,
@@ -943,9 +973,15 @@ def WyattPHEHX():
         'PlateWavelength' : 0.0066, #[m]
         'InclinationAngle' : pi/3,#[rad]
         'PlateConductivity' : 15.0, #[W/m-K]
+        'Rp': 1.0, #[microns] Surface roughness
         'MoreChannels' : 'Hot', #Which stream gets the extra channel, 'Hot' or 'Cold'
     
-        'Verbosity':10
+        'Verbosity':10,
+        
+        'h_tp_cold_tuning':1,
+        'h_tp_hot_tuning':1,
+        'DP_hot_tuning':1,
+        'DP_cold_tuning':1
     }
     PHE=PHEHXClass(**params)
     PHE.Calculate()
@@ -954,18 +990,26 @@ def WyattPHEHX():
 #    pylab.show()
 
 def SWEPVariedmdot():
+    #Abstract State        
+    Ref_c = 'R290'
+    Backend_c = 'HEOS'
+    AS_c = CP.AbstractState(Backend_c, Ref_c)
+    Ref_h = 'Water'
+    Backend_h = 'HEOS'
+    AS_h = CP.AbstractState(Backend_h, Ref_h)
+    
     Tin=8+273.15
     for mdot_h in [0.4176,0.5013,0.6267,0.8357,1.254,2.508]:
         params={
-            'Ref_c':'R290',
+            'AS_c':AS_c,
             'mdot_c':0.03312,
-            'pin_c':PropsSI('P','T',Tin,'Q',1.0,'R290'),
-            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #[J/kg-K]
+            'pin_c':PropsSI('P','T',Tin,'Q',1.0,Ref_c),
+            'hin_c':PropsSI('H','T',Tin,'Q',0.15,Ref_c), #[J/kg-K]
             
-            'Ref_h':'Water',
+            'AS_h':AS_h,
             'mdot_h':mdot_h,
             'pin_h':200000,
-            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #[J/kg-K]
+            'hin_h':PropsSI('H','T',15+273.15,'P',200000,Ref_h), #[J/kg-K]
             
             #Geometric parameters
             'Bp' : 0.101,
@@ -976,9 +1020,15 @@ def SWEPVariedmdot():
             'PlateWavelength' : 0.00626, #[m]
             'InclinationAngle' : 65/180*pi,#[rad]
             'PlateConductivity' : 15.0, #[W/m-K]
+            'Rp': 1.0, #[microns] Surface roughness
             'MoreChannels' : 'Hot', #Which stream gets the extra channel, 'Hot' or 'Cold'
         
-            'Verbosity':0
+            'Verbosity':0,
+            
+            'h_tp_cold_tuning':1,
+            'h_tp_hot_tuning':1,
+            'DP_hot_tuning':1,
+            'DP_cold_tuning':1
         }
         PHE=PHEHXClass(**params)
         PHE.Calculate()
@@ -1021,7 +1071,15 @@ def SamplePHEHX():
 #        print(PHE.Q, PHE.Q/PHE.Qmax)
 #    pylab.plot(TT,QQ)
 #    pylab.show()
-#    
+    
+    #Abstract State        
+    Ref_c = 'R290'
+    Backend_c = 'HEOS'
+    AS_c = CP.AbstractState(Backend_c, Ref_c)
+    Ref_h = 'Water'
+    Backend_h = 'HEOS'
+    AS_h = CP.AbstractState(Backend_h, Ref_h)
+    
     TT=[]
     QQ=[]
     Q1=[]
@@ -1029,17 +1087,15 @@ def SamplePHEHX():
 #    for Tin in np.linspace(275,287,101):##
     for mdot_h in [0.4176,0.5013,0.6267,0.8357,1.254,2.508]:
         params={
-            'Ref_c':'R290',
+            'AS_c':AS_c,
             'mdot_c':0.03312,
-            'pin_c':PropsSI('P','T',Tin,'Q',1.0,'R290'),
-            'hin_c':PropsSI('H','T',Tin,'Q',0.15,'R290'), #[J/kg-K]
-            'Backend_c':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+            'pin_c':PropsSI('P','T',Tin,'Q',1.0,Ref_c),
+            'hin_c':PropsSI('H','T',Tin,'Q',0.15,Ref_c), #[J/kg-K]
             
-            'Ref_h':'Water',
+            'AS_h':AS_h,
             'mdot_h':mdot_h,
             'pin_h':200000,
-            'hin_h':PropsSI('H','T',15+273.15,'P',200000,'Water'), #[J/kg-K]
-            'Backend_h':'HEOS', #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+            'hin_h':PropsSI('H','T',15+273.15,'P',200000,Ref_h), #[J/kg-K]
             
             #Geometric parameters
             'Bp' : 0.101,
@@ -1050,8 +1106,14 @@ def SamplePHEHX():
             'PlateWavelength' : 0.00626, #[m]
             'InclinationAngle' : 65/180*pi,#[rad]
             'PlateConductivity' : 15.0, #[W/m-K]
+            'Rp': 1.0, #[microns] Surface roughness
             'MoreChannels' : 'Hot', #Which stream gets the extra channel, 'Hot' or 'Cold'
-            'Verbosity':0
+            'Verbosity':0,
+            
+            'h_tp_cold_tuning':1,
+            'h_tp_hot_tuning':1,
+            'DP_hot_tuning':1,
+            'DP_cold_tuning':1
         }
         PHE=PHEHXClass(**params)
         PHE.Calculate()
@@ -1070,4 +1132,5 @@ def SamplePHEHX():
 if __name__=='__main__':
     #SamplePHEHX()
     #WyattPHEHX()
+    
     SWEPVariedmdot()

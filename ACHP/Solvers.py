@@ -1,4 +1,4 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import numpy as np
 from scipy.linalg import inv
 from numpy import array,dot
@@ -101,11 +101,11 @@ if __name__=='__main__':
 ##     _x=MultiDimNewtRaph(OBJECTIVE,[-1,1],ytol=1e-10); print _x
 ##     print OBJECTIVE(_x)
     def f(x):
-        print('.',end='')
+        print ('.',end='')
         return [1-4*x[0]+2*x[0]**2-2*x[1]**3,-4+x[0]**4+4*x[1]+4*x[1]**4]
         
-    _x=Broyden(f,[0.1,0.7],ytol=1e-8); print(_x)
-    print(f(_x))
+    _x=Broyden(f,[0.1,0.7],ytol=1e-8); print (_x)
+    print (f(_x))
     from scipy.optimize import fsolve
-    _x=fsolve(f,[0.1,1.0]); print(_x)
-    print(f(_x))
+    _x=fsolve(f,[0.1,1.0]); print (_x)
+    print (f(_x))

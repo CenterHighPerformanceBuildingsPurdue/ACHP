@@ -1,5 +1,6 @@
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 from CoolProp.CoolProp import PropsSI
+from ACHP.OilPropLib import *
 import CoolProp as CP
 
 class CompressorClass():
@@ -8,17 +9,20 @@ class CompressorClass():
     
     Required Parameters:
         
-    ===========   ==========  ========================================================================
-    Variable      Units       Description
-    ===========   ==========  ========================================================================
-    M             Ibm/hr      A numpy-like list of compressor map coefficients for mass flow
-    P             Watts       A numpy-like list of compressor map coefficients for electrical power
-    Ref           N/A         A string representing the refrigerant
-    Tin_r         K           Refrigerant inlet temperature
-    pin_r         Pa          Refrigerant suction pressure (absolute)
-    pout_r        Pa          Refrigerant discharge pressure (absolute)
-    fp            --          Fraction of electrical power lost as heat to ambient
-    Vdot_ratio    --          Displacement Scale factor
+    ===========    ==========  ========================================================================
+    Variable       Units       Description
+    ===========    ==========  ========================================================================
+    M              Ibm/hr      A numpy-like list of compressor map coefficients for mass flow
+    P              Watts       A numpy-like list of compressor map coefficients for electrical power
+    Ref            N/A         A string representing the refrigerant
+    Oil            N/A         A string representing the lubricant oil  
+    Tin_r          K           Refrigerant inlet temperature
+    pin_r          Pa          Refrigerant suction pressure (absolute)
+    pout_r         Pa          Refrigerant discharge pressure (absolute)
+    fp             --          Fraction of electrical power lost as heat to ambient
+    Vdot_ratio     --          Displacement Scale factor
+    V_oil_sump     m^3         Total volume of oil sump inside the compressor shell
+    shell_pressure N/A         A string defining the shell pressure of the compressor
     ===========   ==========  ========================================================================
     
     All variables are of double-type unless otherwise specified
@@ -76,16 +80,13 @@ class CompressorClass():
             ('Outlet Enthalpy','J/kg',self.hout_r),
             ('Overall isentropic efficiency','-',self.eta_oi),
             ('Pumped flow rate','m^3/s',self.Vdot_pumped),
-            ('Ambient heat loss','W',self.Q_amb)
+            ('Ambient heat loss','W',self.Q_amb),
+            ('Refrigerant change in oil sump','kg',self.Charge)
          ]
         
     def Calculate(self):
         #AbstractState
-        if hasattr(self,'Backend'): #check if backend is given
-            AS = CP.AbstractState(self.Backend, self.Ref)
-        else: #otherwise, use the defualt backend
-            AS = CP.AbstractState('HEOS', self.Ref)
-        self.AS = AS
+        AS = self.AS
         
         #Local copies of coefficients
         P=self.P
@@ -156,22 +157,48 @@ class CompressorClass():
         self.Vdot_pumped= mdot*v_actual
         self.Q_amb=-self.fp*power
         
-if __name__=='__main__':        
-    
+        # Estimate refrigerant dissolved in the oil sump
+        T_ave = (T1_actual + self.Tout_r)/2
+        if self.shell_pressure == 'high-pressure':
+            p_shell = P2
+        elif self.shell_pressure == 'low-pressure':
+            p_shell = P1
+
+        self.x_Ref,error = Solubility_Ref_in_Liq(self.Ref,self.Oil,T_ave,p_shell/1000)
+        
+        AS.update(CP.PT_INPUTS, p_shell, T_ave)
+        rho_shell = AS.rhomass() #[kg/m^3]
+
+        rhomass_oil = rho_oil(self.Oil,T_ave-273.15)
+        self.m_oil = self.V_oil_sump*rhomass_oil
+        
+        # Amount of refrigerant dissolved in the oil sump
+        self.Charge = rhomass_oil*self.x_Ref/(1-self.x_Ref)
+        
+        
+if __name__=='__main__':
+    #Abstract State        
+    Ref = 'R134a'
+    Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS = CP.AbstractState(Backend, Ref)
     for i in range(1):
         kwds={
               'M':[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02,7.90E-05,-5.73E-05,1.79E-04,-8.08E-05],
               'P':[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616,-0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03],
-              'Ref':'R134a',
+              'AS': AS, #Abstract state
+              'Ref': Ref,
               'Tin_r':280,
-              'pin_r':PropsSI('P','T',279,'Q',1,'R134a'),
-              'pout_r':PropsSI('P','T',315,'Q',1,'R134a'),
+              'pin_r':PropsSI('P','T',279,'Q',1,Ref),
+              'pout_r':PropsSI('P','T',315,'Q',1,Ref),
               'fp':0.15, #Fraction of electrical power lost as heat to ambient
               'Vdot_ratio': 1.0, #Displacement Scale factor
-              'Backend':'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+              'shell_pressure': 'low-pressure',
+              'Oil': 'POE32',
+              'V_oil_sump': 0.0,
               }
         Comp=CompressorClass(**kwds)
         Comp.Calculate()
-        print(Comp.W,'W')
-        print(Comp.Vdot_pumped,'m^3/s')
-        print(Comp.Q_amb, 'W')
+        print ('Power:', Comp.W,'W')
+        print ('Flow rate:',Comp.Vdot_pumped,'m^3/s')
+        print ('Heat loss rate:', Comp.Q_amb, 'W')
+        print ('Refrigerant dissolved in oil sump:', Comp.Charge,'kg')

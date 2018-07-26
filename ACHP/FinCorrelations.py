@@ -1,8 +1,7 @@
-from __future__ import absolute_import
-
+from __future__ import division, print_function, absolute_import
 from CoolProp.CoolProp import HAPropsSI
 from math import sqrt,pi,tanh,exp,cos,log
-from .ACHPTools import ValidateFields
+from ACHP.ACHPTools import ValidateFields
 
 def IsFinsClass(Fins):
     '''
@@ -78,7 +77,8 @@ class FinInputs():
             ('ID',float,0.0001,1),
             ('OD',float,0.0001,1),
             ('Pl',float,0.0001,1),
-            ('Pt',float,0.0001,1)
+            ('Pt',float,0.0001,1),
+            ('kw',float,0.01,10000)
         ]
         optFields=None
         d=dict(self.Tubes.__dict__) #The current values
@@ -583,6 +583,7 @@ if __name__=='__main__':
     FinsTubes.Tubes.ID=0.0089154
     FinsTubes.Tubes.Pl=0.0254
     FinsTubes.Tubes.Pt=0.0219964
+    FinsTubes.Tubes.kw=237
     
     FinsTubes.Fins.FPI=14.5
     FinsTubes.Fins.Pd=0.001
@@ -600,11 +601,11 @@ if __name__=='__main__':
     
     FinsTubes.Validate()
     
-    print(FinsTubes)  #just print our inputs
+    print (FinsTubes)  #just print our inputs
     WavyLouveredFins(FinsTubes)  #calculate
-    print("Wavy-Louvered fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
+    print ("Wavy-Louvered fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
     HerringboneFins(FinsTubes) 
-    print("Herringbone Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
+    print ("Herringbone Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
     PlainFins(FinsTubes) 
-    print("Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
-    print("a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots")
+    print ("Plain Fins fins:","eta_a is:"+str(FinsTubes.eta_a)+", dP_a is:"+str(FinsTubes.dP_a)+" Pa") #print some of the results
+    print ("a graph for the fin correlations can be found here: "+r"\Documentation\Web\MPLPlots")

@@ -1,11 +1,8 @@
-from __future__ import print_function, absolute_import, division
-
-from scipy.optimize import fsolve
-from math import sqrt,pi,tanh,exp,cos,log,sin
-
+from __future__ import division, print_function, absolute_import
 from CoolProp.CoolProp import HAPropsSI 
-
-from .ACHPTools import ValidateFields
+from math import sqrt,pi,tanh,exp,cos,log,sin
+from ACHP.ACHPTools import ValidateFields
+from scipy.optimize import fsolve
 
 def IsFinsClass(MicroFins):
     '''
@@ -91,7 +88,8 @@ class MicroFinInputs():
             ('b',float,0.0001,1),
             ('tw',float,0.00001,0.01),
             ('twp',float,0.00001,0.01),
-            ('beta',float,0.00001,100)
+            ('beta',float,0.00001,100),
+            ('kw',float,0.01,10000)
         ]
         optFields=None
         d=dict(self.Tubes.__dict__) #The current values
@@ -369,6 +367,7 @@ if __name__=='__main__':
     LouversFinsTubes.Tubes.tw=0.0003               #Tube wall thickness     
     LouversFinsTubes.Tubes.twp=0.0004              #Port wall thickness     
     LouversFinsTubes.Tubes.beta=1                  #Port (channel) aspect ratio (=width/height)
+    LouversFinsTubes.Tubes.kw=117                  #wall thermal conductivity
     
     LouversFinsTubes.Fins.FPI=11.0998              #Fin per inch
     LouversFinsTubes.Fins.Lf=0.0333                #Fin length
@@ -387,6 +386,6 @@ if __name__=='__main__':
     
     LouversFinsTubes.Validate()
     
-    print(LouversFinsTubes)  #just print our inputs
+    print (LouversFinsTubes)  #just print our inputs
     MultiLouveredMicroFins(LouversFinsTubes)  #calculate
-    print("Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)+" Pa")
+    print ("Multi-Louvered Micro fins:","eta_a is:"+str(LouversFinsTubes.eta_a)+", dP_a is:"+str(LouversFinsTubes.dP_a)+" Pa")
