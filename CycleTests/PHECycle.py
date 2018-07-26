@@ -1,14 +1,17 @@
-from Compressor import CompressorClass  #Compressor
-from Condenser import CondenserClass    #Condenser
-from Evaporator import EvaporatorClass  #Evaporator
-from CoolingCoil import CoolingCoilClass #Cooling Coil
-from CoaxialHX import CoaxialHXClass #Coaxial internal heat exchanger
-from Pump import PumpClass # Secondary loop pump class
-from PHEHX import PHEHXClass
+from __future__ import division, print_function, absolute_import
+from ACHP.Compressor import CompressorClass  #Compressor
+from ACHP.Condenser import CondenserClass    #Condenser
+from ACHP.MicroChannelCondenser import MicroCondenserClass
+from ACHP.Evaporator import EvaporatorClass  #Evaporator
+from ACHP.CoolingCoil import CoolingCoilClass #Cooling Coil
+from ACHP.CoaxialHX import CoaxialHXClass #Coaxial internal heat exchanger
+from ACHP.Pump import PumpClass # Secondary loop pump class
+from ACHP.PHEHX import PHEHXClass
 from scipy.optimize import brent, fsolve 
 #^^ fsolve - roots (multiple variables); brent - root of one variable fct
 #from CoolProp.CoolProp import PropsSI #,Tsat        #refrigerant properties
-from FinCorrelations import WavyLouveredFins,FinInputs     #fin correlations
+from ACHP.FinCorrelations import WavyLouveredFins,FinInputs     #fin correlations
+from ACHP.MicroFinCorrelations import MicroFinInputs
 import numpy as np                  #NumPy is fundamental scientific package                                   
 import CoolProp as CP
 
@@ -19,13 +22,56 @@ class SecondaryCycleClass():
         the code that follows
         """
         self.Compressor=CompressorClass()
-        self.Condenser=CondenserClass()
-        self.Condenser.Fins=FinInputs()
         self.CoolingCoil=CoolingCoilClass()
         self.CoolingCoil.Fins=FinInputs()
         self.PHEHX=PHEHXClass()
         self.Pump=PumpClass()
+    
+    def Update(self):
+        '''
+        Update cycle class with selected HX type
+        Update cyle class with Abstract State
+        '''
+        if self.EvapSolver == 'Moving-Boundary':
+            if self.EvapType == 'Fin-tube':
+                self.Evaporator=EvaporatorClass()
+                self.Evaporator.Fins=FinInputs()
+            elif self.EvapType == 'Micro-channel':
+                raise
+            else:
+                raise
+        elif self.EvapSolver == 'Finite-Element':
+            raise
+        else:
+            raise    
         
+        if self.CondSolver == 'Moving-Boundary':
+            if self.CondType == 'Fin-tube':
+                self.Condenser=CondenserClass()
+                self.Condenser.Fins=FinInputs()
+            elif self.CondType == 'Micro-channel':
+                self.Condenser=MicroCondenserClass()
+                self.Condenser.Fins=MicroFinInputs()
+            else:
+                raise
+        elif self.CondSolver == 'Finite-Element':
+            raise
+        else:
+            raise
+        
+        #Abstract State   
+        self.AS = CP.AbstractState(self.Backend, self.Ref)
+        if hasattr(self,'MassFrac'):
+            self.AS.set_mass_fractions([self.MassFrac])
+        elif hasattr(self,'VoluFrac'):
+            self.AS.set_volu_fractions([self.VoluFrac])
+        #Abstract State for SecLoopFluid  
+        self.AS_SLF = CP.AbstractState(self.Backend_SLF, self.SecLoopFluid)
+        if hasattr(self,'MassFrac_SLF'):
+            self.AS_SLF.set_mass_fractions([self.MassFrac_SLF])
+        elif hasattr(self,'VoluFrac_SLF'):
+            self.AS_SLF.set_volu_fractions([self.VoluFrac_SLF])
+                        
     def Calculate(self,DT_evap,DT_cond,Tin_IHX):
         """
         Inputs are differences in temperature [K] between HX air inlet temperature 
@@ -40,26 +86,12 @@ class SecondaryCycleClass():
                 Inlet "glycol" temperature to IHX   
         """
         if self.Verbosity>1:
-            print 'Inputs: DTevap %7.4f DTcond %7.4f fT_IHX %7.4f'%(DT_evap,DT_cond,Tin_IHX) 
+            print ('Inputs: DTevap %7.4f DTcond %7.4f fT_IHX %7.4f'%(DT_evap,DT_cond,Tin_IHX))
         
         #AbstractState
-        if hasattr(self,'Backend'): #check if backend is given
-            AS = CP.AbstractState(self.Backend, self.Ref)
-            if hasattr(self,'MassFrac'):
-                AS.set_mass_fractions([self.MassFrac])
-        else: #otherwise, use the defualt backend
-            AS = CP.AbstractState('HEOS', self.Ref)
-            self.Backend = 'HEOS'
-        self.AS = AS
+        AS = self.AS
         #AbstractState for SecLoopFluid
-        if hasattr(self,'Backend_SLF'): #check if backend_SLF is given
-            AS_SLF = CP.AbstractState(self.Backend_SLF, self.SecLoopFluid)
-            if hasattr(self,'MassFrac_SLF'):
-                AS_SLF.set_mass_fractions([self.MassFrac_SLF])
-        else: #otherwise, use the defualt backend
-            AS_SLF = CP.AbstractState('HEOS', self.SecLoopFluid)
-            self.Backend_SLF = 'HEOS'
-        self.AS_SLF = AS_SLF
+        AS_SLF = self.AS_SLF
         
         """
         The coldest the glycol entering the cooling coil could be would be the 
@@ -77,8 +109,7 @@ class SecondaryCycleClass():
             'pin_r': psat_evap,   
             'pout_r': psat_cond,
             'Tin_r': self.Tdew_evap+self.Compressor.DT_sh,
-            'Ref':  self.Ref,
-            'Backend': self.Backend
+            'AS': AS,
         }
         self.Compressor.Update(**params)
         self.Compressor.Calculate()
@@ -87,8 +118,7 @@ class SecondaryCycleClass():
             'mdot_r': self.Compressor.mdot_r,
             'Tin_r': self.Compressor.Tout_r,
             'psat_r': psat_cond,
-            'Ref': self.Ref,
-            'Backend': self.Backend
+            'AS': AS,
         }
         self.Condenser.Update(**params)
         self.Condenser.Calculate()
@@ -106,7 +136,9 @@ class SecondaryCycleClass():
             'hin_c': self.Condenser.hout_r,
             'mdot_c': self.Compressor.mdot_r,
             'pin_c': psat_evap,
-            'xin_c': xin_r
+            'xin_c': xin_r,
+            'AS_c': AS,
+            'AS_h': AS_SLF,
         }
         self.PHEHX.Update(**params)
         self.PHEHX.Calculate()
@@ -115,13 +147,15 @@ class SecondaryCycleClass():
         params={
             'mdot_g': self.Pump.mdot_g,
             'Tin_g': self.PHEHX.Tout_h,
+            'AS_g': AS_SLF,
         }
         self.CoolingCoil.Update(**params)
         self.CoolingCoil.Calculate()
         
         params={
             'DP_g': self.PHEHX.DP_h+self.CoolingCoil.DP_g,
-            'Tin_g': self.CoolingCoil.Tout_g
+            'Tin_g': self.CoolingCoil.Tout_g,
+            'AS_g': AS_SLF,
         }
         self.Pump.Update(**params)
         self.Pump.Calculate()
@@ -139,7 +173,7 @@ class SecondaryCycleClass():
         resid[2]=self.PHEHX.Q-self.CoolingCoil.Q
         
         if self.Verbosity>1:
-            print 'Qres % 12.6e Resid2: % 12.6e ResSL %10.4f Charge %10.4f SC: %8.4f' %(resid[0],resid[1],resid[2],self.Charge,self.Condenser.DT_sc)
+            print ('Qres % 12.6e Resid2: % 12.6e ResSL %10.4f Charge %10.4f SC: %8.4f' %(resid[0],resid[1],resid[2],self.Charge,self.Condenser.DT_sc))
             
         self.Capacity=self.CoolingCoil.Capacity
         self.COP=self.CoolingCoil.Q/self.Compressor.W
@@ -164,12 +198,13 @@ class SecondaryCycleClass():
                 #Run the cooler to get a good starting inlet temperature for IHX
                 self.CoolingCoil.mdot_g=self.Pump.mdot_g
                 self.CoolingCoil.Tin_g=self.CoolingCoil.Fins.Air.Tdb-DT_evap
+                self.CoolingCoil.AS_g = self.AS_SLF
                 self.CoolingCoil.Calculate()
                 Tin_IHX=self.CoolingCoil.Tout_g
                 resid=self.Calculate(DT_evap,8,Tin_IHX)
             except Exception,e:
                 if self.Verbosity>1:
-                    print 'Failed: ',e.__str__()
+                    print ('Failed: ',e.__str__())
                 raise
                 pass
             else:
@@ -186,10 +221,10 @@ class SecondaryCycleClass():
         x=fsolve(OBJECTIVE,[DT_evap,20,Tin_IHX])
         
         if self.Verbosity>1:
-            print 'Capacity: ', self.Capacity
-            print 'COP: ',self.COP
-            print 'COP (w/ both fans): ',self.COSP
-            print 'SHR: ',self.SHR
+            print ('Capacity: ', self.Capacity)
+            print ('COP: ',self.COP)
+            print ('COP (w/ both fans): ',self.COSP)
+            print ('SHR: ',self.SHR)
         
 if __name__=='__main__': 
     for i in range(1):
@@ -212,7 +247,16 @@ if __name__=='__main__':
         Cycle.DT_sc_target = 7.0
         Cycle.Charge_target = 3.3
         Cycle.Ref='R410A'
+        Cycle.Backend='TTSE&HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+        Cycle.Oil = 'POE32'
+        Cycle.shell_pressure = 'low-pressure'
         Cycle.SecLoopFluid = 'Water'
+        Cycle.Backend_SLF = 'INCOMP' #backend of SecLoopFluid
+        Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
+        Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
+        Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+        Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
+        Cycle.Update()
         
         #--------------------------------------
         #--------------------------------------
@@ -229,6 +273,9 @@ if __name__=='__main__':
             'M':M,
             'P':P,
             'Ref':Cycle.Ref,                                                              #refrigerant
+            'Oil':Cycle.Oil, #Compressor lubricant oil
+            'shell_pressure':Cycle.shell_pressure, #Compressor shell pressure
+            'V_oil_sump':0, #Volume of oil in the sump
             'fp':0.15, #Fraction of electrical power lost as heat to ambient            #shell heat loss
             'Vdot_ratio': 1.0, #Displacement Scale factor                               #up- or downsize compressor (1=original)
             'Verbosity': 0, # How verbose should the debugging statements be [0 to 10]
@@ -250,6 +297,7 @@ if __name__=='__main__':
         Cycle.Condenser.Fins.Tubes.ID=0.0063904
         Cycle.Condenser.Fins.Tubes.Pl=0.0191  #distance between center of tubes in flow direction                                                
         Cycle.Condenser.Fins.Tubes.Pt=0.0222  #distance between center of tubes orthogonal to flow direction
+        Cycle.Condenser.Fins.Tubes.kw=237     #wall thermal conductivity (i.e pipe material)
         
         Cycle.Condenser.Fins.Fins.FPI=25      #Number of fins per inch
         Cycle.Condenser.Fins.Fins.Pd=0.001    #2* amplitude of wavy fin
@@ -266,7 +314,6 @@ if __name__=='__main__':
         Cycle.Condenser.Fins.Air.FanPower=160
         
         params={
-            'Ref': Cycle.Ref,
             'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
             'Verbosity': 0
         }
@@ -286,6 +333,7 @@ if __name__=='__main__':
         Cycle.CoolingCoil.Fins.Tubes.ID=0.0089154
         Cycle.CoolingCoil.Fins.Tubes.Pl=0.0254
         Cycle.CoolingCoil.Fins.Tubes.Pt=0.0219964
+        Cycle.CoolingCoil.Fins.Tubes.kw=237     #wall thermal conductivity (i.e pipe material)
         
         Cycle.CoolingCoil.Fins.Fins.FPI=14.5
         Cycle.CoolingCoil.Fins.Fins.Pd=0.001
@@ -302,7 +350,6 @@ if __name__=='__main__':
         Cycle.CoolingCoil.Fins.Air.FanPower=438
                
         params={
-            'Ref_g': Cycle.SecLoopFluid,
             'pin_g': 200000,
             'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'                                                    #pin_g in Pa
             'Verbosity':0
@@ -311,8 +358,6 @@ if __name__=='__main__':
         
         params={
             'pin_h':300000,
-            'Ref_c':Cycle.Ref,
-            'Ref_h':Cycle.SecLoopFluid,
             'Verbosity':0,
             
             #Geometric parameters
@@ -322,6 +367,7 @@ if __name__=='__main__':
             'PlateAmplitude' : 0.001, #[m]
             'PlateThickness' : 0.0003, #[m]
             'PlateConductivity' : 15.0, #[W/m-K]
+            'Rp': 1.0, #[microns] Surface roughness
             'PlateWavelength' : 0.0126, #[m]
             'InclinationAngle' : 3.14159/2.3,#[rad]
             'MoreChannels' : 'Hot' #Which stream gets the extra channel, 'Hot' or 'Cold'
@@ -332,7 +378,6 @@ if __name__=='__main__':
             'eta':0.5,  #Pump+motor efficiency
             'mdot_g':0.38, #Flow Rate kg/s
             'pin_g':300000,
-            'Ref_g':Cycle.SecLoopFluid,
             'Verbosity':0,
             }
         Cycle.Pump.Update(**params)
@@ -340,4 +385,4 @@ if __name__=='__main__':
         #Now solve
         Cycle.PreconditionedSolve()
         
-        print Cycle.Pump.DP_g,Cycle.Pump.W
+        print (Cycle.Pump.DP_g,Cycle.Pump.W)
