@@ -24,6 +24,7 @@ def SampleSecondaryLoopSystem():
     Cycle.Charge_target = 2.4
     Cycle.DT_sh=5
     Cycle.Ref='R410A'
+    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.SecLoopFluid = 'MEG'
@@ -92,7 +93,6 @@ def SampleSecondaryLoopSystem():
     Cycle.Condenser.Fins.Air.FanPower=260
     
     params={
-        'Ref':     Cycle.Ref,
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -229,6 +229,7 @@ def SampleSecondaryLoopHPSystem():
     Cycle.Charge_target = 3.3
     Cycle.DT_sh=5
     Cycle.Ref='R410A'
+    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.SecLoopFluid = 'Water'
@@ -299,7 +300,6 @@ def SampleSecondaryLoopHPSystem():
     
     Cycle.Evaporator.DT_sh= 5. #Superheat at inlet to compressor [K]
     params={
-        'Ref':     Cycle.Ref,
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -425,6 +425,7 @@ def SampleDXACSystem(Calculate=True):
     Cycle.Charge_target = 2.8
     Cycle.Mode='AC' 
     Cycle.Ref='R410A'
+    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.TestName='DXAC-0014'  #this and the two next lines can be used to specify exact test conditions
@@ -491,7 +492,6 @@ def SampleDXACSystem(Calculate=True):
     Cycle.Condenser.Fins.Air.FanPower=260
     
     params={
-        'Ref': Cycle.Ref,   
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -676,7 +676,6 @@ def SampleDXHPSystem():
     Cycle.Condenser.Fins.Air.FanPower=438
     
     params={
-        'Ref':     Cycle.Ref,   
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
@@ -765,6 +764,6 @@ if __name__=='__main__':
     print ('Running SampleSecondaryLoopSystem')
     SampleSecondaryLoopSystem()
     print ()
-    print ('Running SampleSecondaryHPLoopSystem')
+    #print ('Running SampleSecondaryHPLoopSystem')
     #SampleSecondaryLoopHPSystem()
     
