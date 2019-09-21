@@ -657,8 +657,9 @@ class PHEHXClass():
             'h_h':h_h_2phase,
             'h_c':h_c,
         }
-        
-        return dict(Inputs.items()+Outputs.items())
+        o = Inputs
+        o.update(**Outputs)
+        return o
         
     def Calculate(self):
         """
