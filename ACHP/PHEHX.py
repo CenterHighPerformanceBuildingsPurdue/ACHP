@@ -222,14 +222,15 @@ class PHEHXClass():
         
         # Check whether the enthalpy boundaries are within the bounds set by 
         # the imposed amount of heat transfer
-        if hsatV_c<EnthalpyList_c[-1] and hsatV_c>EnthalpyList_c[0]:
+        eps = 1e-3
+        if hsatV_c<EnthalpyList_c[-1]-eps and hsatV_c>EnthalpyList_c[0]+eps:
             EnthalpyList_c.insert(len(EnthalpyList_c)-1,hsatV_c)
-        if hsatL_c<EnthalpyList_c[-1] and hsatL_c>EnthalpyList_c[0]:
+        if hsatL_c<EnthalpyList_c[-1]-eps and hsatL_c>EnthalpyList_c[0]+eps:
             EnthalpyList_c.insert(1,hsatL_c)
             
-        if hsatV_h<EnthalpyList_h[-1] and hsatV_h>EnthalpyList_h[0]:
+        if hsatV_h<EnthalpyList_h[-1]-eps and hsatV_h>EnthalpyList_h[0]+eps:
             EnthalpyList_h.insert(len(EnthalpyList_h)-1,hsatV_h)
-        if hsatL_h<EnthalpyList_h[-1] and hsatL_h>EnthalpyList_h[0]:
+        if hsatL_h<EnthalpyList_h[-1]-eps and hsatL_h>EnthalpyList_h[0]+eps:
             EnthalpyList_h.insert(1,hsatL_h)
             
         I_h=0
@@ -238,11 +239,11 @@ class PHEHXClass():
             #Try to figure out whether the next phase transition is on the hot or cold side     
             Qbound_h=self.mdot_h*(EnthalpyList_h[I_h+1]-EnthalpyList_h[I_h])
             Qbound_c=self.mdot_c*(EnthalpyList_c[I_c+1]-EnthalpyList_c[I_c])
-            if Qbound_h<Qbound_c-1e-9:
+            if Qbound_h<Qbound_c-1e-6:
                 # Minimum amount of heat transfer is on the hot side,
                 # add another entry to EnthalpyList_c 
                 EnthalpyList_c.insert(I_c+1, EnthalpyList_c[I_c]+Qbound_h/self.mdot_c)
-            elif Qbound_h>Qbound_c+1e-9:
+            elif Qbound_h>Qbound_c+1e-6:
                 # Minimum amount of heat transfer is on the cold side,
                 # add another entry to EnthalpyList_h at the interface
                 EnthalpyList_h.insert(I_h+1, EnthalpyList_h[I_h]+Qbound_c/self.mdot_h)
@@ -253,6 +254,8 @@ class PHEHXClass():
         self.hsatL_h=hsatL_h
         self.hsatV_c=hsatV_c
         self.hsatV_h=hsatV_h
+
+        assert(len(EnthalpyList_c) == len(EnthalpyList_h))
 
         return EnthalpyList_c,EnthalpyList_h
     
@@ -465,7 +468,12 @@ class PHEHXClass():
         epsilon = Q/Qmax
         
         #Pure counterflow with Cr<1 (Incropera Table 11.4)
-        NTU=1/(Cr-1)*log((epsilon-1)/(epsilon*Cr-1))
+        if epsilon > 1.0:
+            # In practice this can never happen, but sometimes
+            # during bad iterations it is possible
+            NTU=10000
+        else:
+            NTU=1/(Cr-1)*log((epsilon-1)/(epsilon*Cr-1))
         
         #Required UA value
         UA_req=Cmin*NTU
@@ -793,6 +801,11 @@ class PHEHXClass():
             outlet states for both fluids are known, and each element can be solved
             analytically in one shot without any iteration.
             """
+
+            if Q == 0.0:
+                return -1
+            if Q == self.Qmax:
+                return np.inf
             
             EnthalpyList_c,EnthalpyList_h=self.BuildEnthalpyLists(Q)
                 
@@ -842,6 +855,8 @@ class PHEHXClass():
                 hin_h=hout_h+Qbound/self.mdot_h
                 hin_c=EnthalpyList_c[I_c]
                 hout_c=hin_c+Qbound/self.mdot_c
+                assert(hin_h > hout_h) # Hot stream is cooling
+                assert(hin_c < hout_c) # Cold stream is heating
                 
                 # Figure out what combination of phases you have:
                 # -------------------------------------------------
@@ -905,8 +920,8 @@ class PHEHXClass():
                     # Cold stream is evaporating, and hot stream is single-phase (SH or SC)
                     
                     #Must be two-phase so quality is defined
-                    xin_c=(hin_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
-                    xout_c=(hout_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
+                    xin_c=max((hin_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c), 0)
+                    xout_c=min((hout_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c), 1)
                     
                     Inputs={
                         'Q':Qbound,
@@ -934,10 +949,12 @@ class PHEHXClass():
             if self.Verbosity>6:
                 print('wsum:', np.sum(wList))
             return np.sum(wList)-1.0
+
+        low, hi = 0, self.Qmax
         try:
-            brentq(GivenQ,0.0000001*self.Qmax,0.999999999*self.Qmax,xtol=0.000001*self.Qmax)#,xtol=0.000001*self.Qmax) is commented
+            brentq(GivenQ, low, hi, xtol=0.000001*self.Qmax)
         except ValueError:
-            print(GivenQ(0.0000001*self.Qmax),GivenQ(0.999999999*self.Qmax))
+            print(GivenQ(low), GivenQ(hi))
             raise
         # Collect parameters from all the pieces
         self.PostProcess(self.cellList)
