@@ -113,6 +113,7 @@ class PHEHXClass():
         #Inlet phases
         self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
         self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
+        assert(self.Tin_h > self.Tin_c)
         
         # Find the maximum possible rate of heat transfer as the minimum of 
         # taking each stream to the inlet temperature of the other stream
