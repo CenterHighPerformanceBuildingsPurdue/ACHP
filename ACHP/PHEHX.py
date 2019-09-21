@@ -106,21 +106,17 @@ class PHEHXClass():
         # See if each phase could change phase if it were to reach the
         # inlet temperature of the opposite phase 
         
-        #AbstractState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
-        
-        #Inlet phases
+        # Inlet phases
         self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
         self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
         assert(self.Tin_h > self.Tin_c)
         
         # Find the maximum possible rate of heat transfer as the minimum of 
         # taking each stream to the inlet temperature of the other stream
-        AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_c)
-        hout_h=AS_h.hmass() #[J/kg]
-        AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_h)
-        hout_c=AS_c.hmass() #[J/kg]
+        self.AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_c)
+        hout_h=self.AS_h.hmass() #[J/kg]
+        self.AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_h)
+        hout_c=self.AS_c.hmass() #[J/kg]
         Qmax=min([self.mdot_c*(hout_c-self.hin_c),self.mdot_h*(self.hin_h-hout_h)])
         if Qmax<0:
             raise ValueError('Qmax in PHE must be > 0')
@@ -149,16 +145,16 @@ class PHEHXClass():
 #            raise ValueError('Outlet or inlet of PHE is pinching.  Why?')
         
         #TODO: could do with more generality if both streams can change phase
-        #Check if any internal points are pinched
-        if np.sum(TList_c>TList_h)>0:
-            #Loop over the internal cell boundaries
-            for i in range(1,len(TList_c)-1):
-                #If cold stream is hotter than the hot stream
+        # Check if any internal points are pinched
+        if (TList_c[1:-1]>TList_h[1:-1]).any():
+            # Loop over the internal cell boundaries
+            for i in range(1, len(TList_c)-1):
+                # If cold stream is hotter than the hot stream
                 if TList_c[i]-1e-9>TList_h[i]:
-                    #Find new enthalpy of cold stream at the hot stream cell boundary
-                    AS_c.update(CP.PT_INPUTS, self.pin_c, TList_h[i])
-                    hpinch=AS_c.hmass() #[J/kg]
-                    #Find heat transfer of hot stream in right-most cell
+                    # Find new enthalpy of cold stream at the hot stream cell boundary
+                    self.AS_c.update(CP.PT_INPUTS, self.pin_c, TList_h[i])
+                    hpinch=self.AS_c.hmass() #[J/kg]
+                    # Find heat transfer of hot stream in right-most cell
                     Qextra=self.mdot_h*(EnthalpyList_h[i+1]-EnthalpyList_h[i])
                     Qmax=self.mdot_c*(hpinch-self.hin_c)+Qextra
         
@@ -442,9 +438,6 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h 
         """
-        #AbstarctState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
         
         #Calculate the mean temperature
         Tmean_h=Inputs['Tmean_h']
@@ -483,11 +476,11 @@ class PHEHXClass():
         w=UA_req/UA_total
         
         #Determine both charge components
-        AS_h.update(CP.PT_INPUTS, self.pin_h,Tmean_h)
-        rho_h=AS_h.rhomass()#[kg/m^3]
+        self.AS_h.update(CP.PT_INPUTS, self.pin_h,Tmean_h)
+        rho_h=self.AS_h.rhomass()#[kg/m^3]
         Charge_h = w * self.V_h * rho_h
-        AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
-        rho_c=AS_c.rhomass()#[kg/m^3]
+        self.AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
+        rho_c=self.AS_c.rhomass()#[kg/m^3]
         Charge_c = w * self.V_c * rho_c
         
         
