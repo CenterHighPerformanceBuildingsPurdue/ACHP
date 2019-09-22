@@ -106,20 +106,17 @@ class PHEHXClass():
         # See if each phase could change phase if it were to reach the
         # inlet temperature of the opposite phase 
         
-        #AbstractState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
-        
-        #Inlet phases
+        # Inlet phases
         self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
         self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
+        assert(self.Tin_h > self.Tin_c)
         
         # Find the maximum possible rate of heat transfer as the minimum of 
         # taking each stream to the inlet temperature of the other stream
-        AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_c)
-        hout_h=AS_h.hmass() #[J/kg]
-        AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_h)
-        hout_c=AS_c.hmass() #[J/kg]
+        self.AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_c)
+        hout_h=self.AS_h.hmass() #[J/kg]
+        self.AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_h)
+        hout_c=self.AS_c.hmass() #[J/kg]
         Qmax=min([self.mdot_c*(hout_c-self.hin_c),self.mdot_h*(self.hin_h-hout_h)])
         if Qmax<0:
             raise ValueError('Qmax in PHE must be > 0')
@@ -148,16 +145,16 @@ class PHEHXClass():
 #            raise ValueError('Outlet or inlet of PHE is pinching.  Why?')
         
         #TODO: could do with more generality if both streams can change phase
-        #Check if any internal points are pinched
-        if np.sum(TList_c>TList_h)>0:
-            #Loop over the internal cell boundaries
-            for i in range(1,len(TList_c)-1):
-                #If cold stream is hotter than the hot stream
+        # Check if any internal points are pinched
+        if (TList_c[1:-1]>TList_h[1:-1]).any():
+            # Loop over the internal cell boundaries
+            for i in range(1, len(TList_c)-1):
+                # If cold stream is hotter than the hot stream
                 if TList_c[i]-1e-9>TList_h[i]:
-                    #Find new enthalpy of cold stream at the hot stream cell boundary
-                    AS_c.update(CP.PT_INPUTS, self.pin_c, TList_h[i])
-                    hpinch=AS_c.hmass() #[J/kg]
-                    #Find heat transfer of hot stream in right-most cell
+                    # Find new enthalpy of cold stream at the hot stream cell boundary
+                    self.AS_c.update(CP.PT_INPUTS, self.pin_c, TList_h[i])
+                    hpinch=self.AS_c.hmass() #[J/kg]
+                    # Find heat transfer of hot stream in right-most cell
                     Qextra=self.mdot_h*(EnthalpyList_h[i+1]-EnthalpyList_h[i])
                     Qmax=self.mdot_c*(hpinch-self.hin_c)+Qextra
         
@@ -222,14 +219,15 @@ class PHEHXClass():
         
         # Check whether the enthalpy boundaries are within the bounds set by 
         # the imposed amount of heat transfer
-        if hsatV_c<EnthalpyList_c[-1] and hsatV_c>EnthalpyList_c[0]:
+        eps = 1e-3
+        if hsatV_c<EnthalpyList_c[-1]-eps and hsatV_c>EnthalpyList_c[0]+eps:
             EnthalpyList_c.insert(len(EnthalpyList_c)-1,hsatV_c)
-        if hsatL_c<EnthalpyList_c[-1] and hsatL_c>EnthalpyList_c[0]:
+        if hsatL_c<EnthalpyList_c[-1]-eps and hsatL_c>EnthalpyList_c[0]+eps:
             EnthalpyList_c.insert(1,hsatL_c)
             
-        if hsatV_h<EnthalpyList_h[-1] and hsatV_h>EnthalpyList_h[0]:
+        if hsatV_h<EnthalpyList_h[-1]-eps and hsatV_h>EnthalpyList_h[0]+eps:
             EnthalpyList_h.insert(len(EnthalpyList_h)-1,hsatV_h)
-        if hsatL_h<EnthalpyList_h[-1] and hsatL_h>EnthalpyList_h[0]:
+        if hsatL_h<EnthalpyList_h[-1]-eps and hsatL_h>EnthalpyList_h[0]+eps:
             EnthalpyList_h.insert(1,hsatL_h)
             
         I_h=0
@@ -238,11 +236,11 @@ class PHEHXClass():
             #Try to figure out whether the next phase transition is on the hot or cold side     
             Qbound_h=self.mdot_h*(EnthalpyList_h[I_h+1]-EnthalpyList_h[I_h])
             Qbound_c=self.mdot_c*(EnthalpyList_c[I_c+1]-EnthalpyList_c[I_c])
-            if Qbound_h<Qbound_c-1e-9:
+            if Qbound_h<Qbound_c-1e-6:
                 # Minimum amount of heat transfer is on the hot side,
                 # add another entry to EnthalpyList_c 
                 EnthalpyList_c.insert(I_c+1, EnthalpyList_c[I_c]+Qbound_h/self.mdot_c)
-            elif Qbound_h>Qbound_c+1e-9:
+            elif Qbound_h>Qbound_c+1e-6:
                 # Minimum amount of heat transfer is on the cold side,
                 # add another entry to EnthalpyList_h at the interface
                 EnthalpyList_h.insert(I_h+1, EnthalpyList_h[I_h]+Qbound_c/self.mdot_h)
@@ -253,6 +251,8 @@ class PHEHXClass():
         self.hsatL_h=hsatL_h
         self.hsatV_c=hsatV_c
         self.hsatV_h=hsatV_h
+
+        assert(len(EnthalpyList_c) == len(EnthalpyList_h))
 
         return EnthalpyList_c,EnthalpyList_h
     
@@ -438,9 +438,6 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h 
         """
-        #AbstarctState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
         
         #Calculate the mean temperature
         Tmean_h=Inputs['Tmean_h']
@@ -465,7 +462,12 @@ class PHEHXClass():
         epsilon = Q/Qmax
         
         #Pure counterflow with Cr<1 (Incropera Table 11.4)
-        NTU=1/(Cr-1)*log((epsilon-1)/(epsilon*Cr-1))
+        if epsilon > 1.0:
+            # In practice this can never happen, but sometimes
+            # during bad iterations it is possible
+            NTU=10000
+        else:
+            NTU=1/(Cr-1)*log((epsilon-1)/(epsilon*Cr-1))
         
         #Required UA value
         UA_req=Cmin*NTU
@@ -474,11 +476,11 @@ class PHEHXClass():
         w=UA_req/UA_total
         
         #Determine both charge components
-        AS_h.update(CP.PT_INPUTS, self.pin_h,Tmean_h)
-        rho_h=AS_h.rhomass()#[kg/m^3]
+        self.AS_h.update(CP.PT_INPUTS, self.pin_h,Tmean_h)
+        rho_h=self.AS_h.rhomass()#[kg/m^3]
         Charge_h = w * self.V_h * rho_h
-        AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
-        rho_c=AS_c.rhomass()#[kg/m^3]
+        self.AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
+        rho_c=self.AS_c.rhomass()#[kg/m^3]
         Charge_c = w * self.V_c * rho_c
         
         
@@ -655,8 +657,9 @@ class PHEHXClass():
             'h_h':h_h_2phase,
             'h_c':h_c,
         }
-        
-        return dict(Inputs.items()+Outputs.items())
+        o = Inputs
+        o.update(**Outputs)
+        return o
         
     def Calculate(self):
         """
@@ -793,6 +796,11 @@ class PHEHXClass():
             outlet states for both fluids are known, and each element can be solved
             analytically in one shot without any iteration.
             """
+
+            if Q == 0.0:
+                return -1
+            if Q == self.Qmax:
+                return np.inf
             
             EnthalpyList_c,EnthalpyList_h=self.BuildEnthalpyLists(Q)
                 
@@ -842,6 +850,8 @@ class PHEHXClass():
                 hin_h=hout_h+Qbound/self.mdot_h
                 hin_c=EnthalpyList_c[I_c]
                 hout_c=hin_c+Qbound/self.mdot_c
+                assert(hin_h > hout_h) # Hot stream is cooling
+                assert(hin_c < hout_c) # Cold stream is heating
                 
                 # Figure out what combination of phases you have:
                 # -------------------------------------------------
@@ -905,8 +915,8 @@ class PHEHXClass():
                     # Cold stream is evaporating, and hot stream is single-phase (SH or SC)
                     
                     #Must be two-phase so quality is defined
-                    xin_c=(hin_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
-                    xout_c=(hout_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
+                    xin_c=max((hin_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c), 0)
+                    xout_c=min((hout_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c), 1)
                     
                     Inputs={
                         'Q':Qbound,
@@ -934,10 +944,12 @@ class PHEHXClass():
             if self.Verbosity>6:
                 print('wsum:', np.sum(wList))
             return np.sum(wList)-1.0
+
+        low, hi = 0, self.Qmax
         try:
-            brentq(GivenQ,0.0000001*self.Qmax,0.999999999*self.Qmax,xtol=0.000001*self.Qmax)#,xtol=0.000001*self.Qmax) is commented
+            brentq(GivenQ, low, hi, xtol=0.000001*self.Qmax)
         except ValueError:
-            print(GivenQ(0.0000001*self.Qmax),GivenQ(0.999999999*self.Qmax))
+            print(GivenQ(low), GivenQ(hi))
             raise
         # Collect parameters from all the pieces
         self.PostProcess(self.cellList)
