@@ -1,7 +1,8 @@
-from __future__ import division, print_function, absolute_import
+from __future__ import division, absolute_import, print_function
 from ACHP.Compressor import CompressorClass  #Compressor
 from ACHP.Condenser import CondenserClass    #Condenser
 from ACHP.MicroChannelCondenser import MicroCondenserClass
+from ACHP.MicroChannelEvaporator import MicroChannelEvaporatorClass
 from ACHP.Evaporator import EvaporatorClass  #Evaporator
 from ACHP.CoolingCoil import CoolingCoilClass #Cooling Coil
 from ACHP.CoaxialHX import CoaxialHXClass #Coaxial internal heat exchanger
@@ -12,6 +13,9 @@ from scipy.optimize import brent, fsolve
 #from CoolProp.CoolProp import PropsSI #,Tsat        #refrigerant properties
 from ACHP.FinCorrelations import WavyLouveredFins,FinInputs     #fin correlations
 from ACHP.MicroFinCorrelations import MicroFinInputs
+from DiscreteHEX.COND import DiscretizeCondenserClass
+from DiscreteHEX.EVAP import DiscretizeEvaporatorClass
+from DiscreteHEX.GASCOOL import DiscretizeGasCoolerClass
 import numpy as np                  #NumPy is fundamental scientific package                                   
 import CoolProp as CP
 
@@ -37,11 +41,12 @@ class SecondaryCycleClass():
                 self.Evaporator=EvaporatorClass()
                 self.Evaporator.Fins=FinInputs()
             elif self.EvapType == 'Micro-channel':
-                raise
+                self.Evaporator=MicroChannelEvaporatorClass()
+                self.Evaporator.Fins=MicroFinInputs()
             else:
                 raise
         elif self.EvapSolver == 'Finite-Element':
-            raise
+            self.Evaporator=DiscretizeEvaporatorClass()
         else:
             raise    
         
@@ -55,7 +60,7 @@ class SecondaryCycleClass():
             else:
                 raise
         elif self.CondSolver == 'Finite-Element':
-            raise
+            self.Condenser=DiscretizeCondenserClass()
         else:
             raise
         
@@ -252,9 +257,9 @@ if __name__=='__main__':
         Cycle.shell_pressure = 'low-pressure'
         Cycle.SecLoopFluid = 'Water'
         Cycle.Backend_SLF = 'INCOMP' #backend of SecLoopFluid
-        Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
-        Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
-        Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+        Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+        Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+        Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
         Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
         Cycle.Update()
         
@@ -361,6 +366,7 @@ if __name__=='__main__':
             'Verbosity':0,
             
             #Geometric parameters
+            'HXType':'Plate-HX',
             'Bp' : 0.117,
             'Lp' : 0.300, #Center-to-center distance between ports
             'Nplates' : 46,

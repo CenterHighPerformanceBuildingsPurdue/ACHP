@@ -1,4 +1,4 @@
-from __future__ import division, print_function, absolute_import
+from __future__ import division, absolute_import, print_function
 from ACHP.Cycle import DXCycleClass,SecondaryCycleClass
 from ACHP.convert_units import F2K
 from ACHP.ACHPTools import Write2CSV
@@ -24,16 +24,15 @@ def SampleSecondaryLoopSystem():
     Cycle.Charge_target = 2.4
     Cycle.DT_sh=5
     Cycle.Ref='R410A'
-    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.SecLoopFluid = 'MEG'
     Cycle.Backend_SLF = 'INCOMP'
     Cycle.IHXType = 'PHE'# or could be 'Coaxial'
     Cycle.Mode='AC'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -93,6 +92,7 @@ def SampleSecondaryLoopSystem():
     Cycle.Condenser.Fins.Air.FanPower=260
     
     params={
+        'Ref':     Cycle.Ref,
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -160,6 +160,7 @@ def SampleSecondaryLoopSystem():
         'Ref_c':Cycle.Ref,
         
         #Geometric parameters
+        'HXType':'Plate-HX',
         'Bp' : 0.117,
         'Lp' : 0.300, #Center-to-center distance between ports
         'Nplates' : 46,
@@ -229,16 +230,15 @@ def SampleSecondaryLoopHPSystem():
     Cycle.Charge_target = 3.3
     Cycle.DT_sh=5
     Cycle.Ref='R410A'
-    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.SecLoopFluid = 'Water'
     Cycle.Backend_SLF = 'INCOMP'
     Cycle.IHXType = 'PHE'
     Cycle.Mode = 'HP'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -300,6 +300,7 @@ def SampleSecondaryLoopHPSystem():
     
     Cycle.Evaporator.DT_sh= 5. #Superheat at inlet to compressor [K]
     params={
+        'Ref':     Cycle.Ref,
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -352,6 +353,7 @@ def SampleSecondaryLoopHPSystem():
         'Ref_h':Cycle.Ref,
         
         #Geometric parameters
+        'HXType':'Plate-HX',
         'Bp' : 0.117,
         'Lp' : 0.300, #Center-to-center distance between ports
         'Nplates' : 46,
@@ -425,15 +427,14 @@ def SampleDXACSystem(Calculate=True):
     Cycle.Charge_target = 2.8
     Cycle.Mode='AC' 
     Cycle.Ref='R410A'
-    Cycle.Backend='HEOS' #Backend for refrigerant properties calculation: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     Cycle.Oil = 'POE32'
     Cycle.shell_pressure = 'low-pressure'
     Cycle.TestName='DXAC-0014'  #this and the two next lines can be used to specify exact test conditions
     Cycle.TestDescription='shows application of DXAC system'
     Cycle.TestDetails='This is the sample cycle for the DXAC system which can be modified for other systems'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary'')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -492,6 +493,7 @@ def SampleDXACSystem(Calculate=True):
     Cycle.Condenser.Fins.Air.FanPower=260
     
     params={
+        'Ref': Cycle.Ref,   
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
 
@@ -616,9 +618,9 @@ def SampleDXHPSystem():
     Cycle.Charge_target = 3.3
     Cycle.Mode='HP' 
     Cycle.Ref='R410A'
-    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme (for now only 'Moving-Boundary')
-    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator (for now only 'Fin-tube')
-    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme (for now only 'Moving-Boundary')
+    Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
+    Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
+    Cycle.CondSolver = 'Moving-Boundary' #choose the type of Condenser solver scheme ('Moving-Boundary' or 'Finite-Element')
     Cycle.CondType = 'Fin-tube' #if CondSolver = 'Moving-Boundary', choose the type of condenser ('Fin-tube' or 'Micro-channel')
     Cycle.Update()
     
@@ -676,6 +678,7 @@ def SampleDXHPSystem():
     Cycle.Condenser.Fins.Air.FanPower=438
     
     params={
+        'Ref':     Cycle.Ref,   
         'Verbosity':0,
         'FinsType':'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
     }
@@ -764,6 +767,6 @@ if __name__=='__main__':
     print ('Running SampleSecondaryLoopSystem')
     SampleSecondaryLoopSystem()
     print ()
-    #print ('Running SampleSecondaryHPLoopSystem')
+    print ('Running SampleSecondaryHPLoopSystem')
     #SampleSecondaryLoopHPSystem()
     

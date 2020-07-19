@@ -1,6 +1,7 @@
-'''This code is for secondary loop cycle in AC Mode'''
+'''This code is for secondary loop cycle in HP Mode'''
 from __future__ import division, absolute_import, print_function
 from ACHP.Cycle import SecondaryCycleClass 
+from ACHP.convert_units import F2K 
 
 #Instantiate the class
 Cycle=SecondaryCycleClass()
@@ -21,7 +22,7 @@ Cycle.MassFrac_SLF = 0.21 #Mass fraction of incompressible SecLoopFluid [i.e MEG
 Cycle.Backend_SLF = 'INCOMP' #backend of SecLoopFluid
 Cycle.IHXType = 'PHE'# or could be 'Coaxial'
 Cycle.shell_pressure='low-pressure'
-Cycle.Mode='AC'
+Cycle.Mode='HP'
 Cycle.DT_sh = 5 #superheat
 Cycle.EvapSolver = 'Moving-Boundary' #choose the type of Evaporator solver scheme ('Moving-Boundary' or 'Finite-Element')
 Cycle.EvapType = 'Fin-tube' #if EvapSolver = 'Moving-Boundary', choose the type of evaporator ('Fin-tube' or 'Micro-channel')
@@ -43,7 +44,7 @@ Cycle.w_ref = 0 #[-]
 #--------------------------------------
 
 #A 3 ton cooling capacity compressor map
-if Cycle.Ref=='R410A':
+if Cycle.Ref=='R410A' or Cycle.Ref == 'R410A.mix':
     M=[217.3163128,5.094492028,-0.593170311,4.38E-02,-2.14E-02,1.04E-02, 7.90E-05,-5.73E-05,1.79E-04,-8.08E-05]
     P=[-561.3615705,-15.62601841,46.92506685,-0.217949552,0.435062616, -0.442400826,2.25E-04,2.37E-03,-3.32E-03,2.50E-03]
 
@@ -62,33 +63,35 @@ params={
 Cycle.Compressor.Update(**params)
 
 #--------------------------------------
-# Condenser parameters
+# Evaportor parameters
 #--------------------------------------
-Cycle.Condenser.Fins.Tubes.NTubes_per_bank=24   #number of tubes per bank=row
-Cycle.Condenser.Fins.Tubes.Nbank=1              #number of banks/rows
-Cycle.Condenser.Fins.Tubes.Ncircuits=3
-Cycle.Condenser.Fins.Tubes.Ltube=2.252
-Cycle.Condenser.Fins.Tubes.OD=0.00913
-Cycle.Condenser.Fins.Tubes.ID=0.00849
-Cycle.Condenser.Fins.Tubes.Pl=0.0191            #distance between center of tubes in flow direction
-Cycle.Condenser.Fins.Tubes.Pt=0.0254            #distance between center of tubes orthogonal to flow direction
-Cycle.Condenser.Fins.Tubes.kw=237               #wall thermal conductivity (i.e pipe material)
+Cycle.Evaporator.Fins.Tubes.NTubes_per_bank=24   #number of tubes per bank=row
+Cycle.Evaporator.Fins.Tubes.Nbank=1              #number of banks/rows
+Cycle.Evaporator.Fins.Tubes.Ncircuits=3
+Cycle.Evaporator.Fins.Tubes.Ltube=2.252
+Cycle.Evaporator.Fins.Tubes.OD=0.00913
+Cycle.Evaporator.Fins.Tubes.ID=0.00849
+Cycle.Evaporator.Fins.Tubes.Pl=0.0191            #distance between center of tubes in flow direction
+Cycle.Evaporator.Fins.Tubes.Pt=0.0254            #distance between center of tubes orthogonal to flow direction
+Cycle.Evaporator.Fins.Tubes.kw=237               #wall thermal conductivity (i.e pipe material)
 
-Cycle.Condenser.Fins.Fins.FPI=25                #Number of fins per inch
-Cycle.Condenser.Fins.Fins.Pd=0.001              #2* amplitude of wavy fin
-Cycle.Condenser.Fins.Fins.xf=0.001              #1/2 period of fin
-Cycle.Condenser.Fins.Fins.t=0.00011             #Thickness of fin material
-Cycle.Condenser.Fins.Fins.k_fin=237             #Thermal conductivity of fin material
+Cycle.Evaporator.Fins.Fins.FPI=25                #Number of fins per inch
+Cycle.Evaporator.Fins.Fins.Pd=0.001              #2* amplitude of wavy fin
+Cycle.Evaporator.Fins.Fins.xf=0.001              #1/2 period of fin
+Cycle.Evaporator.Fins.Fins.t=0.00011             #Thickness of fin material
+Cycle.Evaporator.Fins.Fins.k_fin=237             #Thermal conductivity of fin material
 
-Cycle.Condenser.Fins.Air.Vdot_ha=1.7934         #rated volumetric flowrate Cycle.Condenser.Fins.Air.Tmean=308.15
-Cycle.Condenser.Fins.Air.Tdb=308.15             #Dry Bulb Temperature
-Cycle.Condenser.Fins.Air.p=101325               #Condenser Air pressure in Pa
-Cycle.Condenser.Fins.Air.RH=0.51                #Relative Humidity
-Cycle.Condenser.Fins.Air.RHmean=0.51
-Cycle.Condenser.Fins.Air.FanPower=260
+Cycle.Evaporator.Fins.Air.Vdot_ha=0.5663
+Cycle.Evaporator.Fins.Air.Tmean=F2K(40)
+Cycle.Evaporator.Fins.Air.Tdb=F2K(40)
+Cycle.Evaporator.Fins.Air.p=101325               #Evaporator Air Pressure in Pa
+Cycle.Evaporator.Fins.Air.RH=0.51
+Cycle.Evaporator.Fins.Air.RHmean=0.51
+Cycle.Evaporator.Fins.Air.FanPower=438
 
-Cycle.Condenser.FinsType= 'WavyLouveredFins'                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
-Cycle.Condenser.Verbosity=0
+Cycle.Evaporator.FinsType = 'WavyLouveredFins'        #WavyLouveredFins, HerringboneFins, PlainFins
+Cycle.Evaporator.Verbosity=0
+Cycle.Evaporator.DT_sh=5            #target superheat
 
 #--------------------------------------
 # Cooling Coil parameters
@@ -110,8 +113,8 @@ Cycle.CoolingCoil.Fins.Fins.t=0.00011
 Cycle.CoolingCoil.Fins.Fins.k_fin=237
 
 Cycle.CoolingCoil.Fins.Air.Vdot_ha=0.56319
-Cycle.CoolingCoil.Fins.Air.Tmean=297.039
-Cycle.CoolingCoil.Fins.Air.Tdb=297.039
+Cycle.CoolingCoil.Fins.Air.Tmean=F2K(70)
+Cycle.CoolingCoil.Fins.Air.Tdb=F2K(70)
 Cycle.CoolingCoil.Fins.Air.p=101325
 Cycle.CoolingCoil.Fins.Air.RH=0.5
 Cycle.CoolingCoil.Fins.Air.RHmean=0.5
@@ -119,7 +122,7 @@ Cycle.CoolingCoil.Fins.Air.RHmean=0.5
 Cycle.CoolingCoil.Fins.Air.FanPower=438
 
 params={
-        'pin_g': 200000,
+        'pin_g': 300000,
         'Verbosity':0,
         'mdot_g':0.38,
         'FinsType': 'WavyLouveredFins',                   #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
@@ -127,24 +130,10 @@ params={
 Cycle.CoolingCoil.Update(**params)
 
 # ----------------------------------
-#       IHX Coaxial Exchanger
-# ----------------------------------
-params={
-        'ID_i':0.0278,
-        'OD_i':0.03415,
-        'ID_o':0.045,
-        'L':50,
-        'pin_g':300000,
-        'Verbosity':0
-        }
-Cycle.CoaxialIHX.Update(**params)
-
-
-# ----------------------------------
 #       IHX Plate Heat Exchanger
 # ----------------------------------
 params={
-        'pin_h':300000,
+        'pin_c':300000,
     
         #Geometric parameters
         'HXType':'Plate-HX',
@@ -184,9 +173,9 @@ params={
         't_insul':0.02,
         'k_insul':0.036,
         'T_air':297,
-        #'pin': 300000,
+        'pin': 300000,
         'h_air':0.0000000001,
-        'LineSetOption': 'On'
+        'LineSetOption': 'Off'
         }
 Cycle.LineSetSupply.Update(**params)
 Cycle.LineSetReturn.Update(**params)
