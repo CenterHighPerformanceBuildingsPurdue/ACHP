@@ -10,9 +10,9 @@ if len(sys.argv)==1:
     sys.argv.append('develop')
 
 setup (name = 'ACHP',
-       version = '1.5',
-       author      = "Ian Bell",
-       author_email='ian.h.bell@gmail.com',
+       version = '1.6',
+       author      = "Ian Bell,Ammar Bahman,Davide Ziviani",
+       author_email='ian.h.bell@gmail.com;bahman.ammar@gmail.com;dziviani@purdue.edu',
        url='http://achp.sourceforge.net',
        description = """ACHP - Air Conditioning Heat Pump Model""",
        packages=['ACHP'],
