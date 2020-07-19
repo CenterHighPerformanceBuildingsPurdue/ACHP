@@ -6,11 +6,11 @@ import CoolProp as CP
 
 class LineSetClass():
     def __init__(self,**kwargs):
-        #Load the parameters passed in
+        # Load the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
     def Update(self,**kwargs):
-        #Load the parameters passed in
+        # Load the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
     def OutputList(self):
@@ -41,7 +41,7 @@ class LineSetClass():
          ]
     
     def Calculate(self):
-        #AbstractState
+        # AbstractState
         if hasattr(self,'Backend'): #check if backend is given
             AS = CP.AbstractState(self.Backend, self.Ref)
             if hasattr(self,'MassFrac'):
@@ -51,13 +51,13 @@ class LineSetClass():
         self.AS = AS
         
         if not 'IncompressibleBackend' in AS.backend_name():
-            #Figure out the inlet state
+            # Figure out the inlet state
             AS.update(CP.PQ_INPUTS, self.pin, 0.0)
             self.Tbubble=AS.T() #[K]
             AS.update(CP.PQ_INPUTS, self.pin, 1.0)
             self.Tdew=AS.T() #[K]
         else:
-            #It is a brine
+            # It is a brine
             self.Tbubble = None
             self.Tdew = None
         
@@ -78,46 +78,46 @@ class LineSetClass():
             # Density [kg/m^3]
             rho=AS.rhomass()
 
-        #Thermal resistance of tube
+        # Thermal resistance of tube
         R_tube=log(self.OD/self.ID)/(2*pi*self.L*self.k_tube)
-        #Thermal resistance of insulation
+        # Thermal resistance of insulation
         R_insul=log((self.OD+2.0*self.t_insul)/self.OD)/(2*pi*self.L*self.k_insul);
-        #Convective UA for inside the tube 
+        # Convective UA for inside the tube 
         UA_i=pi*self.ID*self.L*self.h_fluid;
-        #Convective UA for the air-side
+        # Convective UA for the air-side
         UA_o=pi*(self.OD+2*self.t_insul)*self.L*self.h_air;
         
-        #Avoid the possibility of division by zero if h_air is zero
+        # Avoid the possibility of division by zero if h_air is zero
         if UA_o<1e-12:
             UA_o=1e-12
     
-        #Overall UA value
+        # Overall UA value
         UA=1/(1/UA_i+R_tube+R_insul+1/UA_o)
         
-        #Outlet fluid temperature [K]
+        # Outlet fluid temperature [K]
         self.Tout=self.T_air-exp(-UA/(self.mdot*cp))*(self.T_air-self.Tin)
-        #Overall heat transfer rate [W] 
+        # Overall heat transfer rate [W] 
         self.Q=self.mdot*cp*(self.Tout-self.Tin)
         self.hout=self.hin+self.Q/self.mdot
         
-        #Pressure drop calculations for single phase refrigerant
+        # Pressure drop calculations for single phase refrigerant
         v=1./rho
         G=self.mdot/(pi*self.ID**2/4.0)
-        #Pressure gradient using Darcy friction factor
+        # Pressure gradient using Darcy friction factor
         dpdz=-self.f_fluid*v*G**2/(2.*self.ID) #Pressure gradient
         self.DP=dpdz*self.L
         
-        #Charge in Line set [kg]
+        # Charge in Line set [kg]
         self.Charge=pi*self.ID**2/4.0*self.L*rho
 
 
 class LineSetOptionClass():
     def __init__(self,**kwargs):
-        #Load the parameters passed in
+        # Load the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
     def Update(self,**kwargs):
-        #Load the parameters passed in
+        # Load the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
     def OutputList(self):
@@ -149,25 +149,29 @@ class LineSetOptionClass():
     
     def Calculate(self):
                 
-        #AbstractState
+        # AbstractState
         AS = self.AS
         if hasattr(self,'MassFrac'):
             AS.set_mass_fractions([self.MassFrac])
         elif hasattr(self, 'VoluFrac'):
             AS.set_volu_fractions([self.VoluFrac])
         
-        if AS.name() in 'CarbonDioxide':
-            #Supercritical
-            self.Tbubble=None
-            self.Tdew=None
-        elif not 'IncompressibleBackend' in AS.backend_name():
-            #Figure out the inlet state
+
+        if not 'IncompressibleBackend' in AS.backend_name():
+            # Figure out the inlet state
             AS.update(CP.PQ_INPUTS, self.pin, 0.0)
             self.Tbubble=AS.T() #[K]
             AS.update(CP.PQ_INPUTS, self.pin, 1.0)
             self.Tdew=AS.T() #[K]
+            
+            # Check for supercritical state
+            if self.pin > AS.p_critical():
+                # Supercritical
+                self.Tbubble= None
+                self.Tdew= None
+            
         else:
-            #It is a brine
+            # It is a brine or incompressible
             self.Tbubble = None
             self.Tdew = None
         
@@ -176,7 +180,7 @@ class LineSetOptionClass():
             if self.LineSetOption == 'On':
                 
                 self.Tin,self.rhoin,self.Phasein=TrhoPhase_ph(self.AS,self.pin,self.hin,self.Tbubble,self.Tdew)
-                ###Solver shows TwoPhase in the first iteration, the following if statement just to avoid ValueError with CoolProp for pseudo-pure refrigerants
+                ### Solver shows TwoPhase in the first iteration, the following if statement just to avoid ValueError with CoolProp for pseudo-pure refrigerants
                 if self.Phasein =='Supercritical': #TO DO: Need to be UPDATED with Petterson et al. (2000) correlation for transcritical CO2
                     self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin, self.pin, self.AS)
                     AS.update(CP.PT_INPUTS, self.pin, self.Tin)
@@ -184,6 +188,8 @@ class LineSetOptionClass():
                     cp=AS.cpmass()
                     # Density [kg/m^3]
                     rho=AS.rhomass()
+                    # Specific entropy [J/kg-K]
+                    sin=AS.smass()
                 elif self.Phasein =='TwoPhase':
                     self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin-1, self.pin, self.AS)
                     AS.update(CP.PT_INPUTS, self.pin, self.Tin-1)
@@ -191,6 +197,8 @@ class LineSetOptionClass():
                     cp=AS.cpmass()
                     # Density [kg/m^3]
                     rho=AS.rhomass()
+                    # Specific entropy [J/kg-K]
+                    sin=AS.smass()
                 else: #Single phase
                     self.f_fluid, self.h_fluid, self.Re_fluid=f_h_1phase_Tube(self.mdot, self.ID, self.Tin, self.pin, self.AS)
                     AS.update(CP.PT_INPUTS, self.pin, self.Tin)
@@ -198,71 +206,95 @@ class LineSetOptionClass():
                     cp=AS.cpmass()
                     # Density [kg/m^3]
                     rho=AS.rhomass()
+                    # Specific entropy [J/kg-K]
+                    sin=AS.smass()
         
-                #Thermal resistance of tube
+                # Inlet specific entropy
+                self.sin=sin
+                # Thermal resistance of tube
                 R_tube=log(self.OD/self.ID)/(2*pi*self.L*self.k_tube)
-                #Thermal resistance of insulation
+                # Thermal resistance of insulation
                 R_insul=log((self.OD+2.0*self.t_insul)/self.OD)/(2*pi*self.L*self.k_insul);
-                #Convective UA for inside the tube 
+                # Convective UA for inside the tube 
                 UA_i=pi*self.ID*self.L*self.h_fluid;
-                #Convective UA for the air-side
+                # Convective UA for the air-side
                 UA_o=pi*(self.OD+2*self.t_insul)*self.L*self.h_air;
                 
-                #Avoid the possibility of division by zero if h_air is zero
+                # Avoid the possibility of division by zero if h_air is zero
                 if UA_o<1e-12:
                     UA_o=1e-12
             
-                #Overall UA value
+                # Overall UA value
                 UA=1/(1/UA_i+R_tube+R_insul+1/UA_o)
 
-                #Outlet fluid temperature [K]
+                # Outlet fluid temperature [K]
                 self.Tout=self.T_air-exp(-UA/(self.mdot*cp))*(self.T_air-self.Tin)
-                #Overall heat transfer rate [W] 
+                # Overall heat transfer rate [W] 
                 self.Q=self.mdot*cp*(self.Tout-self.Tin)
                 self.hout=self.hin+self.Q/self.mdot
                 
-                #Pressure drop calculations for single phase refrigerant
+                # Pressure drop calculations for single phase refrigerant
                 v=1./rho
                 G=self.mdot/(pi*self.ID**2/4.0)
-                #Pressure gradient using Darcy friction factor
+                # Pressure gradient using Darcy friction factor
                 dpdz=-self.f_fluid*v*G**2/(2.*self.ID) #Pressure gradient
                 self.DP=dpdz*self.L
+
+                # Outlet specific entropy
+                AS.update(CP.HmassP_INPUTS , self.hout, self.pin+self.DP)
+                self.sout=AS.smass()
                 
-                #Charge in Line set [kg]
+                # Charge in Line set [kg]
                 self.Charge=pi*self.ID**2/4.0*self.L*rho
 
-            else: #LineSetOption == 'Off'
+            else: # LineSetOption == 'Off'
                 print('lineSetOption is off for '+str(self.Name))
                 self.Tout=self.Tin
                 
-                #Overall heat transfer rate [W] 
+                # Inlet specific entropy
+                AS.update(CP.HmassP_INPUTS , self.hin, self.pin)
+                self.sin=AS.smass()
+                
+                # Overall heat transfer rate [W] 
                 self.Q= 0.0 
                 self.hout=self.hin
 
                 self.Re_fluid = 0.0
                 self.h_fluid = 0.0
                 
-                #Pressure gradient using Darcy friction factor
+                # Pressure gradient using Darcy friction factor
                 self.DP= 0.0
+
+                # Outlet specific entropy
+                AS.update(CP.HmassP_INPUTS , self.hout, self.pin+self.DP)
+                self.sout=AS.smass()
                 
-                #Charge in Line set [kg]
+                # Charge in Line set [kg]
                 self.Charge= 0.0       
 
         else:
             print(str(self.Name)+ ' is neglected')
             self.Tout=self.Tin
+            
+            # Inlet specific entropy
+            AS.update(CP.HmassP_INPUTS , self.hin, self.pin)
+            self.sin=AS.smass()
                 
-            #Overall heat transfer rate [W] 
+            # Overall heat transfer rate [W] 
             self.Q= 0.0 
             self.hout=self.hin
-            
+
             self.Re_fluid = 0.0
             self.h_fluid = 0.0
                 
-            #Pressure gradient using Darcy friction factor
+            # Pressure gradient using Darcy friction factor
             self.DP= 0.0
+ 
+            # Outlet specific entropy
+            AS.update(CP.HmassP_INPUTS , self.hout, self.pin+self.DP)
+            self.sout=AS.smass()
             
-            #Charge in Line set [kg]
+            # Charge in Line set [kg]
             self.Charge= 0.0
         
 if __name__=='__main__':

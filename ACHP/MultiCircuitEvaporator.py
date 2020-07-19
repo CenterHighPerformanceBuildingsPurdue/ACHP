@@ -260,7 +260,7 @@ class MultiCircuitEvaporatorClass(EvaporatorClass):
         #Convert back to a single value for the overall evaporator
         self.Fins.Air.Vdot_ha=float(self.Fins.Air.Vdot_ha[-1])
         if self.Verbosity>0:
-            print (chr(127),end='') #progress bar
+            print (chr(127)) #progress bar
 
 
 if __name__=='__main__':
@@ -348,7 +348,7 @@ if __name__=='__main__':
     print ("\n demonstrating write to csv",csv_file,'\n')
     #Write2CSV(MCE,open(csv_file,'w'),append=False)
       
-    print ("check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1],end='')
+    print ("check MCE capacity summation", MCE.hin_r*MCE.mdot_r[-1])
     print (np.sum([MCE.Evaps[i].hin_r*MCE.Evaps[i].mdot_r for i in range(MCE.Fins.Tubes.Ncircuits)]))
 
     # plot maldistribution

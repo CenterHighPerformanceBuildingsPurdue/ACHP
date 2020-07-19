@@ -2,6 +2,7 @@ from __future__ import division, print_function, absolute_import
 from CoolProp.CoolProp import PropsSI
 import CoolProp as CP
 from ACHP.convert_units import *
+from ACHP.OilPropLib import *
 
 class VICompressorTelloClass():
     """
@@ -29,11 +30,11 @@ class VICompressorTelloClass():
         
     """
     def __init__(self,**kwargs):
-        #Load up the parameters passed in
+        # Load up the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
     def Update(self,**kwargs):
-        #Update the parameters passed in
+        # Update the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
         
@@ -97,15 +98,15 @@ class VICompressorTelloClass():
          ]
         
     def Calculate(self):
-        #AbstractState
+        # AbstractState
         AS = self.AS
         
-        #Local copies of coefficients
+        # Local copies of coefficients
         P=self.P
         M=self.M
         K=self.K
         
-        #Calculate suction superheat and dew temperatures
+        # Calculate suction superheat and dew temperatures
         AS.update(CP.PQ_INPUTS, self.pin_r, 1.0)
         self.Tsat_s_K=AS.T() #[K]
         
@@ -126,12 +127,12 @@ class VICompressorTelloClass():
         self.sin_r=AS.smass() #[J/kg-K]
         self.vin_r = 1 / AS.rhomass() #[m**3/kg]
         
-        #Convert saturation temperatures in K to F
+        # Convert saturation temperatures in K to F
         Tsat_s = self.Tsat_s_K * 9/5 - 459.67
         Tsat_d = self.Tsat_d_K * 9/5 - 459.67
         Tsat_inj = self.Tsat_inj_K * 9/5 - 459.67
     
-        #Apply the modified 11 coefficient AHRI map to saturation temps in F
+        # Apply the modified 11 coefficient AHRI map to saturation temps in F
         power_map = P[0] + P[1] * Tsat_s + P[2] * Tsat_d + P[3] * Tsat_s**2 + P[4] * Tsat_s * Tsat_d + P[5] * Tsat_d**2 + P[6] * Tsat_s**3 + P[7] * Tsat_d * Tsat_s**2 + P[8] * Tsat_d**2*Tsat_s + P[9] * Tsat_d**3 + P[10] * Tsat_inj
         #power in Watts
         
@@ -139,12 +140,13 @@ class VICompressorTelloClass():
         #mass in g/s convert go kg/s
         mdot_map /= 1000.0 
         
+        # Injection mass flow rate
+        mdot_inj = K[0] * mdot_map + K[1] * mdot_map * (self.pinj_r/self.pin_r)
+        
         # Add more mass flow rate to scale
         mdot_map*=self.Vdot_ratio
+        mdot_inj*=self.Vdot_ratio
         power_map*=self.Vdot_ratio
-         
-        #injection mass flow rate
-        mdot_inj = K[0] * mdot_map + K[1] * mdot_map * (self.pinj_r/self.pin_r)
         
         #P1 = self.pin_r
         #P2 = self.pout_r
@@ -165,35 +167,45 @@ class VICompressorTelloClass():
         mdot = mdot_map # for now use the mass directly from the map ###(1 + F * (v_map / v_actual - 1)) * mdot_map
         power = power_map #for now use the power directly from  the map without any corrections
         
-        #The following enthalpies rae defined based on ASHRAE 23.1 (2015) --NOT yet published  
-        #h_31s = specific enthalpy of refrigerant at injection pressure following an isentropic compression of the refrigerant from inlet of the compressor
+        # The following enthalpies rae defined based on ASHRAE 23.1 (2015) --NOT yet published  
+        # h_31s = specific enthalpy of refrigerant at injection pressure following an isentropic compression of the refrigerant from inlet of the compressor
         AS.update(CP.PSmass_INPUTS, self.pinj_r, self.sin_r)
         h_31s = AS.hmass() #[J/kg]
+        s_31s = AS.smass() #[J/kg-K]
         
-        #h_22s = specific enthalpy of refrigerant vapor after mixing of the intermediate pressure flow at injection state (i.e., state number 5 in ASHRAE 23.1) with partially compressed flow at 31s
+        # h_22s = specific enthalpy of refrigerant vapor after mixing of the intermediate pressure flow at injection state (i.e., state number 5 in ASHRAE 23.1) with partially compressed flow at 31s
         h_22s = (mdot*h_31s+ mdot_inj*self.hinj_r)/(mdot+mdot_inj)
         
         AS.update(CP.HmassP_INPUTS, h_22s, self.pinj_r)
         s_22s = AS.smass() #[J/kg-k]
         
-        #h_32s = specific enthalpy of refrigerant vapor at compressor discharge pressure following an isentropic compression of the refrigerant vapor from state point h_22s
+        # h_32s = specific enthalpy of refrigerant vapor at compressor discharge pressure following an isentropic compression of the refrigerant vapor from state point h_22s
         AS.update(CP.PSmass_INPUTS, self.pout_r, s_22s)
         h_32s = AS.hmass() #[J/kg]
+        s_32s = AS.smass() #[J/kg-K]
 
-        #isentropic discharge enthalpy
+        # Isentropic discharge enthalpy
         AS.update(CP.PSmass_INPUTS, self.pout_r, self.sin_r)
-        h_41s = AS.hmass() #[J/kg] 
+        h_41s = AS.hmass() #[J/kg]
+        s_41s = AS.smass() #[J/kg-K] 
         
-        #isentropic efficiency (assume same heat loss fraction for each stage, assume adiabatic mixing at state 22)
+        # Isentropic efficiency (assume same heat loss fraction for each stage, assume adiabatic mixing at state 22)
         self.eta_oi = (mdot*(h_31s-self.hin_r)+ (mdot+mdot_inj)*(h_32s-h_22s))/power
         
-        #enthalpy after first stage compression
+        # Enthalpy after first stage compression
         h_31 = self.hin_r + (h_31s-self.hin_r)/(self.eta_oi*(1+self.fp)) #including the heat loss
         
-        #enthalpy after mixing h_31 and h_inj
-        h_22 = (mdot*h_31 + mdot_inj*self.hinj_r)/(mdot+mdot_inj)
+        AS.update(CP.HmassP_INPUTS, h_31, self.pinj_r)
+        s_31 = AS.smass() #[J/kg-k]   
+        T_31 = AS.T() #[K]     
         
-        #discharge enthalpy (i.e., h_32 in ASHRAE 23.1)
+        # Enthalpy after mixing h_31 and h_inj
+        h_22 = (mdot*h_31 + mdot_inj*self.hinj_r)/(mdot+mdot_inj)
+
+        AS.update(CP.HmassP_INPUTS, h_22, self.pinj_r)
+        s_22 = AS.smass() #[J/kg-k] 
+        
+        # Discharge enthalpy (i.e., h_32 in ASHRAE 23.1)
         self.hout_r = h_22 + (h_32s-h_22s)/(self.eta_oi*(1+self.fp)) #including the heat loss
         
         
@@ -221,8 +233,26 @@ class VICompressorTelloClass():
         self.CycleEnergyIn=power*(1-self.fp)
         self.Vdot_pumped= mdot*self.vin_r
         self.Q_amb=-self.fp*power
+        
+        # Estimate refrigerant dissolved in the oil sump
+        T_ave = (self.Tin_r + self.Tout_r)/2
+        if self.shell_pressure == 'high-pressure':
+            p_shell = self.pout_r
+        elif self.shell_pressure == 'low-pressure':
+            p_shell = self.pin_r
 
-        #For Plotting:
+        self.x_Ref,error = Solubility_Ref_in_Liq(self.Ref,self.Oil,T_ave,p_shell/1000)
+        
+        AS.update(CP.PT_INPUTS, p_shell, T_ave)
+        rho_shell = AS.rhomass() #[kg/m^3]
+
+        rhomass_oil = rho_oil(self.Oil,T_ave-273.15)
+        self.m_oil = self.V_oil_sump*rhomass_oil
+        
+        # Amount of refrigerant dissolved in the oil sump
+        self.Charge = self.m_oil*self.x_Ref/(1-self.x_Ref)
+        
+        # For Plotting:
         self.h_21 = self.hin_r
         self.h_22 = h_22
         self.h_31 = h_31
@@ -233,6 +263,17 @@ class VICompressorTelloClass():
         self.h_32s = h_32s     
         self.h_41s = h_41s #this should not be used for plotting VI Tello compressor  
 
+        self.s_21 = self.sin_r
+        self.s_22 = s_22
+        self.s_31 = s_31
+        self.s_32 = self.sout_r
+        self.s_5 = self.sinj_r
+        self.s_22s = s_22s
+        self.s_31s = s_31s
+        self.s_32s = s_32s     
+        self.s_41s = s_41s #this should not be used for plotting VI Tello compressor 
+        
+        self.T_31 = T_31 #[K]
         
 if __name__=='__main__':        
     import numpy as np
@@ -249,6 +290,7 @@ if __name__=='__main__':
     Tinj_dew = PropsSI('T','P',pinj_r,'Q',1,Ref)
 
     kwds={
+        'Ref':Ref,
         'K':[-0.3845,0.3296],
         'M':[133.3171898,0.508718380832,-2.15889885692,0.00847246179835,0.009495493298,0.0170835511659,3.65431994895E-05,6.660136064E-06,-4.719716435E-05,-4.61719969253E-05],
         'P':[1.003,0.9998 ,1.134 ,0.9032 ,-0.5003 ,0.5136 ,-0.001366 ,-0.009186 ,0.005756 ,-0.00156 ,1.053],
@@ -260,6 +302,9 @@ if __name__=='__main__':
         'Tinj_r':Tinj_dew+5,
         'fp':0.12, #Fraction of electrical power lost as heat to ambient
         'Vdot_ratio': 1.0, #Displacement Scale factor
+        'shell_pressure': 'low-pressure',
+        'Oil': 'POE32',
+        'V_oil_sump': 0.00189271, #[m^3]
     }
     Comp=VICompressorTelloClass(**kwds)
     Comp.Calculate()
@@ -269,3 +314,4 @@ if __name__=='__main__':
     print (Comp.mdot_inj,'kg/s')
     print (Comp.Q_amb, 'W')
     print (Comp.eta_oi*100, '%')
+    print (Comp.Charge, 'kg')

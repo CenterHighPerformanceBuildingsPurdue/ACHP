@@ -226,7 +226,9 @@ class MicroCondenserClass():
         def OBJECTIVE(x):
             Pair_o = x[0]
             W = x[1]
-            
+            if W < 0: #to ensure that the humidty ratio is 
+                print ('Microchannel Condensder -- Humidity ratio for air pressure drop is less than zero. Humidity ratio is set to 0.0')
+                W = 0.0
             v_da=HAPropsSI('V','T',self.Tout_a,'P',Pair_o,'W',W)
             W_new = HAPropsSI('W','T',self.Tout_a,'P',Pair_o,'V',v_da)
             

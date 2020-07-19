@@ -7,7 +7,7 @@ from scipy.optimize import brentq
 import numpy as np
 import pylab
 
-from ACHP.Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation
+from ACHP.Correlations import ShahEvaporation_Average,PHE_1phase_hdP,Cooper_PoolBoiling,TwoPhaseDensity,TrhoPhase_ph,Phase_ph,LMPressureGradientAvg,KandlikarPHE,Bertsch_MC,AccelPressureDrop,ShahCondensation_Average,LongoCondensation,Petterson_supercritical,Petterson_supercritical_average,f_h_1phase_Tube,f_h_1phase_Annulus,KandlikarEvaporation_average
 
 class PHEHXClass():
     """
@@ -21,14 +21,14 @@ class PHEHXClass():
         Possibility matrix
         
                                       Hot stream
-         Cold Stream  || Subcooled ||  Two-Phase || Superheated ||
-                      --------------------------------------------
-         Subcooled    ||           ||            ||             ||
-                      --------------------------------------------
-         Two-Phase    ||           ||            ||             ||
-                      --------------------------------------------
-         Superheated  ||           ||            ||             ||
-                      --------------------------------------------
+         Cold Stream  || Subcooled ||  Two-Phase || Superheated || Supercritical || Supercrit_liq ||
+                      ------------------------------------------------------------------------------
+         Subcooled    ||           ||            ||             ||               ||               ||
+                      ------------------------------------------------------------------------------
+         Two-Phase    ||           ||            ||             ||               ||               ||
+                      ------------------------------------------------------------------------------
+         Superheated  ||           ||            ||             ||               ||               ||
+                      ------------------------------------------------------------------------------
     
     Hot stream goes to the left in the matrix, cold stream goes down.  If 
     hot stream comes in subcooled, there are only three combinations that 
@@ -62,9 +62,13 @@ class PHEHXClass():
             ('Wetted area','m^2',self.A_h_wetted),
             ('Outlet Superheat','K',self.Tin_c-self.Tdew_c),
             ('Q Total','W',self.Q),
+            ('Q Supercritical Hot','W',self.Q_supercritical_h),
+            ('Q Supercrit_liq Hot','W',self.Q_supercrit_liq_h),
             ('Q Superheat Hot','W',self.Q_superheated_h),
             ('Q Two-Phase Hot','W',self.Q_2phase_h),
             ('Q Subcooled Hot','W',self.Q_subcooled_h),
+            ('Q Supercritical Cold','W',self.Q_supercritical_c),
+            ('Q Supercrit_liq Cold','W',self.Q_supercrit_liq_c),
             ('Q Superheat Cold','W',self.Q_superheated_c),
             ('Q Two-Phase Cold','W',self.Q_2phase_c),
             ('Q Subcooled Cold','W',self.Q_subcooled_c),
@@ -73,30 +77,46 @@ class PHEHXClass():
             ('Inlet cold stream temp','K',self.Tin_c),
             ('Outlet cold stream temp','K',self.Tout_c),
             ('Charge Total','kg',self.Charge_h),
+            ('Charge Supercritical','kg',self.Charge_supercritical_h),
+            ('Charge Supercrit_liq','kg',self.Charge_supercrit_liq_h),
             ('Charge Superheat','kg',self.Charge_superheated_h),
             ('Charge Two-Phase','kg',self.Charge_2phase_h),
             ('Charge Subcool','kg',self.Charge_subcooled_h),
             ('Charge Total','kg',self.Charge_c),
+            ('Charge Supercritical','kg',self.Charge_supercritical_c),
+            ('Charge Supercrit_liq','kg',self.Charge_supercrit_liq_c),
             ('Charge Superheat','kg',self.Charge_superheated_c),
             ('Charge Two-Phase','kg',self.Charge_2phase_c),
             ('Charge Subcool','kg',self.Charge_subcooled_c),
+            ('Hot HTC Supercritical','W/m^2-K',self.h_supercritical_h),
+            ('Hot HTC Supercrit_liq','W/m^2-K',self.h_supercrit_liq_h),
             ('Hot HTC Superheat','W/m^2-K',self.h_superheated_h),
             ('Hot HTC Two-Phase','W/m^2-K',self.h_2phase_h),
             ('Hot HTC Subcool','W/m^2-K',self.h_subcooled_h),
+            ('Cold Mean HTC Supercritical','W/m^2-K',self.h_supercritical_c),
+            ('Cold Mean HTC Supercrit_liq','W/m^2-K',self.h_supercrit_liq_c),
             ('Cold Mean HTC Superheat','W/m^2-K',self.h_superheated_c),
             ('Cold Mean HTC Ref. Two-Phase','W/m^2-K',self.h_2phase_c),
             ('Cold Mean HTC Ref. Subcool','W/m^2-K',self.h_subcooled_c),
             ('Pressure Drop Hot','Pa',self.DP_h),
+            ('Pressure Drop Hot Supercritical','Pa',self.DP_supercritical_h),
+            ('Pressure Drop Hot Supercrit_liq','Pa',self.DP_supercrit_liq_h),
             ('Pressure Drop Hot superheated','Pa',self.DP_superheated_h),
             ('Pressure Drop Hot 2 phase','Pa',self.DP_2phase_h),
             ('Pressure Drop Hot subcooled','Pa',self.DP_subcooled_h),
             ('Pressure Drop Cold','Pa',self.DP_c),
+            ('Pressure Drop Cold Supercritical','Pa',self.DP_supercritical_c),
+            ('Pressure Drop Cold Supercrit_liq','Pa',self.DP_supercrit_liq_c),
             ('Pressure Drop Cold superheated','Pa',self.DP_superheated_c),
             ('Pressure Drop Cold 2 phase','Pa',self.DP_2phase_c),
             ('Pressure Drop Cold subcooled','Pa',self.DP_subcooled_c),
+            ('Area fraction Supercritical Hot','-',self.w_supercritical_h),
+            ('Area fraction Supercrit_liq Hot','-',self.w_supercrit_liq_h),
             ('Area fraction Superheat Hot','-',self.w_superheated_h),
             ('Area fraction Two-Phase Hot','-',self.w_2phase_h),
             ('Area fraction Subcooled Hot','-',self.w_subcooled_h),
+            ('Area fraction Supercritical Cold','-',self.w_supercritical_c),
+            ('Area fraction Supercrit_liq Cold','-',self.w_supercrit_liq_c),
             ('Area fraction Superheat Cold','-',self.w_superheated_c),
             ('Area fraction Two-Phase Cold','-',self.w_2phase_c),
             ('Area fraction Subcooled Cold','-',self.w_subcooled_c)
@@ -106,9 +126,10 @@ class PHEHXClass():
         # See if each phase could change phase if it were to reach the
         # inlet temperature of the opposite phase 
         
-        # Inlet phases
+        #Inlet phases
         self.Tin_h,rhoin_h,Phasein_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)
         self.Tin_c,rhoin_c,Phasein_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)
+        
         assert(self.Tin_h > self.Tin_c)
         
         # Find the maximum possible rate of heat transfer as the minimum of 
@@ -148,7 +169,7 @@ class PHEHXClass():
         # Check if any internal points are pinched
         if (TList_c[1:-1]>TList_h[1:-1]).any():
             # Loop over the internal cell boundaries
-            for i in range(1, len(TList_c)-1):
+            for i in range(1,len(TList_c)-1):
                 # If cold stream is hotter than the hot stream
                 if TList_c[i]-1e-9>TList_h[i]:
                     # Find new enthalpy of cold stream at the hot stream cell boundary
@@ -160,28 +181,54 @@ class PHEHXClass():
         
         return Qmax
         
-    def PlateHTDP(self,AS,T,p,mdot_gap):
+    def HTDP(self,AS,T,p,mdot,side=None):
         """
         This function calls mainly the heat transfer and pressure drop 
-        for single phase fluids in PHE. 
+        for single phase fluids of the IHX (either 'Plate-HX' or 'Coaxial-HX') 
         Inputs: T [K] and p [Pa]
         Outputs: h [W/m^2-K] and cp [J/kg-K]
-        Note: There are several other output. Check "PHE_1phase_hdP" function
+        Note: There are several other output. Check "PHE_1phase_hdP" function in case 'plate-HX'
         for more details.
         """
-        Inputs={
-            'AS':AS, #AS: AbstractState which includes refrigerant or glycol and backend
-            'T':T,
-            'p':p,
-            'mdot_gap' : mdot_gap,                  #mass flow rate per channel
-            'PlateAmplitude': self.PlateAmplitude,
-            'PlateWavelength' : self.PlateWavelength,
-            'InclinationAngle': self.InclinationAngle,
-            'Bp': self.Bp,
-            'Lp': self.Lp
-        }
-        Outputs=PHE_1phase_hdP(Inputs)
-        return Outputs['h'],Outputs['cp'],Outputs
+        if self.HXType == 'Plate-HX':
+            Inputs={
+                'AS':AS, #AS: AbstractState which includes refrigerant or glycol and backend
+                'T':T,
+                'p':p,
+                'mdot_gap' : mdot, #mass flow rate per channel
+                'PlateAmplitude': self.PlateAmplitude,
+                'PlateWavelength' : self.PlateWavelength,
+                'InclinationAngle': self.InclinationAngle,
+                'Bp': self.Bp,
+                'Lp': self.Lp
+            }
+            Outputs=PHE_1phase_hdP(Inputs)
+            return Outputs['h'],Outputs['cp'],Outputs
+        
+        elif self.HXType == 'Coaxial-HX':
+            AS.update(CP.PT_INPUTS,p,T)
+            cp_g=AS.cpmass() #[J/kg-K]
+            v_g=1/AS.rhomass() #[m^3/kg]
+            
+            if side == 'Hot':
+                f_g,h_g,Re_g=f_h_1phase_Tube(mdot, self.ID_i, T, p, AS)
+                dh=self.ID_i
+                dpdz_g=f_g*v_g*self.G_h**2/(2.*dh) #Pressure gradient
+                DP_g=dpdz_g*self.Lp
+            elif side == 'Cold':
+                f_g,h_g,Re_g=f_h_1phase_Annulus(mdot, self.ID_o, self.OD_i, T, p, AS)
+                dh=self.ID_o-self.OD_i
+                dpdz_g=f_g*v_g*self.G_c**2/(2.*dh) #Pressure gradient
+                DP_g=dpdz_g*self.Lp
+
+            Outputs={
+                'Dh':dh,                       #Hydraulic diamter [m]
+                'h':h_g,                       #Heat transfer coeffcient [W/m^2-K]
+                'DELTAP':DP_g,                 #Pressure drop [Pa]
+                'Re': Re_g,                    #Reynold number
+                'cp': cp_g,                    #Specific heat of fluid [J/kg-K]
+            }
+            return Outputs['h'],Outputs['cp'],Outputs
     
     def BuildEnthalpyLists(self,Q):
         #Start the enthalpy lists with inlet and outlet enthalpies
@@ -199,7 +246,7 @@ class PHEHXClass():
         AS_c = self.AS_c
         
         #Find the phase boundaries that exist, and add them to lists
-        if 'IncompressibleBackend' in AS_h.backend_name():
+        if 'IncompressibleBackend' in AS_h.backend_name() or self.pin_h > AS_h.p_critical():
             hsatL_h=1e9
             hsatV_h=1e9
         else:
@@ -208,7 +255,7 @@ class PHEHXClass():
             AS_h.update(CP.DmassT_INPUTS, self.rhosatV_h, self.Tdew_h)
             hsatV_h=AS_h.hmass() #[J/kg]
         
-        if 'IncompressibleBackend' in AS_c.backend_name():
+        if 'IncompressibleBackend' in AS_c.backend_name() or self.pin_c > AS_c.p_critical():
             hsatL_c=1e9
             hsatV_c=1e9
         else:
@@ -251,9 +298,9 @@ class PHEHXClass():
         self.hsatL_h=hsatL_h
         self.hsatV_c=hsatV_c
         self.hsatV_h=hsatV_h
-
+        
         assert(len(EnthalpyList_c) == len(EnthalpyList_h))
-
+        
         return EnthalpyList_c,EnthalpyList_h
     
     def PostProcess(self,cellList):
@@ -290,67 +337,95 @@ class PHEHXClass():
         self.w_superheated_h=sum(collect(cellList,'Phase_h','Superheated','w'))
         self.w_2phase_h=sum(collect(cellList,'Phase_h','TwoPhase','w'))
         self.w_subcooled_h=sum(collect(cellList,'Phase_h','Subcooled','w'))
+        self.w_supercritical_h=sum(collect(cellList,'Phase_h','Supercritical','w'))
+        self.w_supercrit_liq_h=sum(collect(cellList,'Phase_h','Supercrit_liq','w'))
+        
         self.w_superheated_c=sum(collect(cellList,'Phase_c','Superheated','w'))
         self.w_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','w'))
         self.w_subcooled_c=sum(collect(cellList,'Phase_c','Subcooled','w'))
+        self.w_supercritical_c=sum(collect(cellList,'Phase_c','Supercritical','w'))
+        self.w_supercrit_liq_c=sum(collect(cellList,'Phase_c','Supercrit_liq','w'))
         
         self.DP_superheated_c=sum(collect(cellList,'Phase_c','Superheated','DP_c'))
         self.DP_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','DP_c'))
         self.DP_subcooled_c=sum(collect(cellList,'Phase_c','Subcooled','DP_c'))
-        self.DP_c=self.DP_superheated_c+self.DP_2phase_c+self.DP_subcooled_c
-        self.DP_c=self.DP_c*self.DP_cold_tuning #correct the pressure drop on the cold side
+        self.DP_supercritical_c=sum(collect(cellList,'Phase_c','Supercritical','DP_c'))
+        self.DP_supercrit_liq_c=sum(collect(cellList,'Phase_c','Supercrit_liq','DP_c'))
+        DP_c=self.DP_superheated_c+self.DP_2phase_c+self.DP_subcooled_c+self.DP_supercritical_c+self.DP_supercrit_liq_c
+        self.DP_c=DP_c*self.DP_cold_tuning #correct the pressure drop on the cold side
         
         self.DP_superheated_h=sum(collect(cellList,'Phase_h','Superheated','DP_h'))
         self.DP_2phase_h=sum(collect(cellList,'Phase_h','TwoPhase','DP_h'))
         self.DP_subcooled_h=sum(collect(cellList,'Phase_h','Subcooled','DP_h'))
-        self.DP_h=self.DP_superheated_h+self.DP_2phase_h+self.DP_subcooled_h
-        self.DP_h=self.DP_h*self.DP_hot_tuning #correct the pressure drop on the hot side
+        self.DP_supercritical_h=sum(collect(cellList,'Phase_h','Supercritical','DP_h'))
+        self.DP_supercrit_liq_h=sum(collect(cellList,'Phase_h','Supercrit_liq','DP_h'))
+        DP_h=self.DP_superheated_h+self.DP_2phase_h+self.DP_subcooled_h+self.DP_supercritical_h+self.DP_supercrit_liq_h
+        self.DP_h=DP_h*self.DP_hot_tuning #correct the pressure drop on the hot side
         
         self.Charge_superheated_c=sum(collect(cellList,'Phase_c','Superheated','Charge_c'))
         self.Charge_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','Charge_c'))
         self.Charge_subcooled_c=sum(collect(cellList,'Phase_c','Subcooled','Charge_c'))
-        self.Charge_c=self.Charge_superheated_c+self.Charge_2phase_c+self.Charge_subcooled_c
+        self.Charge_supercritical_c=sum(collect(cellList,'Phase_c','Supercritical','Charge_c'))
+        self.Charge_supercrit_liq_c=sum(collect(cellList,'Phase_c','Supercrit_liq','Charge_c'))
+        self.Charge_c=self.Charge_superheated_c+self.Charge_2phase_c+self.Charge_subcooled_c+self.Charge_supercritical_c+self.Charge_supercrit_liq_c
+        
         self.Charge_superheated_h=sum(collect(cellList,'Phase_h','Superheated','Charge_h'))
         self.Charge_2phase_h=sum(collect(cellList,'Phase_h','TwoPhase','Charge_h'))
         self.Charge_subcooled_h=sum(collect(cellList,'Phase_h','Subcooled','Charge_h'))
-        self.Charge_h=self.Charge_superheated_h+self.Charge_2phase_h+self.Charge_subcooled_h
+        self.Charge_supercritical_h=sum(collect(cellList,'Phase_h','Supercritical','Charge_h'))
+        self.Charge_supercrit_liq_h=sum(collect(cellList,'Phase_h','Supercrit_liq','Charge_h'))
+        self.Charge_h=self.Charge_superheated_h+self.Charge_2phase_h+self.Charge_subcooled_h+self.Charge_supercritical_h+self.Charge_supercrit_liq_h
         
         self.Q_superheated_h=sum(collect(cellList,'Phase_h','Superheated','Q'))
         self.Q_2phase_h=sum(collect(cellList,'Phase_h','TwoPhase','Q'))
         self.Q_subcooled_h=sum(collect(cellList,'Phase_h','Subcooled','Q'))
+        self.Q_supercritical_h=sum(collect(cellList,'Phase_h','Supercritical','Q'))
+        self.Q_supercrit_liq_h=sum(collect(cellList,'Phase_h','Supercrit_liq','Q'))
+        
         self.Q_superheated_c=sum(collect(cellList,'Phase_c','Superheated','Q'))
         self.Q_2phase_c=sum(collect(cellList,'Phase_c','TwoPhase','Q'))
         self.Q_subcooled_c=sum(collect(cellList,'Phase_c','Subcooled','Q'))
+        self.Q_supercritical_c=sum(collect(cellList,'Phase_c','Supercritical','Q'))
+        self.Q_supercrit_liq_c=sum(collect(cellList,'Phase_c','Supercrit_liq','Q'))
         
-        w_superheat=collect(cellList,'Phase_c','Superheated','w')
-        w_2phase=collect(cellList,'Phase_c','TwoPhase','w')
-        h_c_sh=collect(cellList,'Phase_c','Superheated','h_c')
-        h_c_2phase=collect(cellList,'Phase_c','TwoPhase','h_c')
-        
-        if len(w_superheat)>0:
-            self.h_superheated_c=float(sum(np.array(h_c_sh)*np.array(w_superheat))/sum(w_superheat))
-        else:
-            self.h_superheated_c=0
-            
-        if len(w_2phase)>0:
-            self.h_2phase_c=float(sum(np.array(h_c_2phase)*np.array(w_2phase))/sum(w_2phase))
-        else:
-            self.h_2phase_c=0
+        #Those lines are repeated below
+#         w_superheat=collect(cellList,'Phase_c','Superheated','w')
+#         w_2phase=collect(cellList,'Phase_c','TwoPhase','w')
+#         h_c_sh=collect(cellList,'Phase_c','Superheated','h_c')
+#         h_c_2phase=collect(cellList,'Phase_c','TwoPhase','h_c')
+#         
+#         if len(w_superheat)>0:
+#             self.h_superheated_c=float(sum(np.array(h_c_sh)*np.array(w_superheat))/sum(w_superheat))
+#         else:
+#             self.h_superheated_c=0
+#             
+#         if len(w_2phase)>0:
+#             self.h_2phase_c=float(sum(np.array(h_c_2phase)*np.array(w_2phase))/sum(w_2phase))
+#         else:
+#             self.h_2phase_c=0
             
         ### Collect all the cells on the hot side
         w_subcooled_h=collect(cellList,'Phase_h','Subcooled','w')
         w_superheat_h=collect(cellList,'Phase_h','Superheated','w')
         w_2phase_h=collect(cellList,'Phase_h','TwoPhase','w')
+        w_supercritical_h=collect(cellList,'Phase_h','Supercritical','w')
+        w_supercrit_liq_h=collect(cellList,'Phase_h','Supercrit_liq','w')
         h_h_sh=collect(cellList,'Phase_h','Superheated','h_h')
         h_h_2phase=collect(cellList,'Phase_h','TwoPhase','h_h')
         h_h_subcool=collect(cellList,'Phase_h','Subcooled','h_h')
+        h_h_supercritical=collect(cellList,'Phase_h','Supercritical','h_h')
+        h_h_supercrit_liq=collect(cellList,'Phase_h','Supercrit_liq','h_h')
         
         w_subcooled_c=collect(cellList,'Phase_c','Subcooled','w')
         w_superheat_c=collect(cellList,'Phase_c','Superheated','w')
         w_2phase_c=collect(cellList,'Phase_c','TwoPhase','w')
+        w_supercritical_c=collect(cellList,'Phase_c','Supercritical','w')
+        w_supercrit_liq_c=collect(cellList,'Phase_c','Supercrit_liq','w')
         h_c_sh=collect(cellList,'Phase_c','Superheated','h_c')
         h_c_2phase=collect(cellList,'Phase_c','TwoPhase','h_c')
         h_c_subcool=collect(cellList,'Phase_c','Subcooled','h_c')
+        h_c_supercritical=collect(cellList,'Phase_c','Supercritical','h_c')
+        h_c_supercrit_liq=collect(cellList,'Phase_c','Supercrit_liq','h_c')
         
         if len(w_subcooled_h)>0:
             self.h_subcooled_h=float(sum(np.array(h_h_subcool)*np.array(w_subcooled_h))/sum(w_subcooled_h))
@@ -366,7 +441,17 @@ class PHEHXClass():
             self.h_superheated_h=float(sum(np.array(h_h_sh)*np.array(w_superheat_h))/sum(w_superheat_h))
         else:
             self.h_superheated_h=0
+        
+        if len(w_supercritical_h)>0:
+            self.h_supercritical_h=float(sum(np.array(h_h_supercritical)*np.array(w_supercritical_h))/sum(w_supercritical_h))
+        else:
+            self.h_supercritical_h=0
             
+        if len(w_supercrit_liq_h)>0:
+            self.h_supercrit_liq_h=float(sum(np.array(h_h_supercrit_liq)*np.array(w_supercrit_liq_h))/sum(w_supercrit_liq_h))
+        else:
+            self.h_supercrit_liq_h=0
+        
         if len(w_subcooled_c)>0:
             self.h_subcooled_c=float(sum(np.array(h_c_subcool)*np.array(w_subcooled_c))/sum(w_subcooled_c))
         else:
@@ -382,17 +467,33 @@ class PHEHXClass():
         else:
             self.h_superheated_c=0
             
-        
+        if len(w_supercritical_c)>0:
+            self.h_supercritical_c=float(sum(np.array(h_c_supercritical)*np.array(w_supercritical_c))/sum(w_supercritical_c))
+        else:
+            self.h_supercritical_c=0
+            
+        if len(w_supercrit_liq_c)>0:
+            self.h_supercrit_liq_c=float(sum(np.array(h_c_supercrit_liq)*np.array(w_supercrit_liq_c))/sum(w_supercrit_liq_c))
+        else:
+            self.h_supercrit_liq_c=0
         
         self.q_flux=collect(cellList,'Phase_c','TwoPhase','q_flux')
-            
+        
+        #hot-side outlet temperature    
         self.Tout_h,self.rhoout_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hout_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
+        #cold-side outlet temperature
         self.Tout_c,self.rhoout_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hout_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
+        #cold-side outlet entropy, subcooling or approach temp (if applicable)
         if 'IncompressibleBackend' in AS_c.backend_name():
             AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tout_c)
             self.sout_c=AS_c.smass() #[J/kg-K]
             self.DT_sc_c=1e9
+        elif self.pin_c > AS_c.p_critical(): #transcritical
+            AS_c.update(CP.DmassT_INPUTS, self.rhoout_c, self.Tout_c)
+            self.sout_c=AS_c.smass() #[J/kg-K]
+            self.DT_app_c=self.Tout_c - self.Tin_h #approach temperature
+            self.DT_sc_c=1e9 #No subcooling in this case
         else:
             AS_c.update(CP.DmassT_INPUTS, self.rhoout_c, self.Tout_c)
             self.sout_c=AS_c.smass() #[J/kg-K]
@@ -405,11 +506,18 @@ class PHEHXClass():
                 self.DT_sc_c=-(self.hout_c-hsatL)/cpsatL
             else:
                 self.DT_sc_c=self.Tbubble_c-self.Tout_c
+            self.DT_app_c=0 #No approach temp in this case
         
+        #hot-side outlet entropy, subcooling or approach temp (if applicable)    
         if 'IncompressibleBackend' in AS_h.backend_name():
             AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tout_h)
             self.sout_h=AS_h.smass() #[J/kg-K]
             self.DT_sc_h=1e9
+        elif  self.pin_h > AS_h.p_critical(): #transcritical
+            AS_h.update(CP.DmassT_INPUTS, self.rhoout_h, self.Tout_h)
+            self.sout_h=AS_h.smass() #[J/kg-K]
+            self.DT_app_h=self.Tout_h - self.Tin_c #approach temperature
+            self.DT_sc_h=1e9 #No subcooling in this case
         else:
             AS_h.update(CP.DmassT_INPUTS, self.rhoout_h, self.Tout_h)
             self.sout_h=AS_c.smass() #[J/kg-K]
@@ -421,7 +529,8 @@ class PHEHXClass():
                 self.DT_sc_h=-(self.hout_h-hsatL)/cpsatL
             else:
                 self.DT_sc_h=self.Tbubble_h-self.Tout_h
-        
+            self.DT_app_h=0 #No approach temp in this case
+            
     def eNTU_CounterFlow(self,Cr,Ntu):
         """
         This function returns the effectiveness for counter flow fluids
@@ -443,14 +552,18 @@ class PHEHXClass():
         Tmean_h=Inputs['Tmean_h']
         Tmean_c=Inputs['Tmean_c']
         #Evaluate heat transfer coefficient for both fluids
-        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.AS_h, Tmean_h, Inputs['pin_h'],self.mdot_h/self.NgapsHot)
-        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c/self.NgapsCold)
-        
+        if self.HXType == 'Plate-HX':
+            h_h,cp_h,PlateOutput_h=self.HTDP(self.AS_h, Tmean_h, Inputs['pin_h'],self.mdot_h/self.NgapsHot)
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        elif self.HXType == 'Coaxial-HX':
+            h_h,cp_h,PlateOutput_h=self.HTDP(self.AS_h, Tmean_h, Inputs['pin_h'],self.mdot_h, side='Hot')
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c, side='Cold')
+            
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
         cp_c=Inputs['cp_c']
         #Evaluate UA [W/K] if entire HX was in this section 
-        UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c*self.A_c_wetted)+self.PlateThickness/(self.PlateConductivity*(self.A_c_wetted+self.A_h_wetted)/2.))
+        UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c*self.A_c_wetted)+self.Rw)
         #Get Ntu [-]
         C=[cp_c*self.mdot_c,cp_h*self.mdot_h]
         Cmin=min(C)
@@ -511,14 +624,15 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h
         """
-        #AbstarctState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
         
         #Calculate the mean temperature for the hot single-phase fluid
-        h_h,cp_h,PlateOutput_h=self.PlateHTDP(self.AS_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
+        if self.HXType == 'Plate-HX':
+            h_h,cp_h,PlateOutput_h=self.HTDP(self.AS_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h/self.NgapsHot)
+        elif self.HXType == 'Coaxial-HX':
+            h_h,cp_h,PlateOutput_h=self.HTDP(self.AS_h, Inputs['Tmean_h'], Inputs['pin_h'],self.mdot_h, side='Hot')
         #Use cp calculated from delta h/delta T
         cp_h=Inputs['cp_h']
+        cp_c=Inputs['cp_c']
         #Mole mass of refrigerant for Cooper correlation
         M=AS_c.molar_mass()*1000 #[kg/kmol]
         #Reduced pressure for Cooper Correlation
@@ -557,7 +671,7 @@ class PHEHXClass():
             Dh=self.Dh_c
             x=(Inputs['xin_c']+Inputs['xout_c'])/2
 
-            UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c_2phase*self.A_c_wetted)+self.PlateThickness/(self.PlateConductivity*self.A_c_wetted))
+            UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c_2phase*self.A_c_wetted)+self.Rw)
             C_h=cp_h*self.mdot_h
             
             Qmax=C_h*(Inputs['Tin_h']-Inputs['Tsat_c'])
@@ -572,21 +686,25 @@ class PHEHXClass():
             w=UA_req/UA_total
         
         #Refrigerant charge
-        AS_h.update(CP.PT_INPUTS,self.pin_h,Inputs['Tmean_h'])
-        rho_h=AS_h.rhomass() #[kg/m^3]
+        self.AS_h.update(CP.PT_INPUTS,self.pin_h,Inputs['Tmean_h'])
+        rho_h=self.AS_h.rhomass() #[kg/m^3]
         Charge_h = w * self.V_h * rho_h
         rho_c=TwoPhaseDensity(self.AS_c,Inputs['xin_c'],Inputs['xout_c'],self.Tdew_c,self.Tbubble_c,slipModel='Zivi')
         Charge_c = rho_c * w * self.V_c
         
-        #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
-        DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
+        #Use Lockhart Martinelli to calculate the pressure drop.  For plate-HX, Claesson found good agreement using C parameter of 4.67
+        if self.HXType == 'Plate-HX':
+            DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
+        elif self.HXType == 'Coaxial-HX':
+            DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c)*w*self.Lp
+        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c,slipModel='Zivi')*w*self.Lp
         
         #Pack outputs
         Outputs={
             'w':w,
             'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
             'Charge_c': Charge_c,
             'Charge_h': Charge_h,
             'DP_h': -PlateOutput_h['DELTAP'],
@@ -609,17 +727,18 @@ class PHEHXClass():
         This function calculate the fraction of heat exchanger 
         that would be required for given thermal duty "w" and DP and h
         """
-        #AbstarctState
-        AS_h = self.AS_h
-        AS_c = self.AS_c
         
         h_h_2phase=LongoCondensation((Inputs['xout_h']+Inputs['xin_h'])/2,self.mdot_h/self.A_h_flow,self.Dh_h,self.AS_h,self.Tbubble_h,self.Tdew_h);
-        h_h_2phase = h_h_2phase*self.h_tp_hot_tuning #correct the convection heat transfer of the two-phase of the hot side
+        h_h_2phase=h_h_2phase*self.h_tp_hot_tuning #correct the convection heat transfer of the two-phase of the hot side
         
-        h_c,cp_c,PlateOutput_c=self.PlateHTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        if self.HXType == 'Plate-HX':
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        elif self.HXType == 'Coaxial-HX':
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Inputs['Tmean_c'], Inputs['pin_c'],self.mdot_c, side='Cold')
         #Use cp calculated from delta h/delta T
         cp_c=Inputs['cp_c']
-        UA_total=1/(1/(h_c*self.A_c_wetted)+1/(h_h_2phase*self.A_h_wetted)+self.PlateThickness/(self.PlateConductivity*(self.A_c_wetted+self.A_h_wetted)/2.))
+        cp_h=Inputs['cp_h']
+        UA_total=1/(1/(h_c*self.A_c_wetted)+1/(h_h_2phase*self.A_h_wetted)+self.Rw)
         C_c=cp_c*self.mdot_c
         
         Q=Inputs['Q']
@@ -635,21 +754,25 @@ class PHEHXClass():
         UA_req=NTU*C_c
         w=UA_req/UA_total
         
-        AS_c.update(CP.PT_INPUTS,self.pin_c,Inputs['Tmean_c'])
-        rho_c=AS_c.rhomass() #[kg/m^3]
+        self.AS_c.update(CP.PT_INPUTS,self.pin_c,Inputs['Tmean_c'])
+        rho_c=self.AS_c.rhomass() #[kg/m^3]
         Charge_c = w * self.V_c * rho_c
         rho_h=TwoPhaseDensity(self.AS_h,Inputs['xout_h'],Inputs['xin_h'],self.Tdew_h,self.Tbubble_h,slipModel='Zivi')
         Charge_h = w * self.V_h * rho_h
         
-        #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
-        DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
+        #Use Lockhart Martinelli to calculate the pressure drop.  For plate-HX, Claesson found good agreement using C parameter of 4.67
+        if self.HXType == 'Plate-HX':
+            DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h,C=4.67)*w*self.Lp
+        elif self.HXType == 'Coaxial-HX':
+            DP_frict_h=LMPressureGradientAvg(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Dh_h,self.Tbubble_h,self.Tdew_h)*w*self.Lp
         #Accelerational pressure drop component    
-        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h)*w*self.Lp
+        DP_accel_h=-AccelPressureDrop(Inputs['xout_h'],Inputs['xin_h'],self.AS_h,self.mdot_h/self.A_h_flow,self.Tbubble_h,self.Tdew_h,slipModel='Zivi')*w*self.Lp
         
         #Pack outputs
         Outputs={
             'w': w,
             'Tout_c': Inputs['Tin_c']-Q/(self.mdot_c*cp_c),
+            'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
             'DP_c': -PlateOutput_c['DELTAP'],
             'DP_h': DP_accel_h+DP_frict_h,
             'Charge_c':Charge_c,
@@ -660,6 +783,212 @@ class PHEHXClass():
         o = Inputs
         o.update(**Outputs)
         return o
+    
+    
+    def _TransCritPhaseH_TwoPhaseC_Qimposed(self,Inputs):
+        """
+        The hot stream is Transcritical phase (supercritical or supercrit_liq), and the cold stream is evaporating (two phase)
+        Inputs: dictionary of parameters
+        Outputs: dictionary of parameters, 
+        but mainly w, pressure drop and heat transfer coefficient 
+        This function calculate the fraction of heat exchanger 
+        that would be required for given thermal duty "w" and DP and h
+        """
+        
+        #Mole mass of refrigerant for Cooper correlation
+        M=self.AS_c.molar_mass()*1000 #[kg/kmol]
+        #Reduced pressure for Cooper Correlation
+        pcrit_c = self.AS_c.p_critical() #critical pressure of Ref_c [Pa]
+        pstar=Inputs['pin_c']/pcrit_c
+        change=999
+        w=1
+        Q=Inputs['Q']
+
+        while abs(change)>1e-6:
+            q_flux=Q/(w*self.A_c_wetted)
+
+            if hasattr(self,'Rp'): #check if surface roughness is given
+                Rp = self.Rp
+            else: #otherwise, use the default surface roughness
+                Rp = 1.0
+            
+            #cold-side mass flux 
+            G_c=self.mdot_c/self.A_c_flow
+            
+            #Heat transfer coefficient from Cooper Pool Boiling with
+            #correction for the two-phase zone of the cold side
+            if self.HXType == 'Plate-HX':
+                h_c_2phase=Cooper_PoolBoiling(pstar,Rp,q_flux,M)
+            elif self.HXType == 'Coaxial-HX':
+                h_c_2phase=KandlikarEvaporation_average(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,G_c,self.Dh_c,Inputs['pin_c'],q_flux,self.Tbubble_c,self.Tdew_c)
+            h_c_2phase=h_c_2phase*self.h_tp_cold_tuning  #correct cold-side (two-phase) with tuning factor
+            #wall heat resistance
+            R_w = self.Rw
+            #cold-side heat resistance
+            R_c = 1/(h_c_2phase*self.A_c_wetted)
+            #wall temperature calculate from energy balance on the cold-side
+            T_w = (R_w+R_c)*Q + Inputs['Tsat_c']
+            
+            #hot-side heat flux
+            #q_flux_h=Q/(w*self.A_h_wetted)
+            
+            #Calculate HTC for the hot Transcritical-phase fluid
+            #HTC and friction calculated using Pettersson (2000) correlations
+            h_h, f_h, cp_h, rho_h = Petterson_supercritical(Inputs['Tmean_h'], T_w, self.AS_h, self.G_h, self.Dh_h, 0, self.Dh_h/self.Lp, 0, Inputs['pin_h'], q_flux)
+            #h_h, f_h, cp_h, rho_h = Petterson_supercritical_average(Inputs['Tout_h'],Inputs['Tin_h'], T_w, self.AS_h, G_h, self.Dh_h, 0, self.Dh_h/self.Lp, 0, Inputs['pin_h'], q_flux)
+            h_h = self.h_r_hot_tuning*h_h #correct HTC for hot-side
+            
+            #Evaluate UA [W/K]
+            UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c_2phase*self.A_c_wetted)+self.Rw)
+            
+            #cp of cold-side (two-phase) is very large compared to hot-side (trans-phase). Therefore, Cmin is on hot-side
+            Cmin=cp_h*self.mdot_h
+            #Effectiveness [-]
+            Qmax=Cmin*(Inputs['Tin_h']-Inputs['Tsat_c'])
+            epsilon=Q/Qmax
+            if epsilon>=1.0:
+                epsilon=1.0-1e-12 
+            #Get Ntu [-]
+            NTU=-log(1-epsilon)
+            #Required UA value
+            UA_req=NTU*Cmin
+            
+            change=UA_req/UA_total-w
+            w=UA_req/UA_total
+        
+        #Refrigerant charge
+        Charge_h = w * self.V_h * rho_h
+        rho_c=TwoPhaseDensity(self.AS_c,Inputs['xin_c'],Inputs['xout_c'],self.Tdew_c,self.Tbubble_c,slipModel='Zivi')
+        Charge_c = rho_c * w * self.V_c
+        
+        #Hot-side Pressure gradient using Darcy friction factor
+        v_h=1./rho_h
+        dpdz_h=-f_h*v_h*self.G_h**2/(2*self.Dh_h) #Pressure gradient
+        DP_frict_h=dpdz_h*self.Lp*w
+        
+        #Use Lockhart Martinelli to calculate the pressure drop.  Claesson found good agreement using C parameter of 4.67
+        DP_frict_c=LMPressureGradientAvg(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Dh_c,self.Tbubble_c,self.Tdew_c,C=4.67)*w*self.Lp
+        #Accelerational pressure drop component    
+        DP_accel_c=AccelPressureDrop(Inputs['xin_c'],Inputs['xout_c'],self.AS_c,self.mdot_c/self.A_c_flow,self.Tbubble_c,self.Tdew_c,slipModel='Zivi')*w*self.Lp
+        
+        #Pack outputs
+        Outputs={
+            'w':w,
+            'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
+            'Charge_c': Charge_c,
+            'Charge_h': Charge_h,
+            'DP_h': DP_frict_h,
+            'DP_c': DP_frict_c+DP_accel_c,
+            'h_h':h_h,
+            'h_c':h_c_2phase,
+            'q_flux':q_flux,
+            'cp_h':cp_h,
+        }
+        o = Inputs
+        o.update(**Outputs)
+        return o
+    
+    
+    def _TransCritPhaseH_OnePhaseC_Qimposed(self,Inputs):
+        """
+        The hot stream is Transcritical phase (supercritical or supercrit_liq), and the cold stream is single phase (SC or SH)
+        Inputs: dictionary of parameters
+        Outputs: dictionary of parameters,
+        but mainly w, pressure drop and heat transfer coefficient 
+        This function calculate the fraction of heat exchanger 
+        that would be required for given thermal duty "w" and DP and h 
+        """
+        
+        #Calculate the mean temperature for cold-side
+        Tmean_c=Inputs['Tmean_c']
+        #Evaluate heat transfer coefficient for cold-side fluid
+        if self.HXType == 'Plate-HX':
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c/self.NgapsCold)
+        elif self.HXType == 'Coaxial-HX':
+            h_c,cp_c,PlateOutput_c=self.HTDP(self.AS_c, Tmean_c, Inputs['pin_c'],self.mdot_c, side='Cold')
+        
+        #Use cp calculated from delta h/delta T for cold-side
+        cp_c=Inputs['cp_c']
+        
+        #heat rate
+        Q=Inputs['Q']
+                 
+        #wall heat resistance
+        R_w = self.Rw
+        #cold-side heat resistance
+        R_c = 1/(h_c*self.A_c_wetted)
+        #wall temperature calculate from energy balance on the cold-side
+        T_w = (R_w+R_c)*Q + Inputs['Tmean_c'] #This is just an initial wall temperature
+        
+        change=999
+        w=1        
+        while abs(change)>1e-6:
+            #heat flux
+            q_flux=Q/(w*self.A_h_wetted)
+            
+            #Calculate HTC for the hot Transcritical-phase fluid
+            #HTC and friction calculated using Pettersson (2000) correlations
+            h_h, f_h, cp_h, rho_h = Petterson_supercritical(Inputs['Tmean_h'], T_w, self.AS_h, self.G_h, self.Dh_h, 0, self.Dh_h/self.Lp, 0, Inputs['pin_h'], q_flux)
+            #h_h, f_h, cp_h, rho_h = Petterson_supercritical_average(Inputs['Tout_h'],Inputs['Tin_h'], T_w, self.AS_h, G_h, self.Dh_h, 0, self.Dh_h/self.Lp, 0, Inputs['pin_h'], q_flux)
+            h_h = self.h_r_hot_tuning*h_h #correct HTC for hot-side
+            
+            #Update wall temperature for the next iteration
+            R_h = 1/(h_h*self.A_h_wetted) #hot-side heat resistance
+            Tout_h = Inputs['Tin_h']-Q/(self.mdot_h*cp_h)
+            T_w = Tout_h - R_h*Q
+            
+            UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c*self.A_c_wetted)+self.Rw)
+            
+            #Evaluate UA [W/K] 
+            UA_total=1/(1/(h_h*self.A_h_wetted)+1/(h_c*self.A_c_wetted)+self.Rw)
+            #Get Ntu [-]
+            C=[cp_c*self.mdot_c,cp_h*self.mdot_h]
+            Cmin=min(C)
+            Cr=Cmin/max(C)
+            #Effectiveness [-]
+            Qmax=Cmin*(Inputs['Tin_h']-Inputs['Tin_c'])
+            epsilon = Q/Qmax
+            if epsilon>=1.0:
+                epsilon=1.0-1e-12 
+            #Pure counterflow with Cr<1 (Incropera Table 11.4)
+            NTU=1/(Cr-1)*log((epsilon-1)/(epsilon*Cr-1))
+            #Required UA value
+            UA_req=Cmin*NTU
+            
+            change=UA_req/UA_total-w
+            w=UA_req/UA_total
+            
+        
+        #Determine both charge components
+        Charge_h = w * self.V_h * rho_h
+        self.AS_c.update(CP.PT_INPUTS, self.pin_c,Tmean_c)
+        rho_c=self.AS_c.rhomass()#[kg/m^3]
+        Charge_c = w * self.V_c * rho_c
+        
+        #Hot-side Pressure gradient using Darcy friction factor
+        v_h=1./rho_h
+        dpdz_h=-f_h*v_h*self.G_h**2/(2*self.Dh_h) #Pressure gradient
+        DP_frict_h=dpdz_h*self.Lp*w
+        
+        #Pack outputs
+        Outputs={
+            'w': w,
+            'Tout_h': Inputs['Tin_h']-Q/(self.mdot_h*cp_h),
+            'Tout_c': Inputs['Tin_c']+Q/(self.mdot_c*cp_c),
+            'Charge_c': Charge_c,
+            'Charge_h': Charge_h,
+            'DP_h': DP_frict_h,
+            'DP_c': -PlateOutput_c['DELTAP'],
+            'h_h':h_h,
+            'h_c':h_c,
+            'q_flux':q_flux,
+            'cp_h':cp_h,
+            
+        }
+        o = Inputs
+        o.update(**Outputs)
+        return o
+    
         
     def Calculate(self):
         """
@@ -670,58 +999,45 @@ class PHEHXClass():
         Hot: Glycol
         """
         #AbstractState
-        AS_c = self.AS_c
         if hasattr(self,'MassFrac_c'):
-            AS_c.set_mass_fractions([self.MassFrac_c])
+            self.AS_c.set_mass_fractions([self.MassFrac_c])
         elif hasattr(self, 'VoluFrac_c'):
-            AS_c.set_volu_fractions([self.VoluFrac_c])
+            self.AS_c.set_volu_fractions([self.VoluFrac_c])
         
-        AS_h = self.AS_h
         if hasattr(self,'MassFrac_h'):
-            AS_h.set_mass_fractions([self.MassFrac_h])
+            self.AS_h.set_mass_fractions([self.MassFrac_h])
         elif hasattr(self, 'VoluFrac_h'):
-            AS_h.set_volu_fractions([self.VoluFrac_h])
+            self.AS_h.set_volu_fractions([self.VoluFrac_h])
         
         #set tuning factors to 1 in case not given by user
         if not hasattr(self,'h_tp_cold_tuning'):
             self.h_tp_cold_tuning = 1
         if not hasattr(self,'h_tp_hot_tuning'):
             self.h_tp_hot_tuning = 1
+        if not hasattr(self,'h_r_hot_tuning'): #used to correct HTC in case hot-side is transcritical 
+            self.h_r_hot_tuning = 1
         if not hasattr(self,'DP_hot_tuning'):
             self.DP_hot_tuning = 1
         if not hasattr(self,'DP_cold_tuning'):
             self.DP_cold_tuning = 1    
         
-        # Allocate channels between hot and cold streams
-        if not hasattr(self,'MoreChannels') or self.MoreChannels not in ['Hot','Cold']:
-            raise KeyError("MoreChannels not found, options are 'Hot' or 'Cold'")
-        #There are (Nplates - 1) gaps between the plates
-        if self.MoreChannels=='Hot':
-            #Hot stream gets the extra channel
-            self.NgapsHot=(self.Nplates-1)//2+1
-            self.NgapsCold=self.Nplates-1-self.NgapsHot
-        else:
-            #Cold stream gets the extra channel
-            self.NgapsCold=(self.Nplates-1)//2+1
-            self.NgapsHot=self.Nplates-1-self.NgapsCold
-        
         #Saturation temperatures for cold fluid
-        if 'IncompressibleBackend' in AS_c.backend_name():
+        if 'IncompressibleBackend' in self.AS_c.backend_name() or self.pin_c > self.AS_c.p_critical():
             self.rhosatL_c= None
             self.rhosatV_c= None
             self.Tbubble_c = None
             self.Tdew_c = None
             self.Tsat_c = None
         else:
-            AS_c.update(CP.PQ_INPUTS, self.pin_c, 0.0)
-            self.Tbubble_c=AS_c.T() #[K]
-            self.rhosatL_c=AS_c.rhomass() #[kg/m^3]
-            AS_c.update(CP.PQ_INPUTS, self.pin_c, 1.0)
-            self.Tdew_c=AS_c.T() #[K]
-            self.rhosatV_c=AS_c.rhomass() #[kg/m^3]
+            self.AS_c.update(CP.PQ_INPUTS, self.pin_c, 0.0)
+            self.Tbubble_c=self.AS_c.T() #[K]
+            self.rhosatL_c=self.AS_c.rhomass() #[kg/m^3]
+            self.AS_c.update(CP.PQ_INPUTS, self.pin_c, 1.0)
+            self.Tdew_c=self.AS_c.T() #[K]
+            self.rhosatV_c=self.AS_c.rhomass() #[kg/m^3]
             self.Tsat_c=(self.Tbubble_c+self.Tdew_c)/2.0
         
-        if 'IncompressibleBackend' in AS_h.backend_name():
+        if 'IncompressibleBackend' in self.AS_h.backend_name() or self.pin_h > self.AS_h.p_critical():
             self.Tbubble_h=None
             self.Tdew_h=None
             self.Tsat_h=None
@@ -729,64 +1045,108 @@ class PHEHXClass():
             self.rhosatV_h=None
         else:
             #Saturation temperatures for hot fluid
-            AS_h.update(CP.PQ_INPUTS, self.pin_h, 0.0)
-            self.Tbubble_h=AS_h.T() #[K]
-            self.rhosatL_h=AS_h.rhomass() #[kg/m^3]
-            AS_h.update(CP.PQ_INPUTS, self.pin_h, 1.0)
-            self.Tdew_h=AS_h.T() #[K]
-            self.rhosatV_h=AS_h.rhomass() #[kg/m^3]
+            self.AS_h.update(CP.PQ_INPUTS, self.pin_h, 0.0)
+            self.Tbubble_h=self.AS_h.T() #[K]
+            self.rhosatL_h=self.AS_h.rhomass() #[kg/m^3]
+            self.AS_h.update(CP.PQ_INPUTS, self.pin_h, 1.0)
+            self.Tdew_h=self.AS_h.T() #[K]
+            self.rhosatV_h=self.AS_h.rhomass() #[kg/m^3]
             self.Tsat_h=(self.Tbubble_h+self.Tdew_h)/2.0
         
         #The rest of the inlet states
         self.Tin_h,self.rhoin_h=TrhoPhase_ph(self.AS_h,self.pin_h,self.hin_h,self.Tbubble_h,self.Tdew_h,self.rhosatL_h,self.rhosatV_h)[0:2]
         self.Tin_c,self.rhoin_c=TrhoPhase_ph(self.AS_c,self.pin_c,self.hin_c,self.Tbubble_c,self.Tdew_c,self.rhosatL_c,self.rhosatV_c)[0:2]
         
-        if 'IncompressibleBackend' in AS_c.backend_name():
-            AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_c)
-            self.sin_c=AS_c.smass() #[J/kg-K]
+        if 'IncompressibleBackend' in self.AS_c.backend_name() or self.pin_c > self.AS_c.p_critical():
+            self.AS_c.update(CP.PT_INPUTS, self.pin_c, self.Tin_c)
+            self.sin_c=self.AS_c.smass() #[J/kg-K]
         else:
-            AS_c.update(CP.DmassT_INPUTS, self.rhoin_c,self.Tin_c)
-            self.sin_c=AS_c.smass() #[J/kg-K]
+            self.AS_c.update(CP.DmassT_INPUTS, self.rhoin_c,self.Tin_c)
+            self.sin_c=self.AS_c.smass() #[J/kg-K]
             
-        if 'IncompressibleBackend' in AS_h.backend_name():
-            AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_h)
-            self.sin_h=AS_h.smass() #[J/kg-K]
+        if 'IncompressibleBackend' in self.AS_h.backend_name() or self.pin_h > self.AS_h.p_critical():
+            self.AS_h.update(CP.PT_INPUTS, self.pin_h, self.Tin_h)
+            self.sin_h=self.AS_h.smass() #[J/kg-K]
         else:
-            AS_h.update(CP.DmassT_INPUTS, self.rhoin_h, self.Tin_h)
-            self.sin_h=AS_h.smass() #[J/kg-K]
+            self.AS_h.update(CP.DmassT_INPUTS, self.rhoin_h, self.Tin_h)
+            self.sin_h=self.AS_h.smass() #[J/kg-K]
+        
+        if self.HXType == 'Plate-HX':
+            # Allocate channels between hot and cold streams
+            if not hasattr(self,'MoreChannels') or self.MoreChannels not in ['Hot','Cold']:
+                raise KeyError("MoreChannels not found, options are 'Hot' or 'Cold'")
+            #There are (Nplates - 1) gaps between the plates
+            if self.MoreChannels=='Hot':
+                #Hot stream gets the extra channel
+                self.NgapsHot=(self.Nplates-1)//2+1
+                self.NgapsCold=self.Nplates-1-self.NgapsHot
+            else:
+                #Cold stream gets the extra channel
+                self.NgapsCold=(self.Nplates-1)//2+1
+                self.NgapsHot=self.Nplates-1-self.NgapsCold
+                    
+            # Find HT and Delta P on the hot side
+            #---------------
+            #Mean values for the hot side based on average of inlet temperatures
+            HotPlateInputs={
+                'PlateAmplitude': self.PlateAmplitude,
+                'PlateWavelength' : self.PlateWavelength,
+                'InclinationAngle': self.InclinationAngle,
+                'Bp': self.Bp,
+                'Lp': self.Lp
+            }
+            HotPlateOutputs=PHE_1phase_hdP(HotPlateInputs,JustGeo=True)
+            #There are (Nplates-2) active plates (outer ones don't do anything)
+            self.A_h_wetted=HotPlateOutputs['Ap']*(self.Nplates-2)
+            self.V_h=HotPlateOutputs['Vchannel']*self.NgapsHot
+            self.A_h_flow=HotPlateOutputs['Aflow']*self.NgapsHot
+            self.Dh_h=HotPlateOutputs['Dh']
+            self.G_h=self.mdot_h/self.A_h_flow
             
-        # Find HT and Delta P on the hot side
-        #---------------
-        #Mean values for the hot side based on average of inlet temperatures
-        HotPlateInputs={
-            'PlateAmplitude': self.PlateAmplitude,
-            'PlateWavelength' : self.PlateWavelength,
-            'InclinationAngle': self.InclinationAngle,
-            'Bp': self.Bp,
-            'Lp': self.Lp
-        }
-        HotPlateOutputs=PHE_1phase_hdP(HotPlateInputs,JustGeo=True)
-        #There are (Nplates-2) active plates (outer ones don't do anything)
-        self.A_h_wetted=HotPlateOutputs['Ap']*(self.Nplates-2)
-        self.V_h=HotPlateOutputs['Vchannel']*self.NgapsHot
-        self.A_h_flow=HotPlateOutputs['Aflow']*self.NgapsHot
-        self.Dh_h=HotPlateOutputs['Dh']
+            # Find geometric parameters for cold side of plates
+            ColdPlateInputs={
+                'PlateAmplitude': self.PlateAmplitude,
+                'PlateWavelength' : self.PlateWavelength,
+                'InclinationAngle': self.InclinationAngle,
+                'Bp': self.Bp,
+                'Lp': self.Lp
+            }
+            ColdPlateOutputs=PHE_1phase_hdP(ColdPlateInputs,JustGeo=True)
+            #There are (Nplates-2) active plates (outer ones don't do anything)
+            self.A_c_wetted=ColdPlateOutputs['Ap']*(self.Nplates-2)
+            self.V_c=ColdPlateOutputs['Vchannel']*self.NgapsCold
+            self.A_c_flow=ColdPlateOutputs['Aflow']*self.NgapsCold
+            self.Dh_c=ColdPlateOutputs['Dh']
+            self.G_c = self.mdot_c/self.A_c_flow
+            
+            #Thermal Conduction Resistance of the intermediate wall
+            self.Rw = self.PlateThickness/(self.PlateConductivity*(self.A_c_wetted+self.A_h_wetted)/2.)
         
-        # Find geometric parameters for cold side of plates
-        ColdPlateInputs={
-            'PlateAmplitude': self.PlateAmplitude,
-            'PlateWavelength' : self.PlateWavelength,
-            'InclinationAngle': self.InclinationAngle,
-            'Bp': self.Bp,
-            'Lp': self.Lp
-        }
-        ColdPlateOutputs=PHE_1phase_hdP(ColdPlateInputs,JustGeo=True)
-        #There are (Nplates-2) active plates (outer ones don't do anything)
-        self.A_c_wetted=ColdPlateOutputs['Ap']*(self.Nplates-2)
-        self.V_c=ColdPlateOutputs['Vchannel']*self.NgapsCold
-        self.A_c_flow=ColdPlateOutputs['Aflow']*self.NgapsCold
-        self.Dh_c=ColdPlateOutputs['Dh']
-        
+        elif self.HXType == 'Coaxial-HX':
+            # Wetted area on the refrigerant side (hot-side)
+            self.A_h_wetted=pi*self.ID_i*self.Lp
+            # Wetted area of the glycol (cold-side) (not including outer tube)
+            self.A_c_wetted=pi*self.OD_i*self.Lp
+            # Cross section area for both sides
+            self.A_h_flow=pi*self.ID_i**2/4.0
+            self.A_c_flow=pi*(self.ID_o**2-self.OD_i**2)/4.0
+            # Volume for both sides
+            self.V_h=self.Lp*pi*self.ID_i**2/4.0
+            self.V_c=self.Lp*pi*(self.ID_o**2-self.OD_i**2)/4.0
+            #Average mass flux of hot-side [kg/m^2-s]
+            self.G_h = self.mdot_h/self.A_h_flow 
+            #Average mass flux of cold-side [kg/m^2-s]
+            self.G_c = self.mdot_c/self.A_c_flow 
+            #Hot-side hydraulic diameter [m]
+            self.Dh_h=self.ID_i
+            #Cold-side Hydraulic diameter [m]
+            self.Dh_c=self.ID_o-self.OD_i
+            #Thermal conductivity of the intermediate wall pipe
+            self.k =self.Conductivity
+            
+            #Thermal Conduction Resistance of the intermediate wall
+            self.Rw = log(self.OD_i/self.ID_i) / (2*pi*self.k*self.Lp)
+            
         #Figure out the limiting rate of heat transfer
         self.Qmax=self.DetermineHTBounds()
         
@@ -796,12 +1156,13 @@ class PHEHXClass():
             outlet states for both fluids are known, and each element can be solved
             analytically in one shot without any iteration.
             """
-
+            
             if Q == 0.0:
                 return -1
             if Q == self.Qmax:
                 return np.inf
             
+             
             EnthalpyList_c,EnthalpyList_h=self.BuildEnthalpyLists(Q)
                 
 #            #Plot temperature versus enthalpy profiles
@@ -852,7 +1213,7 @@ class PHEHXClass():
                 hout_c=hin_c+Qbound/self.mdot_c
                 assert(hin_h > hout_h) # Hot stream is cooling
                 assert(hin_c < hout_c) # Cold stream is heating
-                
+                 
                 # Figure out what combination of phases you have:
                 # -------------------------------------------------
                 # Hot stream is either single phase or condensing (two phase)
@@ -891,8 +1252,8 @@ class PHEHXClass():
                     # Hot stream is condensing, and cold stream is single-phase (SH or SC)
                     # TODO: bounding state can be saturated state if hot stream is condensing
                     #Must be two-phase so quality is defined
-                    xin_h=(hin_h-self.hsatL_h)/(self.hsatV_h-self.hsatL_h)
-                    xout_h=(hout_h-self.hsatL_h)/(self.hsatV_h-self.hsatL_h)
+                    xin_h=min((hin_h-self.hsatL_h)/(self.hsatV_h-self.hsatL_h), 1)
+                    xout_h=max((hout_h-self.hsatL_h)/(self.hsatV_h-self.hsatL_h), 0)
                     Inputs={
                         'Q':Qbound,
                         'xin_h':xin_h,
@@ -900,12 +1261,19 @@ class PHEHXClass():
                         'Tsat_h':self.Tsat_h,
                         'Tmean_c':(Tin_c+Tout_c)/2,
                         'cp_c':(hin_c-hout_c)/(Tin_c-Tout_c),
+                        #'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h), #redefined below
                         'Tin_c':Tin_c,
+                        'Tin_h':Tin_h,
                         'pin_h':self.pin_h,
                         'pin_c':self.pin_c,
                         'Phase_c':Phase_c,
                         'Phase_h':Phase_h
                     }
+                    # cp_h in two-phase region is infinite. However, in case of temperature glide cp_h varies
+                    if Tin_h != Tout_c:
+                        Inputs['cp_h'] = (hin_h-hout_h)/(Tin_h-Tout_h)
+                    else:
+                        Inputs['cp_h'] = (hin_h-hout_h)/0.00001
                     Outputs=self._TwoPhaseH_OnePhaseC_Qimposed(Inputs)
                     if self.Verbosity>6:
                         print('w[2-1]: ', Outputs['w'])
@@ -924,14 +1292,69 @@ class PHEHXClass():
                         'xout_c':xout_c,
                         'Tsat_c':self.Tsat_c,
                         'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h),
+                        #'cp_c':(hin_c-hout_c)/(Tin_c-Tout_c), #redefined below
                         'Tmean_h':(Tin_h+Tout_h)/2,
                         'Tin_h':Tin_h,
+                        'Tin_c':Tin_c,
                         'pin_h':self.pin_h,
                         'pin_c':self.pin_c,
                         'Phase_c':Phase_c,
                         'Phase_h':Phase_h
                     }
+                    # cp_c in two-phase region is infinite. However, in case of temperature glide cp_c varies
+                    if Tin_c != Tout_c:
+                        Inputs['cp_c'] = (hin_c-hout_c)/(Tin_c-Tout_c)
+                    else:
+                        Inputs['cp_c'] = (hin_c-hout_c)/0.00001
                     Outputs=self._OnePhaseH_TwoPhaseC_Qimposed(Inputs)
+                    if self.Verbosity>6:
+                        print('w[3-2]: ', Outputs['w'])
+                    wList.append(Outputs['w'])
+                    cellList.append(Outputs)
+                elif Phase_c=='TwoPhase' and Phase_h in ['Supercritical','Supercrit_liq']:
+                    # Cold stream is evaporating, and hot stream is transcritical-phase (Supercrit or Suoercrit_liq)
+                    
+                    #Must be two-phase so quality is defined
+                    xin_c=(hin_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
+                    xout_c=(hout_c-self.hsatL_c)/(self.hsatV_c-self.hsatL_c)
+                    
+                    Inputs={
+                        'Q':Qbound,
+                        'xin_c':xin_c,
+                        'xout_c':xout_c,
+                        'Tsat_c':self.Tsat_c,
+                        #'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h),
+                        'Tmean_h':(Tin_h+Tout_h)/2,
+                        'Tin_h':Tin_h,
+                        'Tout_h':Tout_h,
+                        'pin_h':self.pin_h,
+                        'pin_c':self.pin_c,
+                        'Phase_c':Phase_c,
+                        'Phase_h':Phase_h
+                    }
+                    Outputs=self._TransCritPhaseH_TwoPhaseC_Qimposed(Inputs)
+                    if self.Verbosity>6:
+                        print('w[3-1]: ', Outputs['w'])
+                    wList.append(Outputs['w'])
+                    cellList.append(Outputs)    
+                elif Phase_c in ['Subcooled','Superheated'] and Phase_h in ['Supercritical','Supercrit_liq']:
+                    # Cold stream is single-phase (SH or SC), and hot stream is transcritical-phase (Supercrit or Supercrit_liq)
+                    
+                    Inputs={
+                        'Q':Qbound,
+                        #'cp_h':(hin_h-hout_h)/(Tin_h-Tout_h),
+                        'cp_c':(hin_c-hout_c)/(Tin_c-Tout_c),
+                        'Tmean_h':(Tin_h+Tout_h)/2,
+                        'Tmean_c':(Tin_c+Tout_c)/2,
+                        'Tin_h':Tin_h,
+                        'Tout_h':Tout_h,
+                        'Tin_c':Tin_c,
+                        'pin_h':self.pin_h,
+                        'pin_c':self.pin_c,
+                        'Phase_c':Phase_c,
+                        'Phase_h':Phase_h
+                    }
+                    Outputs=self._TransCritPhaseH_OnePhaseC_Qimposed(Inputs)
                     if self.Verbosity>6:
                         print('w[1-2]: ', Outputs['w'])
                     wList.append(Outputs['w'])
@@ -944,10 +1367,10 @@ class PHEHXClass():
             if self.Verbosity>6:
                 print('wsum:', np.sum(wList))
             return np.sum(wList)-1.0
-
+        
         low, hi = 0, self.Qmax
         try:
-            brentq(GivenQ, low, hi, xtol=0.000001*self.Qmax)
+            brentq(GivenQ, low, hi,xtol=0.000001*self.Qmax)
         except ValueError:
             print(GivenQ(low), GivenQ(hi))
             raise
@@ -977,6 +1400,7 @@ def WyattPHEHX():
         'hin_h':PropsSI('H','T',115.5+273.15,'Q',1,Ref_h), #[J/kg-K]
         
         #Geometric parameters
+        'HXType':'Plate-HX', #choose the type of IHX
         'Bp' : 0.119,
         'Lp' : 0.526, #Center-to-center distance between ports
         'Nplates' : 110,
@@ -1024,6 +1448,7 @@ def SWEPVariedmdot():
             'hin_h':PropsSI('H','T',15+273.15,'P',200000,Ref_h), #[J/kg-K]
             
             #Geometric parameters
+            'HXType':'Plate-HX', #choose the type of IHX
             'Bp' : 0.101,
             'Lp' : 0.455, #Center-to-center distance between ports
             'Nplates' : 46,
@@ -1045,6 +1470,7 @@ def SWEPVariedmdot():
         PHE=PHEHXClass(**params)
         PHE.Calculate()
         print(PHE.Q,',',PHE.h_subcooled_h,',',-PHE.DP_h/1000)
+        print(PHE.OutputList())
 
 def SamplePHEHX():
     
@@ -1064,6 +1490,7 @@ def SamplePHEHX():
 #                'hin_c':PropsSI('H','T',282.52,'P',300000,'Water'), #*1000
 #                
 #                #Geometric parameters
+#                'HXType':'Plate-HX', #choose the type of IHX
 #                'Bp' : 0.11,
 #                'Lp' : 0.300, #Center-to-center distance between ports
 #                'Nplates' : 16,
@@ -1110,6 +1537,7 @@ def SamplePHEHX():
             'hin_h':PropsSI('H','T',15+273.15,'P',200000,Ref_h), #[J/kg-K]
             
             #Geometric parameters
+            'HXType':'Plate-HX', #choose the type of IHX
             'Bp' : 0.101,
             'Lp' : 0.455, #Center-to-center distance between ports
             'Nplates' : 46,

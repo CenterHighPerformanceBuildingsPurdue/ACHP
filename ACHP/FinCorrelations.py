@@ -502,7 +502,7 @@ def PlainFins(Inputs):
     if N==1:
         P1=1.9-0.23*log(Re_Dc)
         P2=-0.236+0.126*log(Re_Dc)
-        j=0.108*pow(Re_Dc,-0.29)*pow(P_t/P_L,P1)*pow(F_p/D_h,-1.084)*pow(F_p/D_h,-0.786)*pow(F_p/P_t,P2)
+        j=0.108*pow(Re_Dc,-0.29)*pow(P_t/P_L,P1)*pow(F_p/D_c,-1.084)*pow(F_p/D_h,-0.786)*pow(F_p/P_t,P2)
     if N>=2:
         P3=-0.361-0.042*N/log(Re_Dc)+0.158*log(N*(F_p/D_c)**0.41)
         P4=-1.224-0.076*pow(P_L/D_h,1.42)/log(Re_Dc)

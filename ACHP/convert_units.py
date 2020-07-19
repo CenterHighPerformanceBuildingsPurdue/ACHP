@@ -5,7 +5,7 @@
    as needed commonly for ACHP'''
 
 #import necessary modules
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 from numpy import array, ones, ndarray
 """##### Array handling (convenience function ####################################"""
 def unitconvert(value,function):
@@ -71,6 +71,12 @@ def cfm2cms(cfm):
 def cms2cfm(cms):
     """"convert cubic meters per second(cms) to cubic feet per minutes(cfm)"""
     return cms/0.0004719474  #(0.3048[ft/m])^3/60[s/minute]
+def cms2gpm(cms):
+    """"convert cubic meters per second(cms) to gallon per minutes(gpm)"""
+    return cms*15850.3
+def gpm2cms(gpm):
+    """"convert gallon per minutes(gpm) to cubic meters per second(cms)"""
+    return gpm/15850.3
 
 """##### Energy     ####################################"""
 def kJ2J(kJ):
@@ -85,7 +91,7 @@ def BTUh2W(btuh):
     """convert Btu/h to W"""
     return btuh*0.2928104
 def W2BTUh(W):
-    """convert Btu/h to W"""
+    """convert W to Btu/h"""
     return W/0.2928104
 def kW2W(kW):
     """convert kW to W"""

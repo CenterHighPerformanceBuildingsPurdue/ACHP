@@ -37,13 +37,15 @@ def TrhoPhase_ph(AS,p,h,Tbubble,Tdew,rhosatL=None,rhosatV=None):
         return T,rho,'Subcooled'
   
     #Check if it is supercritical
-    pcrit = AS.p_critical() #[pa]
-    if p>pcrit:
+    if p >= AS.p_critical():
         AS.update(CP.HmassP_INPUTS,h,p)
         T=AS.T() #[K]
         rho=AS.rhomass() #[kg/m^3]
-        return T,rho,'Supercritical'
-    else: #It is not supercritical
+        if T >= AS.T_critical():
+            return T,rho,'Supercritical'
+        else:
+            return T,rho,'Supercrit_liq' 
+    else: #It is subcritical
         if rhosatL==None:
             AS.update(CP.QT_INPUTS,0.0,Tbubble)
             rhosatL=AS.rhomass() #[kg/m^3]
@@ -94,8 +96,8 @@ def TwoPhaseDensity(AS,xmin,xmax,Tdew,Tbubble,slipModel='Zivi'):
         raise ValueError("slipModel must be either 'Zivi' or 'Homogeneous'")
     C=S*rhog/rhof
 
-    if xmin+5*machine_eps<0 or xmax-5*machine_eps>1.0:
-        raise ValueError('Quality must be between 0 and 1')
+    if xmin+5*machine_eps<0 or xmax-10*machine_eps>1.0:
+        raise ValueError('Quality must be between 0 and 1, '+'xmin: '+str(xmin+5*machine_eps)+', xmax: '+str(xmax-10*machine_eps))
     #Avoid the zero and one qualities (undefined integral)
     if xmin==xmax:
         alpha_average=1/(1+C*(1-xmin)/xmin)
@@ -585,74 +587,6 @@ def Petterson_supercritical_average(Tout,Tin,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
     "INVESTIGATION OF AN EJECTOR-EXPANSION DEVICE IN A TRANSCRITICAL CARBON DIOXIDE CYCLE FOR MILITARY ECU APPLICATIONS" 
     '''
 
-    def Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
-        AS.update(CP.PT_INPUTS,p,T_w)
-        h_w = AS.hmass() #[J/kg]
-        mu_w = AS.viscosity() #[Pa-s OR kg/m-s]
-        cp_w = AS.cpmass() #[J/kg-K]
-        k_w = AS.conductivity() #[W/m-K]
-        rho_w = AS.rhomass() #[kg/m^3]
-        Pr_w = cp_w * mu_w / k_w #[-]
-        
-        AS.update(CP.PT_INPUTS,p,T)
-        h = AS.hmass() #[J/kg]
-        mu = AS.viscosity() #[Pa-s OR kg/m-s]
-        cp = AS.cpmass() #[J/kg-K]
-        k = AS.conductivity() #[W/m-K]
-        rho = AS.rhomass() #[kg/m^3]
-        Pr = cp * mu / k #[-]
-        
-        if mdot == 0: #For the case of Michro-channel
-            Dh = OD
-            Re=G*Dh/mu
-            Re_w=G*Dh/mu_w
-        else: #for the case of fin-and-tube
-            Dh = OD - ID
-            Area=pi*(OD**2-ID**2)/4.0
-            u=mdot/(Area*rho)
-            Re=rho*u*Dh/mu
-            Re_w=Re#rho_w*u*Dh/mu_w
-        
-        if G > 350:
-            e_D = 0 #smooth pipe
-            f = (-1.8*log10(6.9/Re + (1/3.7*e_D)**1.11))**(-2)/4
-            Nu_m = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) *(1+(D_l)**(2/3))
-            Nu = Nu_m * (Pr/Pr_w)**0.11
-        
-        else: # G<350
-            
-            M = 0.001 #[kg/J]
-            K = 0.00041 #[kg/J]
-            
-            cp_avg = (h-h_w)/(T-T_w)
-            
-            if cp_avg/cp_w <= 1:
-                n = 0.66 - K*(q_flux_w/G)
-            else: #cp_avg/cp_w <1
-                n = 0.9 - K*(q_flux_w/G)
-            
-            f0 = (0.79*log(Re)-1.64)**(-2)
-            
-            g =9.81
-            #coefficient of thermal expansion
-            beta = AS.isobaric_expansion_coefficient() #[1/K]
-            #Grashoff number
-            Gr = g*beta*(T_w-T)*Dh**3/(mu/rho)**2
-            if Gr/Re**2 < 5e-4:
-                f = f0 * (mu_w/mu)**0.22
-            elif  Gr/Re**2 >= 5e-4 and G/Re**2 < 0.3:
-                f = 2.15 * f0 * (mu_w/mu)**0.22 * (Gr/Re)**0.1
-            else: #use f0 for friction factor
-                f = f0
-                
-            Nu_w_ppk = (f0/8)*Re_w*Pr_w/(1.07+12.7*sqrt(f/8)*(Pr_w**(2/3)-1))
-            
-            Nu = Nu_w_ppk * (1-M*q_flux_w/G) * (cp_avg/cp_w)**n
-            
-        h = k*Nu/Dh #[W/m^2-K]
-        
-        return (h,f,cp,rho)
-
     def SuperCriticalCondensation_h(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
         '''return h value'''
         return Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)[0]
@@ -676,7 +610,75 @@ def Petterson_supercritical_average(Tout,Tin,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
     else:
         #A single value is given
         return Petterson_supercritical(Tout,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w)
+
+def Petterson_supercritical(T,T_w,AS,G,OD,ID,D_l,mdot,p,q_flux_w):
+    AS.update(CP.PT_INPUTS,p,T_w)
+    h_w = AS.hmass() #[J/kg]
+    mu_w = AS.viscosity() #[Pa-s OR kg/m-s]
+    cp_w = AS.cpmass() #[J/kg-K]
+    k_w = AS.conductivity() #[W/m-K]
+    rho_w = AS.rhomass() #[kg/m^3]
+    Pr_w = cp_w * mu_w / k_w #[-]
     
+    AS.update(CP.PT_INPUTS,p,T)
+    h = AS.hmass() #[J/kg]
+    mu = AS.viscosity() #[Pa-s OR kg/m-s]
+    cp = AS.cpmass() #[J/kg-K]
+    k = AS.conductivity() #[W/m-K]
+    rho = AS.rhomass() #[kg/m^3]
+    Pr = cp * mu / k #[-]
+    
+    if mdot == 0: #For the case of Michro-channel
+        Dh = OD
+        Re=G*Dh/mu
+        Re_w=G*Dh/mu_w
+    else: #for the case of fin-and-tube
+        Dh = OD - ID
+        Area=pi*(OD**2-ID**2)/4.0
+        u=mdot/(Area*rho)
+        Re=rho*u*Dh/mu
+        Re_w=Re#rho_w*u*Dh/mu_w
+    
+    if G > 350:
+        e_D = 0 #smooth pipe
+        f = (-1.8*log10(6.9/Re + (1/3.7*e_D)**1.11))**(-2)/4
+        Nu_m = (f/8)*(Re-1000)*Pr/(1+12.7*sqrt(f/8)*(Pr**(2/3)-1)) *(1+(D_l)**(2/3))
+        Nu = Nu_m * (Pr/Pr_w)**0.11
+    
+    else: # G<350
+        
+        M = 0.001 #[kg/J]
+        K = 0.00041 #[kg/J]
+        
+        cp_avg = (h-h_w)/(T-T_w)
+        
+        if cp_avg/cp_w <= 1:
+            n = 0.66 - K*(q_flux_w/G)
+        else: #cp_avg/cp_w <1
+            n = 0.9 - K*(q_flux_w/G)
+        
+        f0 = (0.79*log(Re)-1.64)**(-2)
+        
+        g =9.81
+        #coefficient of thermal expansion
+        beta = AS.isobaric_expansion_coefficient() #[1/K]
+        #Grashoff number
+        Gr = g*beta*(T_w-T)*Dh**3/(mu/rho)**2
+        if Gr/Re**2 < 5e-4:
+            f = f0 * (mu_w/mu)**0.22
+        elif  Gr/Re**2 >= 5e-4 and G/Re**2 < 0.3:
+            f = 2.15 * f0 * (mu_w/mu)**0.22 * (Gr/Re)**0.1
+        else: #use f0 for friction factor
+            f = f0
+            
+        Nu_w_ppk = (f0/8)*Re_w*Pr_w/(1.07+12.7*sqrt(f/8)*(Pr_w**(2/3)-1))
+        
+        Nu = Nu_w_ppk * (1-M*q_flux_w/G) * (cp_avg/cp_w)**n
+        
+    h = k*Nu/Dh #[W/m^2-K]
+    
+    return (h,f,cp,rho)
+   
 def f_h_1phase_Tube(mdot,ID,T, p,AS,Phase='Single'):
     """ 
     Convenience function to run annular model for tube.  Tube is a degenerate case of annulus with inner diameter of 0
@@ -775,7 +777,6 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
     Exchangers by Holger Martin DOI: 10.1007/978-3-540-77877-6_66 Springer Verlag
     Outputs: for JustGeo=True >> Ap, Vchannel, Aflow, Dh, PHI
              for JustGeo=False >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
-             
     ::
         =============================        
         ||   __               __    ||
@@ -902,6 +903,201 @@ def PHE_1phase_hdP(Inputs,JustGeo=False):
         }
         return Outputs
 
+def ShellTube_1phase_hdP(Inputs,JustGeo=False):
+    """   
+    Based on HoSung Lee "Thermal Design, Heat Sinks, Thermoelectrics, Heat Pipes
+    Compact HEat Exchangers and Solar Cells" Wiley 2010. Chapter 5.4: Shell-and-Tube
+    Heat Exchangers.
+    Outputs: for JustGeo=False >> Ap, Vchannel, Aflow, Dh, PHI
+             for JustGeop=True >> Dh, h, Ap, DELTAP, Re_g, w_g, k_g, cp_g, Vchannel, Aflow
+    ::
+
+        Square-pitch layout (Fig. 5.21a)
+             __               ___ do
+            /  \             / | \   
+           |    |           | di  | ========   
+            \__/             \_|_/ ___    |
+    Flow                            |     |
+    ===>                            Ct   Pt
+             __               __ ___|_    |
+            /  \             /  \         |
+           |    |           |    | ========    
+            \__/             \__/ 
+
+
+     `  Triangular-pitch layout (Fig. 5.21b)
+                              do
+                         / | \   
+                        | di  |                 ==========   
+             __          \_|_/ ___        __            |
+            /  \                |        /   \          |
+    Flow   |    |              Ct       |     |         Pt
+    ===>    \__/           __ __|_       \ __/          |
+                          /  \                          |
+                         |    |                  =========   
+                          \__/ 
+
+    """
+        
+    #Shell-and-Tube parameters
+    Lt = Inputs['TubeLength']
+    Nt = Inputs['NumberTube']
+    Np = Inputs['NumberPasses']
+    Ds = Inputs['ShellDiameter']
+    Nb = Inputs['NumberBuffles']
+    
+    #Tube Layout
+    TubeLayout = Inputs['TubeLayout']
+    Pt = Inputs['TubePitch']
+    Ct = Inputs['TubeClearance']
+    di = Inputs['TubeInnerDiameter']
+    do = Inputs['TubeOuterDiameter']
+
+    if JustGeo==False:        
+        AS_tube = Inputs['AS_tube']
+        AS_shell = Inputs['AS_shell']
+        T_tube = Inputs['T_tube']
+        p_tube = Inputs['p_tube']
+        T_shell = Inputs['T_shell']
+        p_shell = Inputs['p_shell']
+        mdot_tube = Inputs['mdot_tube']           #mass flow rate per tube
+        mdot_shell = Inputs['mdot_shell']
+        
+    # Buffle spacing (Eq. 5.128)   
+    B = Lt/(Nb + 1)
+    
+    # Equivalent diameter
+    if TubeLayout == 'square-pitch':
+        # Eq. 5.130a
+        De = 4*(Pt**2 - pi*do**2/4)/(pi*do)
+        CL = 1
+    elif TubeLayout == 'triangular-pitch':
+        # Eq. 5.130b
+        De = 4*((sqrt(3)*Pt**2/4) - (pi*do**2/8))/(pi*do/2)
+        CL = sin(pi/3)
+    else:
+        raise
+    
+    # Cross-flow area (Eq. 5.131)
+    Ac_shell = Ds*Ct*B/Pt
+    
+    # Diameter ratio (Eq. 5.132)
+    dr = do/dt
+    
+    # Tube pitch ratio (Eq. 5.133)
+    Pr = Pt/do
+    
+    # Tube clearance (Eq. 5.134)
+    Ct = Pt - do
+
+    # Tube ciynt constant (CTP) (Eq. 5.136)
+    if NumberPasses == 1:
+        CTP = 0.93 # one-pass exchanger    
+    elif NumberPasses == 2:
+        CTP = 0.90 # two-pass exchanger    
+    elif NumberPasses == 3:
+        CTP = 0.85 # three-pass exchanger    
+    else:
+        raise
+    
+    # Shaded Area (Eq. 5.137)
+    ShadedArea = CL*Pt**2
+    
+    # Number of tubes
+    Nt = CPT*(pi*Ds**2/4)/ShadedArea
+    
+    # Heat transfer areas of inner and outer surfaces of pipe
+    Ai = pi*di*Nt*Lt
+    Ao = pi*do*Nt*Lt
+    
+    # Tube side
+    Ac_i = (pi*di**2/4)*Nt/Np    
+    
+    if JustGeo==True:
+        return {'Aflow_tube':Ac_i,'Aflow_shell':Ac_shell,'Vtubes':0,'Vshell':0,} #TO DO: Vtubes and Vshell ?
+    else:
+        #Also calculate the thermodynamics and pressure drop
+        
+
+        #Single phase Fluid properties tube
+        AS_tube.update(CP.PT_INPUTS, p_tube, T_tube)
+        rho_tube=AS_tube.rhomass() #[kg/m^3]
+        eta_tube=AS_tube.viscosity() #Viscosity[Pa-s]
+        cp_tube=AS_tube.cpmass() #[J/kg-K]
+        k_tube=AS_tube.conductivity() #Thermal conductivity[W/m/K]
+        
+        Pr_tube=cp_tube*eta_tube/k_tube
+        
+        eta_tube_w=eta_tube #TODO: allow for temperature dependence?
+        w_tube=mdot_tube/rho_tube/Ac_tubes
+        ReD_tube=rho_tube*w_tube*di/eta_tube
+        
+        
+        if ReD_tube < 2300: # Laminar flow
+            NuD_tube = 1.86*(di*ReD_tube*Pr_tube/Lt)**(1/3)*(mu_tube/mu_tube_w)**0.14 # Eq. 5.145
+            
+            if NuD_tube < 3.66:
+                NuD_tube = 3.66
+            
+            f = 16/ReD_tube
+            
+        else: # ReD > 2300 Turbulent flow
+            # friction factor
+            f = (1.58*log(ReD_tube) - 3.28)**(-2)
+
+            NuD_tube = ((f/2)*(ReD_tube - 1000)*Pr_tube)/(1 + 12.7*(f/2)**0.5*(Pr_tube**(2/3)-1)) # Eq. 5.146
+        
+        
+        #Heat transfer coefficient tube side (Eq. 5.145)
+        h_tube = NuD_tube*k_f/di
+        
+        # Shell side
+        #Single phase Fluid properties shell
+        AS_shell.update(CP.PT_INPUTS, p_shell, T_shell)
+        rho_shell=AS_shell.rhomass() #[kg/m^3]
+        eta_shell=AS_shell.viscosity() #Viscosity[Pa-s]
+        cp_shell=AS_shell.cpmass() #[J/kg-K]
+        k_shell=AS_shell.conductivity() #Thermal conductivity[W/m/K]
+        
+        Pr_shell=cp_shell*eta_shell/k_shell
+        
+        eta_shell_w=eta_tube #TODO: allow for temperature dependence?
+        w_shell=mdot_shell/rho_shell/Ac_shell
+
+        ReD_shell = mdot_shell*De/(Ac_shell*mu)
+        
+        #TODO: check Sarkar 2011 Eq. 5 includes additional factors
+        if ReD_shell > 2300 and ReD_shell < 1e6:
+            Nu_shell = 0.36*ReD_shell**0.55*Pr_shell**(1/3)*(mu_shell/mu_shell_w)**0.14 # Eq. 5.151
+        
+            f = exp(0.576 - 0.19*log(Re_s))
+            
+        else:
+            raise
+        
+        #Heat transfer coefficient shell side (Eq. 5.151)
+        h_shell = Nu_shell*kf/De
+        
+        # Pressure drop tube side (Eq. 5.158)
+        DELTAP_tube = 4*(f*Lt/di + 1)*Np*rho_tube/2*w_tube**2
+        
+        # Pressure drop shell side (Eq. 5.161)
+        DELTAP_shell = f*(Ds/De)*(Nb + 1)*rho_shell/2*w_shell**2
+        
+        
+        # There are quite a lot of things that might be useful to have access to
+        # in outer functions, so pack up parameters into a dictionary
+        Outputs={
+             'De':dh,                       #Equivalent diamter [m]
+             'h_tube':h_tube,               #Heat transfer coeffcient tube side [W/m^2-K]
+             'h_shell':h_tube,              #Heat transfer coeffcient shell side [W/m^2-K]
+             'DELTAP_tube':DELTAP_tube,     #Pressure drop tube side [Pa]
+             'DELTAP_shell':DELTAP_shell,   #Pressure drop tube side [Pa]
+             'ReD_tube': ReD_tube,          #Reynold number tube side
+             'ReD_shell': ReD_shell,        #Reynold number shell side
+        }
+        return Outputs
+    
 def Cooper_PoolBoiling(pstar,Rp,q,M):
     """
     Cooper M.G., 1984, "Heat flow rates in saturated nucleate boiling - A wide-ranging 
@@ -1433,6 +1629,131 @@ def Kim_Mudawar_boiling_DPDZ_h(AS, G, Dh, x, Tbubble, Tdew, p, beta, q_fluxH, PH
     
     return dpdz, h
 
+def NaturalConv_HTC(AS,HTCat,T_wall,T_inf,P_film,L,D_pipe=None,PlateNum=None):
+
+    """
+    Nusselt number for different heat transfer categories;
+    find heat transfer coefficient based on Nusselt number;
+    characteristic length, A/P;
+    Based on: Incropera et al. "Fundamentals of Heat and Mass Transfer"
+    
+    Return heat transfer rate by natural convection
+    
+    Parameters
+    ----------
+    AS : AbstractState with the refrigerant name and backend 
+    HTCat : 'horizontal_pipe' or 'vertical_pipe' or 'vertical_plate' or 'horizontal_plate'
+    T_wall [K]: surface temperature
+    P_film [Pa]: pressure at the film
+    Tinf [K]: surrounding temperature
+    L [m]: characteristc length
+    D_pipe [m]: pipe diameter
+    PlateNum : 'upper_surface' or 'lower_surface'
+    ----------
+    Return
+    h [W/m^2 K]: Heat transfer coefficient
+    """
+    # Gravity acceleration
+    g = 9.81 #[m/s^2]
+
+    # Film temperature, used to calculate thermal propertiers
+    T_film = (T_wall + T_inf)/2 # [K]
+    
+    # thermal expansion coefficient, assumed ideal gas
+    beta = 1/T_film # [1/K]
+
+    # Transport properties calcualtion film
+    AS.update(CP.PT_INPUTS,P_film,T_film)   # use the film temperature to find the outer convective coefficient
+    
+    rho_film = AS.rhomass() #[kg/m3]
+    k_film = AS.conductivity() #[W/m-K]
+    mu_film = AS.viscosity() #[Pa-s OR kg/m-s]
+    nu_film = mu_film/rho_film  #[m^2/s]
+    cp_film = AS.cpmass() #[J/kg/K]
+    Pr_film = cp_film*mu_film/k_film #[-]
+
+    if T_wall<T_inf:
+        # Grashof number, beta-thermal expansion coefficient
+        Gr = g*beta*(T_inf-T_wall)*L**3/nu_film**2 #[-]
+    else:
+        # Grashof number, beta-thermal expansion coefficient
+        Gr = g*beta*(T_wall-T_inf)*L**3/nu_film**2 #[-]
+    
+    # Rayleigh number
+    RaL = Gr*Pr_film #[-]
+    
+    if HTCat == 'horizontal_pipe':
+        RaD =  RaL*D_pipe**3/L**3 #[-]
+
+    if RaL < 1e-3:
+        Nu = 0.0 #[-]
+    else:
+        if HTCat == 'vertical_plate':
+            if RaL > 1e9:
+                Nu = (0.825 + 0.387*RaL**(1/6) / ( 1 + (0.492/Pr_film)**(9/16) )**(8/27))**2 #[-]
+            else:
+                Nu = 0.68 + 0.670*RaL**(1/4) / ( 1 + (0.492/Pr_film)**(9/16) )**(4/9) #[-]
+            
+        elif HTCat == 'horizontal_plate':
+            if PlateNum == 'upper_surface': 
+                if T_wall > T_inf: #hot plate
+                    if RaL >= 1e4 and RaL <= 1e7:
+                        Nu = 0.54*RaL**(1/4) #[-]
+                    elif RaL >= 1e7 and RaL <= 1e11:
+                        Nu = 0.15*RaL**(1/3) #[-]          
+                    else:
+                        Nu = 0.71*RaL**(1/4) #[-] 
+                    
+                else: # cold plate
+                    if RaL >= 1e5 and RaL <= 1e10:
+                        Nu = 0.27*RaL**(1/4)
+                    else:
+                        Nu = 0.71*RaL**(1/4) #[-]
+
+            elif PlateNum == 'lower_surface':
+                if T_wall > T_inf: # hot plate
+                    if RaL >= 1e5 and RaL <= 1e10:
+                        Nu = 0.27*RaL**(1/4) #[-]
+                    else:
+                        Nu = 0.25*RaL**(1/4) #[-]
+                    
+                else: # cold plate
+                    if RaL >= 1e4 and RaL <= 1e7:
+                        Nu = 0.54*RaL**(1/4) #[-]
+                    elif RaL >= 1e7 and RaL <= 1e11:
+                        Nu = 0.15*RaL**(1/3) #[-]
+                    else:
+                        Nu = 0.25*RaL**(1/4) #[-]
+            else:
+                raise Exception('PlateNum must be either upper_surface or lower_surface')
+            
+                    
+        elif HTCat == 'horizontal_pipe':
+            if RaD <= 1e12:
+                # Churchill and Chu, 1975, RaL->RaD    
+                Nu = (0.60+0.387*RaD**(1/6)/(1 + (0.559/Pr_film)**(9/16))**(8/27))**2 #[-]   
+
+            else: # Kuehn and Goldstein, 1976.
+                temp= (( 0.518*(RaD**0.25)*(1+(0.559/Pr_film)**0.6)**(-5/12) )**15 + (0.1*RaD**(1/3))**15)**(1/15) 
+                Nu = 2/(log(1 + 2/temp)) #[-]
+                
+        elif HTCat == 'vertical_pipe':
+            if (D_pipe/L) < 35/Gr**(1/4):
+                F = 1/3*((L/D_pipe)/(1/Gr))**(1/4)+1 #[-]
+            else:
+                F = 1.0 #[-]
+            Nu = F*(0.825 + 0.387*RaL**(1/6)/(1+(0.492/Pr_film)**(9/16))**(8/27))**2 #[-]
+
+        else:
+            raise Exception('not implemented')
+
+    # Convective heat transfer coefficient
+    if HTCat == 'horizontal_pipe':
+        h = Nu*k_film/D_pipe #[W/m^2 K]
+    else:
+        h = Nu*k_film/L #[W/m^2 K]
+
+    return h
  
 if __name__=='__main__':
     DP_vals_acc=[]

@@ -2,10 +2,11 @@ from __future__ import division, print_function, absolute_import
 import sys
 
 from scipy.optimize import brentq, fsolve,newton 
-import numpy as np                  
+import numpy as np                  #NumPy is fundamental scientific package
 
 import CoolProp as CP
-#General ACHP imports
+
+from ACHP.convert_units import W2BTUh
 from ACHP.Compressor import CompressorClass  #Compressor
 from ACHP.Condenser import CondenserClass    #Condenser
 from ACHP.MicroChannelCondenser import MicroCondenserClass #MicroChannelCondenser
@@ -18,10 +19,16 @@ from ACHP.LineSet import LineSetClass, LineSetOptionClass #Line set class
 from ACHP.ExpDev import ExpDevClass
 from ACHP.Pump import PumpClass # Secondary loop pump class
 from ACHP.Correlations import TrhoPhase_ph            
-from ACHP.Solvers import MultiDimNewtRaph, Broyden
+from ACHP.Solvers import MultiDimNewtRaph, Broyden, DE
 from ACHP.Preconditioners import DXPreconditioner,SecondaryLoopPreconditioner
 from ACHP.FinCorrelations import FinInputs     #fin correlations
 from ACHP.MicroFinCorrelations import MicroFinInputs #Micro-fin correlations
+from ACHP.GasCooler import GasCoolerClass #GasCooler
+from ACHP.MicroChannelGasCooler import MicroChannelGasCoolerClass #Micro-channel GasCooler
+from ACHP.MicroChannelEvaporator import MicroChannelEvaporatorClass #Micro-channel Evaporator
+from ACHP.System_Volumes import SightGlassFilterDrierMicroMotionClass, SightGlassFilterDrierMicroMotionOptionClass
+from ACHP.Compressor_VariableSpeed_HitachiRotary import HitachiVariableSpeedRotaryCompressorClass
+from ACHP.Receiver import SuctionAccumulatorClass
 
 
 class SecondaryCycleClass():
@@ -60,11 +67,12 @@ class SecondaryCycleClass():
                 self.Evaporator=EvaporatorClass()
                 self.Evaporator.Fins=FinInputs()
             elif self.EvapType == 'Micro-channel':
-                raise
+                self.Evaporator=MicroChannelEvaporatorClass()
+                self.Evaporator.Fins=MicroFinInputs()
             else:
                 raise
         elif self.EvapSolver == 'Finite-Element':
-            raise
+            raise Exception('Discretized HX model not implemented')
         else:
             raise 
         
@@ -78,16 +86,20 @@ class SecondaryCycleClass():
             else:
                 raise
         elif self.CondSolver == 'Finite-Element':
-            raise
+            raise Exception('Discretized HX model not implemented')
         else:
             raise
         
         #Abstract State   
         self.AS = CP.AbstractState(self.Backend, self.Ref)
         if hasattr(self,'MassFrac'):
-            self.AS.set_mass_fractions([self.MassFrac])
+            self.AS.set_mass_fractions([self.MassFrac,1-self.MassFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
         elif hasattr(self,'VoluFrac'):
-            self.AS.set_volu_fractions([self.VoluFrac])
+            self.AS.set_volu_fractions([self.VoluFrac,1-self.VoluFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
         #Abstract State for SecLoopFluid  
         self.AS_SLF = CP.AbstractState(self.Backend_SLF, self.SecLoopFluid)
         if hasattr(self,'MassFrac_SLF'):
@@ -115,6 +127,7 @@ class SecondaryCycleClass():
             ('COSP','-',self.COSP),
             ('Net Capacity','W',self.CoolingCoil.Capacity),
             ('Net Power','W',self.Power),
+            ('EER','BTU/(W-hr)',self.EER),
             ('SHR','-',self.SHR),
             ('Condensation temp (dew)','K',self.Tdew_cond),
             ('Evaporation temp (dew)','K',self.Tdew_evap),
@@ -140,6 +153,18 @@ class SecondaryCycleClass():
         AS = self.AS
         #AbstractState for SecLoopFluid
         AS_SLF = self.AS_SLF
+
+        # Surrounding
+        if hasattr(self,'T_0') and hasattr(self,'p_0'):
+            T_0 = self.T_0
+            p_0 = self.p_0
+        else:
+            T_0 = 25+273.15 #K
+            p_0 = 101325 #Pa
+        
+        AS.update(CP.PT_INPUTS,p_0,T_0)
+        h_0 = AS.hmass()
+        s_0 = AS.smass()
         
         #Store the values to save on computation for later
         self.DT_evap=DT_evap
@@ -336,9 +361,27 @@ class SecondaryCycleClass():
             self.Pump.Update(**params)
             self.Pump.Calculate()
             
-            self.Charge=self.Compressor.Charge+self.Condenser.Charge+self.IHX.Charge_r+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            
             self.EnergyBalance=self.Compressor.CycleEnergyIn+self.Condenser.Q+self.IHX.Q+self.LineSetSuction.Q+self.LineSetDischarge.Q+self.LineSetLiquid.Q
-            #Calculate properties:
+            
+            Charge=self.Compressor.Charge+self.Condenser.Charge+self.IHX.Charge_r+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction         
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
+            
+            # Calculate properties
             AS.update(CP.QT_INPUTS,0.0,self.Tbubble_cond)
             h_L = AS.hmass() #[J/kg]
             cp_L = AS.cpmass() #[J/kg-K]
@@ -370,6 +413,7 @@ class SecondaryCycleClass():
             self.COSP=self.CoolingCoil.Capacity/(self.Compressor.W+self.Pump.W+self.CoolingCoil.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower)
             self.SHR=self.CoolingCoil.SHR
             self.Power=self.Compressor.W+self.Pump.W+self.CoolingCoil.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
             self.DP_high_Model=self.Condenser.DP_r+self.LineSetDischarge.DP+self.LineSetLiquid.DP #[Pa]
             self.DP_low_Model=self.IHX.DP_r+self.LineSetSuction.DP #[Pa]
         
@@ -507,16 +551,31 @@ class SecondaryCycleClass():
             self.Pump.Update(**params)
             self.Pump.Calculate()
             
-            self.Charge=self.Compressor.Charge+self.Evaporator.Charge+self.PHEIHX.Charge_h+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            Charge=self.Compressor.Charge+self.Evaporator.Charge+self.PHEIHX.Charge_h+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction         
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
             
-            #Calculate properties:
+            # Calculate properties
             AS.update(CP.QT_INPUTS,0.0,self.Tbubble_cond)
             h_L = AS.hmass() #[J/kg]
             cp_L = AS.cpmass() #[J/kg-K]
             AS.update(CP.PT_INPUTS,psat_cond,self.Tbubble_cond-self.DT_sc_target)
             h_target = AS.hmass() #[J/kg]
-            #Calculate an effective subcooling amount by deltah/cp_satL
-            #Can be positive or negative (negative is quality at outlet
+            # Calculate an effective subcooling amount by deltah/cp_satL
+            # Can be positive or negative (negative is quality at outlet
             self.DT_sc=self.PHEIHX.DT_sc_h#(PropsSI('H','T',self.Tbubble_cond,'Q',0,self.Ref)-self.PHEIHX.hout_h)/(PropsSI('C','T',self.Tbubble_cond,'Q',0,self.Ref)) #*1000 #*1000
             deltaH_sc=self.Compressor.mdot_r*(h_L-h_target)
             
@@ -537,6 +596,7 @@ class SecondaryCycleClass():
             self.COP=-self.CoolingCoil.Q/self.Compressor.W
             self.COSP=self.Capacity/(self.Compressor.W+self.Pump.W+self.CoolingCoil.Fins.Air.FanPower+self.Evaporator.Fins.Air.FanPower)
             self.Power=self.Compressor.W+self.Pump.W+self.CoolingCoil.Fins.Air.FanPower+self.Evaporator.Fins.Air.FanPower
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
             self.SHR=-self.CoolingCoil.SHR
             self.DP_high_Model=self.PHEIHX.DP_h+self.LineSetDischarge.DP+self.LineSetLiquid.DP #[Pa]
             self.DP_low_Model=self.Evaporator.DP_r+self.LineSetSuction.DP #[Pa]
@@ -682,11 +742,12 @@ class DXCycleClass():
                 self.Evaporator=EvaporatorClass()
                 self.Evaporator.Fins=FinInputs()
             elif self.EvapType == 'Micro-channel':
-                raise
+                self.Evaporator=MicroChannelEvaporatorClass()
+                self.Evaporator.Fins=MicroFinInputs()
             else:
                 raise
         elif self.EvapSolver == 'Finite-Element':
-            raise
+            raise Exception('Discretized HX model not implemented')
         else:
             raise    
         
@@ -700,11 +761,20 @@ class DXCycleClass():
             else:
                 raise
         elif self.CondSolver == 'Finite-Element':
-            raise
+            raise Exception('Discretized HX model not implemented')
         else:
             raise
         #Abstract State    
         self.AS = CP.AbstractState(self.Backend, self.Ref)
+        if hasattr(self,'MassFrac'):
+            self.AS.set_mass_fractions([self.MassFrac,1-self.MassFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
+        elif hasattr(self,'VoluFrac'):
+            self.AS.set_volu_fractions([self.VoluFrac])
+            self.AS.set_mass_fractions([self.VoluFrac,1-self.VoluFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
           
     def OutputList(self):
         """
@@ -723,6 +793,9 @@ class DXCycleClass():
             Output_List.append(('Description','N/A',self.TestDescription))
         if hasattr(self,'TestDetails'):
             Output_List.append(('Details','N/A',self.TestDetails))
+        if self.ImposedVariable == 'Charge':
+            Output_List.append(('Charge w/no Correction','kg',self.Charge_noCorrect))
+            Output_List.append(('Charge w/ Correction','kg',self.Charge_correct))
         Output_List_default=[                                                   #default output list
             ('Charge','kg',self.Charge),
             ('Condensation temp (dew)','K',self.Tdew_cond),
@@ -734,6 +807,7 @@ class DXCycleClass():
             ('COSP','-',self.COSP),
             ('Net Capacity','W',self.Capacity),
             ('Net Power','W',self.Power),
+            ('EER','BTU/(W-hr)',self.EER),
             ('SHR','-',self.SHR),
             ('Imposed Variable','-',self.ImposedVariable),
          ]
@@ -757,28 +831,45 @@ class DXCycleClass():
         if self.Verbosity>1:
             print ('DTevap %7.4f DTcond %7.4f DTsh %7.4f,' %(DT_evap,DT_cond,DT_sh))
         
-        #AbstractState
+        # AbstractState
         AS = self.AS
         
-        #Condenser and evaporator dew temperature (guess)
+        # Surrounding
+        if hasattr(self,'T_0') and hasattr(self,'p_0'):
+            T_0 = self.T_0
+            p_0 = self.p_0
+        else:
+            T_0 = 25+273.15 #K
+            p_0 = 101325 #Pa
+            self.T_0 = T_0
+            self.p_0 = p_0
+            
+        AS.update(CP.PT_INPUTS,p_0,T_0)
+        h_0 = AS.hmass()
+        s_0 = AS.smass()
+        
+        self.h_0 = h_0
+        self.s_0 = s_0
+        
+        # Condenser and evaporator dew temperature (guess)
         Tdew_cond=self.Condenser.Fins.Air.Tdb+DT_cond#the values (Tin_a,..) come from line 128ff
         Tdew_evap=self.Evaporator.Fins.Air.Tdb-DT_evap
-        #Condenser and evaporator saturation pressures
+        # Condenser and evaporator saturation pressures
         AS.update(CP.QT_INPUTS,1.0,Tdew_cond)
         psat_cond=AS.p() #[Pa]
         AS.update(CP.QT_INPUTS,1.0,Tdew_evap)
         psat_evap=AS.p() #[Pa]
-        #evaporator bubble temparture
+        # evaporator bubble temparture
         AS.update(CP.PQ_INPUTS,psat_evap,0.0)
         Tbubble_evap=AS.T() #[T]
         
         self.Tdew_cond=Tdew_cond
         self.Tdew_evap=Tdew_evap
         
-        #If the user doesn't include the Mode, fail
+        # If the user doesn't include the Mode, fail
         assert hasattr(self,'Mode')
         
-        #Cycle Solver in 'AC' model
+        # Cycle Solver in 'AC' model
         if self.Mode=='AC':
             if not hasattr(self.Compressor,'mdot_r') or self.Compressor.mdot_r<0.00001:
                 # The first run of model, run the compressor just so you can get a preliminary value 
@@ -792,7 +883,7 @@ class DXCycleClass():
                 self.Compressor.Update(**params)
                 self.Compressor.Calculate()
             
-            #Calculate inlet enthalpy 
+            # Calculate inlet enthalpy 
             AS.update(CP.PT_INPUTS,psat_evap,Tdew_evap+DT_sh)
             h_in = AS.hmass() #[J/kg]
             params={
@@ -867,18 +958,35 @@ class DXCycleClass():
             self.Evaporator.Update(**params)
             self.Evaporator.Calculate()
             
-            self.Charge=self.Compressor.Charge+self.Condenser.Charge+self.Evaporator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            
             self.EnergyBalance=self.Compressor.CycleEnergyIn+self.Condenser.Q+self.Evaporator.Q+self.LineSetSuction.Q+self.LineSetDischarge.Q+self.LineSetLiquid.Q
             
-            self.DP_HighPressure=self.Condenser.DP_r+self.LineSetLiquid.DP+self.LineSetDischarge.DP
-            self.DP_LowPressure=self.Evaporator.DP_r+self.LineSetSuction.DP
-            
+            Charge=self.Compressor.Charge+self.Condenser.Charge+self.Evaporator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction         
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
+                
+                
             if self.ExpDev.ExpType == 'Ideal':
                 resid=np.zeros((3))
                 resid[0]=self.Compressor.mdot_r*(self.Evaporator.hout_r-self.LineSetSuction.hin)
                 resid[2]=DT_sh-self.Evaporator.DT_sh
             else:
-                raise
+                resid=np.zeros((3))
+                resid[0]=self.Evaporator.hout_r-self.LineSetSuction.hin
+                resid[2]=self.Compressor.mdot_r-self.ExpDev.mdot_r
             
             if self.ImposedVariable=='Subcooling':
                 resid[1]=self.Condenser.DT_sc-self.DT_sc_target    
@@ -892,11 +1000,14 @@ class DXCycleClass():
             self.Power=self.Compressor.W+self.Evaporator.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
             self.COP=self.Evaporator.Q/self.Compressor.W
             self.COSP=self.Evaporator.Capacity/self.Power
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
             self.SHR=self.Evaporator.SHR
             self.DT_sc=self.Condenser.DT_sc
+            self.DP_HighPressure=self.Condenser.DP_r+self.LineSetLiquid.DP+self.LineSetDischarge.DP
+            self.DP_LowPressure=self.Evaporator.DP_r+self.LineSetSuction.DP
             
         
-        #Cycle Solver in 'HP' model
+        # Cycle Solver in 'HP' model
         elif self.Mode=='HP':
             if not hasattr(self.Compressor,'mdot_r') or self.Compressor.mdot_r<0.00001:
                 # The first run of model, run the compressor just so you can get a preliminary value 
@@ -910,7 +1021,7 @@ class DXCycleClass():
                 self.Compressor.Update(**params)
                 self.Compressor.Calculate()
             
-            #Calculate inlet enthalpy 
+            # Calculate inlet enthalpy 
             AS.update(CP.PT_INPUTS,psat_evap,Tdew_evap+DT_sh)
             h_in = AS.hmass() #[J/kg]
             params={
@@ -985,15 +1096,34 @@ class DXCycleClass():
             self.Evaporator.Calculate()
             
             
-            self.Charge=self.Compressor.Charge+ self.Condenser.Charge+self.Evaporator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
             self.EnergyBalance=self.Compressor.CycleEnergyIn+self.Condenser.Q+self.Evaporator.Q+self.LineSetSuction.Q+self.LineSetDischarge.Q+self.LineSetLiquid.Q
             
+            Charge=self.Compressor.Charge+ self.Condenser.Charge+self.Evaporator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction         
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
+                
+                
             if self.ExpDev.ExpType == 'Ideal':
                 resid=np.zeros((3))
                 resid[0]=self.Compressor.mdot_r*(self.Evaporator.hout_r-self.LineSetSuction.hin)
                 resid[2]=DT_sh-self.Evaporator.DT_sh
             else:
-                raise
+                resid=np.zeros((3))
+                resid[0]=self.Evaporator.hout_r-self.LineSetSuction.hin
+                resid[2]=self.Compressor.mdot_r-self.ExpDev.mdot_r
             
             if self.ImposedVariable=='Subcooling':
                 resid[1]=self.Condenser.DT_sc-self.DT_sc_target    
@@ -1005,11 +1135,13 @@ class DXCycleClass():
             self.Power=self.Compressor.W+self.Evaporator.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
             self.COP=-self.Condenser.Q/self.Compressor.W
             self.COSP=self.Capacity/self.Power
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
             self.SHR=self.Evaporator.SHR
             self.DP_HighPressure=self.Condenser.DP_r+self.LineSetDischarge.DP+self.LineSetLiquid.DP
             self.DP_LowPressure=self.Evaporator.DP_r+self.LineSetSuction.DP
         else:
-            ValueError("DX Cycle mode must be 'AC', or 'HP'")
+            ValueError("DX Cycle mode must be 'AC', or 'HP'")     
+        
         if self.Verbosity>1:
             print ('DTevap {:4.4f} DTcond {:4.4f} DTsh {:4.4f} resid[0] {:12.6e} resid[1]: {:12.6e} resid[3]: {:12.6e} Charge {:4.4f} SC: {:4.4f}'.format(DT_evap,DT_cond,DT_sh,resid[0],resid[1],resid[2],self.Charge,self.Condenser.DT_sc))
         self.DT_evap=DT_evap
@@ -1057,13 +1189,13 @@ class DXCycleClass():
                 self.DP_high=0
                 DP_converged=False        
                 while DP_converged==False:
-                    #Actually run the Newton-Raphson solver to get the solution
+                    # Actually run the Newton-Raphson solver to get the solution
                     x=Broyden(OBJECTIVE_DXCycle,[DT_evap_init,DT_cond_init,DT_sh_init])
                     delta_low=abs(self.DP_low-abs(self.DP_LowPressure))
                     delta_high=abs(self.DP_high-abs(self.DP_HighPressure))
                     self.DP_low=abs(self.DP_LowPressure)
                     self.DP_high=abs(self.DP_HighPressure)
-                    #Update the guess values based on last converged values
+                    # Update the guess values based on last converged values
                     DT_evap_init=self.DT_evap
                     DT_cond_init=self.DT_cond
                     DT_sh_init=self.DT_sh
@@ -1097,3 +1229,561 @@ class DXCycleClass():
         print ('     Simulation Completed            ')
         print ('-------------------------------------')
 
+class VariableSpeedHPClass():
+    def __init__(self):
+        """
+        Load up the necessary sub-structures to be filled with
+        the code that follows
+        """
+        self.LineSetEvapAccumulator = LineSetOptionClass()
+        self.LineSetSuction=LineSetOptionClass()
+        self.LineSetDischarge=LineSetOptionClass()
+        self.LineSetLiquid=LineSetOptionClass()
+        self.ExpDev=ExpDevClass()
+        self.SuctionAccumulator = SuctionAccumulatorClass()
+        
+    def Update(self):
+        '''
+        Update cycle class with selected compressor type
+        Update cycle class with selected HX type
+        Update cycle class with Abstract State
+        '''
+        if self.CompModel == 'Miranda-Mendoza':
+            if self.CompType == 'Hitachi-RollingPiston':
+                self.Compressor=HitachiVariableSpeedRotaryCompressorClass()
+            else:
+                raise
+        else:
+            raise
+        
+        if self.EvapSolver == 'Moving-Boundary':
+            if self.EvapType == 'Fin-tube':
+                self.Evaporator=EvaporatorClass()
+                self.Evaporator.Fins=FinInputs()
+            elif self.EvapType == 'Micro-channel':
+                self.Evaporator=MicroChannelEvaporatorClass()
+                self.Evaporator.Fins=MicroFinInputs()
+            else:
+                raise
+        elif self.EvapSolver == 'Finite-Element':
+            raise Exception('Discretized HX model not implemented')
+        else:
+            raise    
+        
+        if self.CondSolver == 'Moving-Boundary':
+            if self.CondType == 'Fin-tube':
+                self.Condenser=CondenserClass()
+                self.Condenser.Fins=FinInputs()
+            elif self.CondType == 'Micro-channel':
+                self.Condenser=MicroCondenserClass()
+                self.Condenser.Fins=MicroFinInputs()
+            else:
+                raise
+        elif self.CondSolver == 'Finite-Element':
+            raise Exception('Discretized HX model not implemented')
+        else:
+            raise
+        #Abstract State    
+        self.AS = CP.AbstractState(self.Backend, self.Ref)
+        if hasattr(self,'MassFrac'):
+            self.AS.set_mass_fractions([self.MassFrac,1-self.MassFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
+        elif hasattr(self,'VoluFrac'):
+            self.AS.set_volu_fractions([self.VoluFrac])
+            self.AS.set_mass_fractions([self.VoluFrac,1-self.VoluFrac])
+            self.AS.build_phase_envelope("dummy")
+            self.AS.get_phase_envelope_data()
+          
+    def OutputList(self):
+        """
+            Return a list of parameters for this component for further output
+            
+            It is a list of tuples, and each tuple is formed of items:
+                [0] Description of value
+                [1] Units of value
+                [2] The value itself
+        """
+        Output_List=[]
+        #append optional parameters, if applicable
+        if hasattr(self,'TestName'):
+            Output_List.append(('Name','N/A',self.TestName)) 
+        if hasattr(self,'TestDescription'):
+            Output_List.append(('Description','N/A',self.TestDescription))
+        if hasattr(self,'TestDetails'):
+            Output_List.append(('Details','N/A',self.TestDetails))
+        if self.ImposedVariable == 'Charge':
+            Output_List.append(('Charge w/no Correction','kg',self.Charge_noCorrect))
+            Output_List.append(('Charge w/ Correction','kg',self.Charge_correct))
+        Output_List_default=[                                                   #default output list
+            ('Charge','kg',self.Charge),
+            ('Condensation temp (dew)','K',self.Tdew_cond),
+            ('Evaporation temp (dew)','K',self.Tdew_evap),
+            ('Condenser Subcooling','K',self.DT_sc),
+            ('Evaporator Superheat','K',self.DT_sh),
+            ('Primary Ref.','-',self.Ref),
+            ('COP','-',self.COP),
+            ('COSP','-',self.COSP),
+            ('Net Capacity','W',self.Capacity),
+            ('Net Power','W',self.Power),
+            ('EER','BTU/(W-hr)',self.EER),
+            ('SHR','-',self.SHR),
+            ('Imposed Variable','-',self.ImposedVariable),
+         ]
+        for i in range(0,len(Output_List_default)):                             #append default parameters to output list
+            Output_List.append(Output_List_default[i])
+        return Output_List
+
+    def Calculate(self,DT_evap,DT_cond,DT_sh):
+        """
+        Inputs are differences in temperature [K] between HX air inlet temperature 
+        and the dew temperature for the heat exchanger.
+        
+        Required Inputs:
+            DT_evap: 
+                Difference in temperature [K] between evaporator air inlet temperature and refrigerant dew temperature
+            DT_cond:
+                Difference in temperature [K] between condenser air inlet temperature and refrigeant dew temperature
+            DT_sh:
+                Superheat value
+        """
+        if self.Verbosity>1:
+            print ('DTevap %7.4f DTcond %7.4f DTsh %7.4f,' %(DT_evap,DT_cond,DT_sh))
+        
+        # AbstractState
+        AS = self.AS
+        
+        # Surrounding
+        if hasattr(self,'T_0') and hasattr(self,'p_0'):
+            T_0 = self.T_0
+            p_0 = self.p_0
+        else:
+            T_0 = 25+273.15 #K
+            p_0 = 101325 #Pa
+            self.T_0 = T_0
+            self.p_0 = p_0
+            
+        AS.update(CP.PT_INPUTS,p_0,T_0)
+        h_0 = AS.hmass()
+        s_0 = AS.smass()
+        
+        self.h_0 = h_0
+        self.s_0 = s_0
+        
+        # Condenser and evaporator dew temperature (guess)
+        Tdew_cond=self.Condenser.Fins.Air.Tdb+DT_cond#the values (Tin_a,..) come from line 128ff
+        Tdew_evap=self.Evaporator.Fins.Air.Tdb-DT_evap
+        # Condenser and evaporator saturation pressures
+        AS.update(CP.QT_INPUTS,1.0,Tdew_cond)
+        psat_cond=AS.p() #[Pa]
+        AS.update(CP.QT_INPUTS,1.0,Tdew_evap)
+        psat_evap=AS.p() #[Pa]
+        # evaporator bubble temparture
+        AS.update(CP.PQ_INPUTS,psat_evap,0.0)
+        Tbubble_evap=AS.T() #[T]
+        
+        self.Tdew_cond=Tdew_cond
+        self.Tdew_evap=Tdew_evap
+        
+        # If the user doesn't include the Mode, fail
+        assert hasattr(self,'Mode')
+        
+        # Cycle Solver in 'AC' model
+        if self.Mode=='AC':
+            if not hasattr(self.Compressor,'mdot_r') or self.Compressor.mdot_r<0.00001:
+                # The first run of model, run the compressor just so you can get a preliminary value 
+                # for the mass flow rate for the line set 
+                params={               #dictionary -> key:value, e.g. 'key':2345,
+                    'pin_r': psat_evap,   
+                    'pout_r': psat_cond,
+                    'Tin_r': Tdew_evap+DT_sh,
+                    'AS': AS,
+                }
+                self.Compressor.Update(**params)
+                self.Compressor.Calculate()
+            
+            # Calculate inlet enthalpy 
+            AS.update(CP.PT_INPUTS,psat_evap,Tdew_evap+DT_sh)
+            h_in = AS.hmass() #[J/kg]
+            
+            params={
+                'Tin': Tdew_evap+DT_sh,
+                'pin': psat_evap,
+                'hin': h_in,
+                'mdot': self.Compressor.mdot_r,
+                'AS':  AS,
+                'Name': 'Evap Accumulator Line'
+            }           
+            self.LineSetEvapAccumulator.Update(**params)
+            self.LineSetEvapAccumulator.Calculate()
+            
+            params={
+                'Tin_r': self.LineSetEvapAccumulator.Tout,
+                'pin_r': psat_evap,
+                'AS':  AS,
+            }
+            self.SuctionAccumulator.Update(**params)
+            self.SuctionAccumulator.Calculate()            
+            
+            params={
+                'Tin': self.SuctionAccumulator.Tout_r,
+                'pin': psat_evap,
+                'hin': self.SuctionAccumulator.hout_r,
+                'mdot': self.Compressor.mdot_r,
+                'AS':  AS,
+                'Name': 'Suction Line'
+            }
+            self.LineSetSuction.Update(**params)
+            self.LineSetSuction.Calculate()
+            
+            params={               #dictionary -> key:value, e.g. 'key':2345,
+                'pin_r': psat_evap-self.DP_low,   
+                'pout_r': psat_cond+self.DP_high,
+                'Tin_r': TrhoPhase_ph(self.AS,psat_evap,self.LineSetSuction.hout,Tbubble_evap,Tdew_evap)[0],
+                'AS':  AS,
+            }
+            self.Compressor.Update(**params)
+            self.Compressor.Calculate()
+            if self.Verbosity>1:
+                print ('Comp DP L H',self.DP_low,self.DP_high)
+            
+            params={
+                'Tin':self.Compressor.Tout_r,
+                'pin':psat_cond,
+                'hin':self.Compressor.hout_r,
+                'mdot':self.Compressor.mdot_r,
+                'AS':AS,
+                'Name': 'Discharge Line'
+            }
+            self.LineSetDischarge.Update(**params)
+            self.LineSetDischarge.Calculate()
+            
+            params={
+                'mdot_r': self.Compressor.mdot_r,
+                'Tin_r': self.LineSetDischarge.Tout,
+                'psat_r': psat_cond,
+                'AS': AS,
+            }
+            self.Condenser.Update(**params)
+            self.Condenser.Calculate()
+            
+            params={
+                'Tin': self.Condenser.Tout_r,
+                'pin':psat_cond,
+                'hin':self.Condenser.hout_r,
+                'mdot':self.Compressor.mdot_r,
+                'AS':AS,
+                'Name': 'Liquid Line'
+            }
+            self.LineSetLiquid.Update(**params)
+            self.LineSetLiquid.Calculate()
+            
+            params={
+                'pin_r':psat_cond,
+                'hin_r':self.LineSetLiquid.hout,
+                'Tsup':DT_sh,
+                'pout_r':psat_evap,
+                'AS':AS,
+            }
+            self.ExpDev.Update(**params)
+            self.ExpDev.Calculate()
+            
+            params={
+                'mdot_r': self.Compressor.mdot_r,
+                'psat_r': psat_evap,
+                'hin_r': self.ExpDev.hout_r,
+                'AS': AS,
+            }
+            self.Evaporator.Update(**params)
+            self.Evaporator.Calculate()
+            
+            
+            self.EnergyBalance=self.Compressor.CycleEnergyIn+self.Condenser.Q+self.Evaporator.Q+self.LineSetEvapAccumulator.Q+self.LineSetSuction.Q+self.LineSetDischarge.Q+self.LineSetLiquid.Q+self.SuctionAccumulator.Q
+
+            Charge=self.Compressor.Charge+self.Condenser.Charge+self.Evaporator.Charge+self.LineSetEvapAccumulator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge+self.SuctionAccumulator.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction         
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
+            
+            
+            if self.ExpDev.ExpType == 'Ideal':
+                resid=np.zeros((3))
+                resid[0]=self.Compressor.mdot_r*(self.Evaporator.hout_r-self.LineSetSuction.hin)
+                resid[2]=DT_sh-self.Evaporator.DT_sh
+            else:
+                resid=np.zeros((3))
+                resid[0]=self.Evaporator.hout_r-self.LineSetEvapAccumulator.hin
+                resid[2]=self.Compressor.mdot_r-self.ExpDev.mdot_r
+            
+            if self.ImposedVariable=='Subcooling':
+                resid[1]=self.Condenser.DT_sc-self.DT_sc_target    
+            elif self.ImposedVariable=='Charge':
+                resid[1]=self.Charge-self.Charge_target
+                 
+            if self.Verbosity>1:
+                print (resid)
+            
+            self.Capacity=self.Evaporator.Capacity
+            self.Power=self.Compressor.W+self.Evaporator.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
+            self.COP=self.Evaporator.Q/self.Compressor.W
+            self.COSP=self.Evaporator.Capacity/self.Power
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
+            self.SHR=self.Evaporator.SHR
+            self.DT_sc=self.Condenser.DT_sc
+            self.DP_HighPressure=self.Condenser.DP_r+self.LineSetLiquid.DP+self.LineSetDischarge.DP
+            self.DP_LowPressure=self.Evaporator.DP_r+self.LineSetEvapAccumulator.DP+self.LineSetSuction.DP
+        
+        # Cycle Solver in 'HP' model
+        elif self.Mode=='HP':
+            if not hasattr(self.Compressor,'mdot_r') or self.Compressor.mdot_r<0.00001:
+                # The first run of model, run the compressor just so you can get a preliminary value 
+                # for the mass flow rate for the line set 
+                params={               #dictionary -> key:value, e.g. 'key':2345,
+                    'pin_r': psat_evap,   
+                    'pout_r': psat_cond,
+                    'Tin_r': Tdew_evap+DT_sh,
+                    'AS': AS,
+                }
+                self.Compressor.Update(**params)
+                self.Compressor.Calculate()
+            
+            # Calculate inlet enthalpy 
+            AS.update(CP.PT_INPUTS,psat_evap,Tdew_evap+DT_sh)
+            h_in = AS.hmass() #[J/kg]
+            
+            params={
+                'Tin': Tdew_evap+DT_sh,
+                'pin': psat_evap,
+                'hin': h_in,
+                'mdot': self.Compressor.mdot_r,
+                'AS':  AS,
+                'Name': 'Evap Accumulator Line'
+            }             
+            self.LineSetEvapAccumulator.Update(**params)
+            self.LineSetEvapAccumulator.Calculate()
+            
+            params={
+                'Tin_': self.LineSetEvapAccumulator.Tout,
+                'pin_r': psat_evap,
+                'AS':  AS,
+            }
+            self.SuctionAccumulator.Update(**params)
+            self.SuctionAccumulator.Calculate()
+            
+            params={
+                'Tin': self.SuctionAccumulator.Tout_r,
+                'pin': psat_evap,
+                'hin': self.SuctionAccumulator.hout_r,
+                'mdot': self.Compressor.mdot_r,
+                'AS':  AS,
+                'Name': 'Suction Line'
+            }
+            self.LineSetSuction.Update(**params)
+            self.LineSetSuction.Calculate()
+                       
+            params={               #dictionary -> key:value, e.g. 'key':2345,
+                'pin_r': psat_evap-self.DP_low,   
+                'pout_r': psat_cond+self.DP_high,
+                'Tin_r': TrhoPhase_ph(self.AS,psat_evap,self.LineSetSuction.hout,Tbubble_evap,Tdew_evap)[0],
+                'Ref':  self.Ref,
+                'AS': AS
+            }
+            self.Compressor.Update(**params)
+            self.Compressor.Calculate()
+            
+            params={
+                'Tin': self.Compressor.Tout_r,
+                'pin': psat_cond,
+                'hin': self.Compressor.hout_r,
+                'mdot': self.Compressor.mdot_r,
+                'AS':  AS,
+                'Name': 'Discharge Line'
+            }
+            self.LineSetDischarge.Update(**params)
+            self.LineSetDischarge.Calculate()
+            
+            params={
+                'mdot_r': self.Compressor.mdot_r,
+                'Tin_r': self.LineSetDischarge.Tout,
+                'psat_r': psat_cond,
+                'AS': AS,
+            }
+            self.Condenser.Update(**params)
+            self.Condenser.Calculate()
+            
+            params={
+                'Tin': self.Condenser.Tout_r,
+                'pin': psat_cond,
+                'hin': self.Condenser.hout_r,
+                'mdot': self.Compressor.mdot_r,
+                'AS': AS,
+                'Name': 'Liquid Line'
+            }
+            self.LineSetLiquid.Update(**params)
+            self.LineSetLiquid.Calculate()
+            
+            params={
+                'pin_r':psat_cond,
+                'hin_r':self.LineSetLiquid.hout,
+                'Tsup':DT_sh,
+                'pout_r':psat_evap,
+                'AS':AS,
+            }
+            self.ExpDev.Update(**params)
+            self.ExpDev.Calculate()
+            
+            params={
+                'mdot_r': self.Compressor.mdot_r,
+                'psat_r': psat_evap,
+                'hin_r': self.ExpDev.hout_r,
+                'AS': AS,
+            }
+            self.Evaporator.Update(**params)
+            self.Evaporator.Calculate()
+            
+            
+            self.EnergyBalance=self.Compressor.CycleEnergyIn+self.Condenser.Q+self.Evaporator.Q+self.LineSetEvapAccumulator.Q+self.LineSetSuction.Q+self.LineSetDischarge.Q+self.LineSetLiquid.Q+self.SuctionAccumulator.Q
+
+            Charge=self.Compressor.Charge+ self.Condenser.Charge+self.Evaporator.Charge+self.LineSetEvapAccumulator.Charge+self.LineSetSuction.Charge+self.LineSetDischarge.Charge+self.LineSetLiquid.Charge+self.SuctionAccumulator.Charge
+            self.Charge_noCorrect = Charge #Charge with no correction        
+            # Correct the charge with Bo Shen's two point regression method
+            if self.ImposedVariable=='Charge':
+                C = self.C #[kg]
+                if self.ChargeMethod=='One-point':
+                    self.Charge_correct = Charge + C #one-point charge correction
+                elif self.ChargeMethod=='Two-point':
+                    K = self.K #[kg]
+                    w_ref = self.w_ref #[-]
+                    w_liq = self.Condenser.w_subcool
+                    self.delta_charge = C + K * (w_liq - w_ref)
+                    self.Charge_correct = Charge + self.delta_charge #two-point charge correction
+                self.Charge = self.Charge_correct
+            else:
+                self.Charge = Charge
+                        
+            
+            if self.ExpDev.ExpType == 'Ideal':
+                resid=np.zeros((3))
+                resid[0]=self.Compressor.mdot_r*(self.Evaporator.hout_r-self.LineSetSuction.hin)
+                resid[2]=DT_sh-self.Evaporator.DT_sh
+            else:
+                resid=np.zeros((3))
+                resid[0]=self.Evaporator.hout_r-self.LineSetEvapAccumulator.hin
+                resid[2]=self.Compressor.mdot_r-self.ExpDev.mdot_r
+            
+            if self.ImposedVariable=='Subcooling':
+                resid[1]=self.Condenser.DT_sc-self.DT_sc_target    
+            elif self.ImposedVariable=='Charge':
+                resid[1]=self.Charge-self.Charge_target
+            
+            self.Capacity=-self.Condenser.Q+self.Condenser.Fins.Air.FanPower
+            self.DT_sc=self.Condenser.DT_sc
+            self.Power=self.Compressor.W+self.Evaporator.Fins.Air.FanPower+self.Condenser.Fins.Air.FanPower
+            self.COP=-self.Condenser.Q/self.Compressor.W
+            self.COSP=self.Capacity/self.Power
+            self.EER = W2BTUh(self.Capacity)/self.Power #[BTU/(W-hr)]
+            self.SHR=self.Evaporator.SHR
+            self.DP_HighPressure=self.Condenser.DP_r+self.LineSetLiquid.DP+self.LineSetDischarge.DP
+            self.DP_LowPressure=self.Evaporator.DP_r+self.LineSetEvapAccumulator.DP+self.LineSetSuction.DP
+        else:
+            ValueError("DX Cycle mode must be 'AC', or 'HP'")      
+        
+        if self.Verbosity>1:
+            print ('DTevap {:4.4f} DTcond {:4.4f} DTsh {:4.4f} resid[0] {:12.6e} resid[1]: {:12.6e} resid[3]: {:12.6e} Charge {:4.4f} SC: {:4.4f}'.format(DT_evap,DT_cond,DT_sh,resid[0],resid[1],resid[2],self.Charge,self.Condenser.DT_sc))
+        self.DT_evap=DT_evap
+        self.DT_cond=DT_cond
+        self.DT_sh=DT_sh
+        return resid
+    
+    def PreconditionedSolve(self):
+        """
+        Solver that will precondition by trying a range of DeltaT until the model
+        can solve, then will kick into 2-D Newton Raphson solve
+        
+        The two input variables for the system solver are the differences in 
+        temperature between the inlet air temperature of the heat exchanger and the
+        dew temperature of the refrigerant.  This is important for refrigerant blends
+        with temperature glide during constant-pressure evaporation or condensation.
+        Good examples of common working fluid with glide would be R404A or R410A.
+        """
+        def OBJECTIVE_DXCycle(x):
+            """
+            A wrapper function to convert input vector for fsolve to the proper form for the solver
+            """
+            try:
+                resids=self.Calculate(DT_evap=float(x[0]),DT_cond=float(x[1]),DT_sh=float(x[2]))#,DP_low=float(x[2]),DP_high=float(x[3]))
+            except ValueError:
+                raise
+            return resids
+        
+        # Use the preconditioner to determine a reasonably good starting guess
+        print ('-------------------------------------')
+        print ('            Running Preconditioner   ')
+        print ('-------------------------------------')
+        DT_evap_init,DT_cond_init,DT_sh_init=DXPreconditioner(self)
+        
+        print ('-------------------------------------')
+        print ('           Preconditioner Completed  ')
+        print ('             Starting Main Cycle     ')
+        print ('-------------------------------------')
+        
+        
+        GoodRun=False
+        while GoodRun==False:
+            try:
+                self.DP_low=0
+                self.DP_high=0
+                DP_converged=False        
+                while DP_converged==False:
+                    # Actually run the Newton-Raphson solver to get the solution
+                    x=Broyden(OBJECTIVE_DXCycle,[DT_evap_init,DT_cond_init,DT_sh_init])
+                    delta_low=abs(self.DP_low-abs(self.DP_LowPressure))
+                    delta_high=abs(self.DP_high-abs(self.DP_HighPressure))
+                    self.DP_low=abs(self.DP_LowPressure)
+                    self.DP_high=abs(self.DP_HighPressure)
+                    # Update the guess values based on last converged values
+                    DT_evap_init=self.DT_evap
+                    DT_cond_init=self.DT_cond
+                    DT_sh_init=self.DT_sh
+                    if delta_low<1 and delta_high<1:
+                        DP_converged=True
+                    if self.Verbosity>4:
+                        print (self.DP_HighPressure,self.DP_LowPressure,'DPHP')
+                    GoodRun=True
+            except AttributeError:
+                # This will be a fatal error !! Should never have attribute error
+                raise 
+            except:
+                print ("--------------  Exception Caught ---------------- ")
+                print ("Error of type",sys.exc_info()[0]," is: " + sys.exc_info()[1].message)
+                raise
+        
+        if self.Verbosity>0:
+            
+            print ("Debugging Results")
+            print ()
+            print ('Q Evaporator:', self.Evaporator.Q)
+            print ('Capacity: ', self.Capacity)
+            print ('Compressor Power:',self.Compressor.W)
+            print ('Total Power', self.Power)
+            print ('COP: ',self.COP)
+            print ('COP (w/ both fans): ',self.COSP)
+            print ('SHR: ',self.SHR)
+        
+        print ('-------------------------------------')
+        print ('     Simulation Completed            ')
+        print ('-------------------------------------')
+
+            

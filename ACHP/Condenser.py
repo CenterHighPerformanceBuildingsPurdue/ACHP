@@ -75,12 +75,12 @@ class CondenserClass():
         ]
         
     def Update(self,**kwargs):
-        #Update the parameters passed in
+        # Update the parameters passed in
         # using the dictionary
         self.__dict__.update(kwargs)
         
     def Calculate(self):
-        #Only validate the first time
+        # Only validate the first time
         if not hasattr(self,'IsValidated'):
             self.Fins.Validate()
             reqFields=[
@@ -94,7 +94,7 @@ class CondenserClass():
             ValidateFields(self.__dict__,reqFields,optFields)
             self.IsValidated=True
         
-        #set tuning factors to 1 in case not given by user
+        # Set tuning factors to 1 in case not given by user
         if not hasattr(self,'h_a_tuning'):
             self.h_a_tuning = 1
         if not hasattr(self,'h_tp_tuning'):
@@ -102,7 +102,7 @@ class CondenserClass():
         if not hasattr(self,'DP_tuning'):
             self.DP_tuning = 1
                   
-        #AbstractState
+        # AbstractState
         AS = self.AS
         
         # Retrieve some parameters from nested structures 
@@ -138,21 +138,38 @@ class CondenserClass():
         # Thermal resistance at the wall
         self.Rw = log(self.OD/self.ID)/(2*pi*self.kw*self.Lcircuit*self.Ncircuits)
         
-        #define known parameters
+        # Define known parameters
         AS.update(CP.PT_INPUTS, self.psat_r, self.Tin_r)
         self.hin_r=AS.hmass() #[J/kg]
         self.sin_r=AS.smass() #[J/kg-K]
         
-        #Definitely have a superheated portion
-        self._Superheat_Forward()
-        #Maybe have a full two-phase section
-        #First try to run with a full two-phase section from quality of 1 to quality of 0
+        # Definitely have a superheated portion
+        # First try to run with a full superheated section from Tin_r to Tdew
+        self._Superheat_Forward(T_sh_out_r = self.Tdew)
+        # Maybe have a full two-phase section
+        # First try to run with a full two-phase section from quality of 1 to quality of 0
         self._TwoPhase_Forward()
-        #If we have already used too much of the HX (max possible sum of w is 1.0)
-        if self.w_2phase+self.w_superheat>1:
-            #There is no subcooled portion, solve for outlet quality
+        # If we have already used too much of the HX (max possible sum of w is 1.0)
+        if self.w_superheat>=1:
+            # There is partial superheated region
+            brentq(self._Superheat_Forward,self.Tdew,self.Tin_r)
+            # Zero out all the two-phase parameters
+            self.Q_2phase=0.0
+            self.DP_r_2phase=0.0
+            self.Charge_2phase=0.0
+            self.w_2phase=0.0
+            self.h_r_2phase=0.0
+            # Zero out all the subcooled parameters
+            self.Q_subcool=0.0
+            self.DP_r_subcool=0.0
+            self.Charge_subcool=0.0
+            self.w_subcool=0.0
+            self.h_r_subcool=0.0
+            self.existsSubcooled=False                 
+        elif self.w_2phase+self.w_superheat>1:
+            # There is no subcooled portion, solve for outlet quality
             brentq(self._TwoPhase_Forward,0.0000001,0.9999999)
-            #Zero out all the subcooled parameters
+            # Zero out all the subcooled parameters
             self.Q_subcool=0.0
             self.DP_r_subcool=0.0
             self.Charge_subcool=0.0
@@ -160,21 +177,29 @@ class CondenserClass():
             self.h_r_subcool=0.0
             self.existsSubcooled=False
         else:
-            #By definition then we have a subcooled portion, solve for it
+            # By definition then we have a subcooled portion, solve for it
             self.existsSubcooled=True 
             self._Subcool_Forward()
         
-        #Overall calculations
+        # Overall calculations
         self.Q=self.Q_superheat+self.Q_2phase+self.Q_subcool
         self.DP_r=self.DP_r_superheat+self.DP_r_2phase+self.DP_r_subcool
         self.DP_r=self.DP_r*self.DP_tuning #correcting the pressure drop
         self.Charge=self.Charge_2phase+self.Charge_subcool+self.Charge_superheat
         
         if self.existsSubcooled==True:
+            # Outlet condition is in the subcooled zone 
             AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
             self.hout_r=AS.hmass() #[J/kg]
             self.sout_r=AS.smass() #[J/kg-K]
+        elif self.w_superheat>=1:
+            # Outlet condition is in the superheated zone 
+            AS.update(CP.PT_INPUTS, self.psat_r, self.Tout_r)
+            self.hout_r=AS.hmass() #[J/kg]
+            self.sout_r=AS.smass() #[J/kg-K]   
+            self.DT_sc = 0.0 #[K]                 
         else:
+            # Outlet conditions is in the two-phase zone 
             self.Tout_r=self.xout_2phase*self.Tdew+(1-self.xout_2phase)*self.Tbubble
             AS.update(CP.QT_INPUTS, 0.0, self.Tout_r)
             h_l=AS.hmass() #[J/kg]
@@ -184,24 +209,24 @@ class CondenserClass():
             s_v=AS.smass() #[J/kg-K]
             self.hout_r= h_l + self.xout_2phase * (h_v - h_l)
             self.sout_r= s_l + self.xout_2phase * (s_v - s_l)
-            #Use the effective subcooling
+            # Use the effective subcooling
             self.DT_sc=self.DT_sc_2phase
         
-        #Calculate the mean outlet air temperature [K]
+        # Calculate the mean outlet air temperature [K]
         self.Tout_a=self.Tin_a-self.Q/(self.Fins.cp_da*self.Fins.mdot_da)
         self.hmean_r=self.w_2phase*self.h_r_2phase+self.w_superheat*self.h_r_superheat+self.w_subcool*self.h_r_subcool
         self.UA_r=self.hmean_r*self.A_r_wetted
         self.UA_a=(self.Fins.h_a*self.h_a_tuning)*self.Fins.A_a*self.Fins.eta_a
         self.UA_w=1/self.Rw
         
-    def _Superheat_Forward(self):
+    def _Superheat_Forward(self,T_sh_out_r):
         # **********************************************************************
         #                      SUPERHEATED PART 
         # **********************************************************************
-        #AbstractState
+        # AbstractState
         AS = self.AS
-        #Dew temperature for constant pressure cooling to saturation
-        Tdew=self.Tdew
+        # Dew temperature for constant pressure cooling to saturation
+        Tdew= T_sh_out_r #self.Tdew
         Tbubble=self.Tbubble
         
         # Average fluid temps are used for the calculation of properties 
@@ -214,7 +239,7 @@ class CondenserClass():
         cp_r = AS.cpmass() #[J/kg-K]
         rho_superheat= AS.rhomass() #[kg/m^3]
 
-        #Compute Fins Efficiency based on FinsType 
+        # Compute Fins Efficiency based on FinsType 
         if self.FinsType == 'WavyLouveredFins':
             WavyLouveredFins(self.Fins)
         elif self.FinsType == 'HerringboneFins':
@@ -236,21 +261,25 @@ class CondenserClass():
         # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
         # Heat is removed here from the refrigerant since it is being cooled
         self.Q_superheat = self.mdot_r * cp_r * (Tdew-self.Tin_r)
-
-        #Pressure drop calculations for superheated refrigerant
+        self.DT_sh = -self.Q_superheat/(self.mdot_r*cp_r)
+        self.Tout_r = self.Tin_r-self.DT_sh
+        
+        # Pressure drop calculations for superheated refrigerant
         v_r=1./rho_superheat
-        #Pressure gradient using Darcy friction factor
+        # Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_superheat*v_r*self.G_r**2/(2*self.ID) #Pressure gradient
         self.DP_r_superheat=dpdz_r*self.Lcircuit*self.w_superheat
         self.Charge_superheat = self.w_superheat * self.V_r * rho_superheat
 
-        #Latent heat needed for pseudo-quality calc
+        # Latent heat needed for pseudo-quality calc
         AS.update(CP.QT_INPUTS, 0.0, Tbubble)
         h_l = AS.hmass() #[J/kg]
         AS.update(CP.QT_INPUTS, 1.0, Tdew)
         h_v = AS.hmass() #[J/kg]
         h_fg = h_v - h_l #[J/kg]
         self.xin_r=1.0+cp_r*(self.Tin_r-Tdew)/h_fg
+        
+        return self.w_superheat-1
         
     def _TwoPhase_Forward(self,xout_r_2phase=0.0):
         """
@@ -277,15 +306,15 @@ class CondenserClass():
         self.epsilon_2phase=1-exp(-UA_overall/(self.mdot_da*self.Fins.cp_da));
         self.w_2phase=-self.mdot_r*h_fg*(1.0-xout_r_2phase)/(self.mdot_da*self.Fins.cp_da*(self.Tin_a-Tsat_r)*self.epsilon_2phase);
 
-        #Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
-        #Heat is removed here from the refrigerant since it is condensing
+        # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
+        # Heat is removed here from the refrigerant since it is condensing
         self.Q_2phase = self.epsilon_2phase * self.Fins.cp_da* self.mdot_da * self.w_2phase * (self.Tin_a-Tsat_r);
         
         self.xout_2phase=xout_r_2phase
         
         # Frictional pressure drop component
         DP_frict=LMPressureGradientAvg(self.xout_2phase,1.0,self.AS,self.G_r,self.ID,Tbubble,Tdew)*self.Lcircuit*self.w_2phase
-        #Accelerational pressure drop component    
+        # Accelerational pressure drop component    
         DP_accel=-AccelPressureDrop(self.xout_2phase,1.0,self.AS,self.G_r,Tbubble,Tdew,slipModel='Zivi')*self.Lcircuit*self.w_2phase
         # Total pressure drop is the sum of accelerational and frictional components (neglecting gravitational effects)
         self.DP_r_2phase=DP_frict+DP_accel
@@ -297,12 +326,12 @@ class CondenserClass():
             print ('2phase cond resid', self.w_2phase-(1-self.w_superheat))
             print ('h_r_2phase',self.h_r_2phase)
         
-        #Calculate an effective pseudo-subcooling based on the equality
+        # Calculate an effective pseudo-subcooling based on the equality
         #     cp*DT_sc=-dx*h_fg
         cp_satL = self.cp_satL #[J/kg-K]
         self.DT_sc_2phase=-self.xout_2phase*h_fg/(cp_satL)
             
-        #If the quality is being solved for, the length of the two-phase and subcooled
+        # If the quality is being solved for, the length of the two-phase and subcooled
         # sections should add to the length of the HX.  Return the residual
         return self.w_2phase-(1-self.w_superheat)
     
@@ -313,7 +342,7 @@ class CondenserClass():
         if self.w_subcool<0:
             raise ValueError('w_subcool in Condenser cannot be less than zero')
         
-        #AbstractState
+        # AbstractState
         AS = self.AS
         ## Bubble and dew temperatures (same for fluids without glide)
         Tbubble=self.Tbubble
@@ -346,10 +375,10 @@ class CondenserClass():
         NTU=UA_subcool/Cmin
         
         if(self.mdot_da*self.Fins.cp_da*self.w_subcool>self.mdot_r*cp_r):
-            #Minimum capacitance rate on refrigerant side
+            # Minimum capacitance rate on refrigerant side
             epsilon_subcool = 1. - exp(-1. / Cr * (1. - exp(-Cr * NTU)))
         else:
-            #Minimum capacitance rate on air side
+            # Minimum capacitance rate on air side
             epsilon_subcool = 1 / Cr * (1 - exp(-Cr * (1 - exp(-NTU))))
             
         # Positive Q is heat input to the refrigerant, negative Q is heat output from refrigerant. 
@@ -362,9 +391,9 @@ class CondenserClass():
         rho_subcool=AS.rhomass() #[kg/m^3]
         self.Charge_subcool = self.w_subcool * self.V_r * rho_subcool
     
-        #Pressure drop calculations for subcooled refrigerant
+        # Pressure drop calculations for subcooled refrigerant
         v_r=1/rho_subcool
-        #Pressure gradient using Darcy friction factor
+        # Pressure gradient using Darcy friction factor
         dpdz_r=-self.f_r_subcool*v_r*self.G_r**2/(2*self.ID)  #Pressure gradient
         self.DP_r_subcool=dpdz_r*self.Lcircuit*self.w_subcool
         
@@ -410,8 +439,51 @@ def SampleCondenser(AS,T=41.37):
     Cond.Calculate()
     return Cond
     
+def SampleIntercooler(AS,T=41.37):
+    # Only superheated region
+    Fins=FinInputs()
+    Fins.Tubes.NTubes_per_bank=41       #number of tubes per bank or row
+    Fins.Tubes.Nbank=1                  #number of banks or rows
+    Fins.Tubes.Ncircuits=5              #number of circuits
+    Fins.Tubes.Ltube=3                  #one tube length
+    Fins.Tubes.OD=0.007
+    Fins.Tubes.ID=0.0063904
+    Fins.Tubes.Pl=0.0191                #distance between center of tubes in flow direction                                                
+    Fins.Tubes.Pt=0.0222                #distance between center of tubes orthogonal to flow direction
+    Fins.Tubes.kw=237                   #Wall thermal conductivity
+    
+    Fins.Fins.FPI=25                    #Number of fins per inch
+    Fins.Fins.Pd=0.001                  #2* amplitude of wavy fin
+    Fins.Fins.xf=0.001                  #1/2 period of fin
+    Fins.Fins.t=0.00011                 #Thickness of fin material
+    Fins.Fins.k_fin=237                 #Thermal conductivity of fin material
+    
+    Fins.Air.Vdot_ha=8.998             #rated volumetric flowrate
+    Fins.Air.Tmean=48.9+273.15   
+    Fins.Air.Tdb=48.9+273.15                 #Dry Bulb Temperature
+    Fins.Air.p=101325                   #Air pressure in Pa
+    Fins.Air.RH=0.51                    #Relative Humidity
+    Fins.Air.RHmean=0.51
+    Fins.Air.FanPower=160    
+    
+    params={
+        'AS': AS, #Abstract State
+        'mdot_r': 1.209,
+        'Tin_r': T+273.15,
+        'psat_r': 716700, 
+        'Fins': Fins,
+        'FinsType': 'HerringboneFins',  #Choose fin Type: 'WavyLouveredFins' or 'HerringboneFins'or 'PlainFins'
+        'Verbosity':0,
+        'h_a_tuning':1,
+        'h_tp_tuning':1,
+        'DP_tuning':1,
+    }
+    Cond=CondenserClass(**params)
+    Cond.Calculate()
+    return Cond    
+
 if __name__=='__main__':
-    #This runs if you run this file directly
+    # This runs if you run this file directly
     Ref = 'R410A'
     Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     AS = CP.AbstractState(Backend, Ref) #Abstract State
@@ -425,3 +497,22 @@ if __name__=='__main__':
     print ('Fraction of circuit length in superheated section is',Cond.w_superheat)
     print ('Fraction of circuit length in twophase section is',Cond.w_2phase)
     print ('Fraction of circuit length in subcooled section is',Cond.w_subcool) 
+    print ()
+    
+    
+    #This runs the intercooler
+    Ref = 'R134A'
+    Backend = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
+    AS = CP.AbstractState(Backend, Ref) #Abstract State
+    Cond=SampleIntercooler(AS,85.72)
+    print (Cond.OutputList())
+    
+    print ('Heat transfer rate in condenser is', Cond.Q,'W')
+    print ('Heat transfer rate in condenser (superheat section) is',Cond.Q_superheat,'W')
+    print ('Heat transfer rate in condenser (twophase section) is',Cond.Q_2phase,'W')
+    print ('Heat transfer rate in condenser (subcooled section) is',Cond.Q_subcool,'W')
+    print ('Fraction of circuit length in superheated section is',Cond.w_superheat)
+    print ('Fraction of circuit length in twophase section is',Cond.w_2phase)
+    print ('Fraction of circuit length in subcooled section is',Cond.w_subcool)
+    print ('Refrigerant Inlet Temperature is',Cond.Tin_r - 273.15) 
+    print ('Refrigerant Outlet Temperature is',Cond.Tout_r - 273.15)

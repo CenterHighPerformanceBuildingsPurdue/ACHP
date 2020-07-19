@@ -1,4 +1,4 @@
-from __future__ import print_function, absolute_import
+from __future__ import division, print_function, absolute_import
 from CoolProp.CoolProp import PropsSI
 from ACHP.Correlations import f_h_1phase_Annulus,f_h_1phase_Tube,ShahEvaporation_Average
 from ACHP.Correlations import TwoPhaseDensity,LMPressureGradientAvg,AccelPressureDrop
@@ -282,7 +282,7 @@ if __name__=='__main__':
     TT=[]
     QQ=[]
     Q1=[]
-    #refrigerant Abstract State
+    #refigearnt Abstract State
     Ref_r = 'R290'
     Backend_r = 'HEOS' #choose between: 'HEOS','TTSE&HEOS','BICUBIC&HEOS','REFPROP','SRK','PR'
     AS_r = CP.AbstractState(Backend_r, Ref_r)
@@ -306,8 +306,8 @@ if __name__=='__main__':
                 'pin_r':PropsSI('P','T',Tdew_evap,'Q',1.0,Ref_r),
                 'pin_g':300000,     #pin_g in Pa
                 'Tin_g':290.52,
-                'AS_r':AS_r, #abstract state of refigerant
-                'AS_g':AS_g, #abstract state of glycol
+                'AS_r':AS_r, #Abstract state of refigerant
+                'AS_g':AS_g, ##Abstract state of glycol
                 'Verbosity':0,
                 'Conductivity' : 237, #[W/m-K]
                 'h_g_tuning':1,

@@ -199,7 +199,7 @@ def SecondaryLoopPreconditioner(Cycle,epsilon=0.9):
             #Evaporator will be dry
             Qcoolingcoil=epsilon*Cycle.CoolingCoil.Fins.Air.Vdot_ha*rho_air*(Tin_CC-Cycle.CoolingCoil.Fins.Air.Tdb)*Cp_air
             
-            #Glycol specific heat
+            #Glycol specifi heat
             AS_SLF.update(CP.PT_INPUTS,Cycle.Pump.pin_g,Tin_CC)
             cp_g=AS_SLF.cpmass() #[J/kg/K]
             

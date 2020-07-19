@@ -173,7 +173,7 @@ class CompressorClass():
         self.m_oil = self.V_oil_sump*rhomass_oil
         
         # Amount of refrigerant dissolved in the oil sump
-        self.Charge = rhomass_oil*self.x_Ref/(1-self.x_Ref)
+        self.Charge = self.m_oil*self.x_Ref/(1-self.x_Ref)
         
         
 if __name__=='__main__':

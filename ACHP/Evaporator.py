@@ -81,7 +81,7 @@ class EvaporatorClass():
             ('Mass Flow rate humid Air','kg/s',self.Fins.mdot_ha),
             ('Pressure Drop Air-side','Pa',self.Fins.dP_a),
             ('Sensible Heat Ratio','-',self.SHR),
-            ('Bend Temperature profile','K',self.Tbends)
+            #('Bend Temperature profile','K',self.Tbends)
         ]
         for i in range(0,len(Output_List_default)):         #append default parameters to output list
             Output_List.append(Output_List_default[i])
@@ -318,10 +318,14 @@ class EvaporatorClass():
             raise ValueError('Q_target in Evaporator must be positive')
         
         # Average Refrigerant heat transfer coefficient
-        if self.AS.name() in 'CarbonDioxide':
-            h_r=KandlikarEvaporation_average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
-        else:
-            h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+        try:
+            if self.AS.name() in 'CarbonDioxide':
+                h_r=KandlikarEvaporation_average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+            else:
+                h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+        except:
+                h_r=ShahEvaporation_Average(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.psat_r,Q_target/DWS.A_r,self.Tbubble_r,self.Tdew_r)
+            
         DWS.h_r=h_r*self.h_tp_tuning #correct refrigerant side convection heat transfer
         
         #Run the DryWetSegment to carry out the heat and mass transfer analysis
@@ -339,12 +343,14 @@ class EvaporatorClass():
         #Frictional pressure drop component
         DP_frict=LMPressureGradientAvg(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.ID,self.Tbubble_r,self.Tdew_r)*self.Lcircuit*w_2phase
         #Accelerational pressure drop component
-        if self.AS.name() in 'CarbonDioxide':
-            DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r,D=self.ID,slipModel='Premoli')*self.Lcircuit*w_2phase
-        else:
-            DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r,slipModel='Zivi')*self.Lcircuit*w_2phase
-        self.DP_r_2phase=DP_frict+DP_accel;
-        
+        try:
+            if self.AS.name() in 'CarbonDioxide':
+                DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r,D=self.ID,slipModel='Premoli')*self.Lcircuit*w_2phase
+            else:
+                DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r,slipModel='Zivi')*self.Lcircuit*w_2phase
+        except:
+                DP_accel=AccelPressureDrop(self.xin_r,self.xout_2phase,self.AS,self.G_r,self.Tbubble_r,self.Tdew_r,slipModel='Zivi')*self.Lcircuit*w_2phase
+        self.DP_r_2phase=DP_frict+DP_accel            
         if self.Verbosity>7:
             print (w_2phase,DWS.Q,Q_target,self.xin_r,"w_2phase,DWS.Q,Q_target,self.xin_r")
         return DWS.Q-Q_target
