@@ -213,23 +213,23 @@ if __name__=='__main__':
     
     for i in range(1):
         kwds={
-              'AS': AS, #Abstract state
-              'Ref': Ref,
-              'Tamb': 35 + 273.15,
-              'Tin_r':Tin_r + 273.15, #K
-              'pin_r':pin_r*1000,#Pa
-              'pout_r':pout_r*1000,#Pa
-              'Vdisp': 47e-6, #Displacement volume, m^3
-              'Vdot_ratio': 1.0, #Displacement Scale factor
-              'N': 3600, #Rotational speed, rpm
-              'a_etav':[1,-0.15876759,0.08252584,0.0200752], #Volumetric eff. coeff.
-              'a_etais':[1,0.07416618,0.21692259,0.02080006,0.10180568], #Isentropic eff. coeff.
-              'a_etaoi':[1,-0.01360705,-0.07433923,0.18585116,0.7669], #Overall eff. coeff.
-              'shell_pressure': 'low-pressure',
-              'Oil': 'POE32',
-              'V_oil_sump': 0.0,
-              'Verbosity': 0.0
-              }
+                'AS': AS, #Abstract state
+                'Ref': Ref,
+                'Tamb': 35 + 273.15,
+                'Tin_r':Tin_r + 273.15, #K
+                'pin_r':pin_r*1000,#Pa
+                'pout_r':pout_r*1000,#Pa
+                'Vdisp': 47e-6, #Displacement volume, m^3
+                'Vdot_ratio': 1.0, #Displacement Scale factor
+                'N': 3600, #Rotational speed, rpm
+                'a_etav':[1.,-0.32094114,0.00170576,-0.03695206], #Volumetric eff. coeff.
+                'a_etais':[1.,0.24148598,0.37491376,0.07996134,-0.03366503], #Isentropic eff. coeff.
+                'a_etaoi':[1.,-0.01360404,-0.07435644,0.18584579,0.63589724], #Overall eff. coeff.
+                'shell_pressure': 'low-pressure',
+                'Oil': 'POE32',
+                'V_oil_sump': 0.0,
+                'Verbosity': 0.0
+                }
         Comp=HitachiVariableSpeedRotaryCompressorClass(**kwds)
         Comp.Calculate()
         print ('Power:', Comp.W,'W')
