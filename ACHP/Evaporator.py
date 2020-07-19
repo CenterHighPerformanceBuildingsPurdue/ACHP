@@ -278,7 +278,7 @@ class EvaporatorClass():
         #Number of bends (including inlet and outlet of coil)
         Nbends=1+self.Lcircuit/self.Ltube
         #x-position of each point
-        xv=np.linspace(0,1,Nbends)
+        xv=np.linspace(0,1,int(Nbends))
         
         self.Tbends=interp1d(x,Tv)(xv)
         
