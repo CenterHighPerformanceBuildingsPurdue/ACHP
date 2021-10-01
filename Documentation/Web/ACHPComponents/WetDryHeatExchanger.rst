@@ -44,7 +44,7 @@ the overall heat transfrer conductance by
 .. math::
     :label: eqWDHE2
 
-    \frac{1}{\mathrm{UA}}=\frac{1}{1/\mathrm{UA}_a+1/\mathrm{UA}_r}
+    \mathrm{UA}=\frac{1}{1/\mathrm{UA}_a+1/\mathrm{UA}_r}
 
 and the |Ntu| from
 
