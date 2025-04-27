@@ -115,19 +115,19 @@ def WavyLouveredFins(Inputs):
     
                  |--       Pl      -|
                 ___                 |
-              /     \               |
+              /     \\              |
        =     |       |              |
-       |      \ ___ /               |
+       |     \\ ___ /               |
        |                            |
        |                           ___      
-       |                         /     \      |
+       |                         /     \\     |
       Pt                        |       |     D
-       |                         \ ___ /      |
+       |                        \\ ___ /      |
        |    
        |        ___
-       |      /     \
+       |      /     \\
        =     |       |
-              \ ___ /
+             \\ ___ /
     """
     
     Ntubes_bank = Inputs.Tubes.NTubes_per_bank  #tubes per bank

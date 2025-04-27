@@ -1,3 +1,4 @@
 *.pyc
 /Documentation/Web/_build
 ACHP/__pycache__
+.venv

@@ -634,9 +634,9 @@ class PHEHXClass():
         cp_h=Inputs['cp_h']
         cp_c=Inputs['cp_c']
         #Mole mass of refrigerant for Cooper correlation
-        M=AS_c.molar_mass()*1000 #[kg/kmol]
+        M=self.AS_c.molar_mass()*1000 #[kg/kmol]
         #Reduced pressure for Cooper Correlation
-        pcrit_c = AS_c.p_critical() #critical pressure of Ref_c [Pa]
+        pcrit_c = self.AS_c.p_critical() #critical pressure of Ref_c [Pa]
         pstar=Inputs['pin_c']/pcrit_c
         change=999
         w=1

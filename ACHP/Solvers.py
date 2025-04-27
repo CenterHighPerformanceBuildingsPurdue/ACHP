@@ -9,7 +9,7 @@ def MultiDimNewtRaph(f,x0,dx=1e-6,args=(),ytol=1e-5,w=1.0,JustOneStep=False):
     re-using the information as in the fsolve method of scipy.optimize
     """
     #Convert to numpy array, force type conversion to float
-    x=np.array(x0,dtype=np.float)
+    x=np.array(x0,dtype=float)
     error=999
     J=np.zeros((len(x),len(x)))
     
@@ -44,7 +44,7 @@ def Broyden(f,x0,dx=1e-5,args=(),ytol=1e-5,w=1.0,itermax=10,JustOneStep=False):
     Roughly speaking, the secant method replaces the derivative 
     by a finite difference approximation
     """
-    x0=np.array(x0,dtype=np.float)
+    x0=np.array(x0,dtype=float)
     x1=x0.copy()
     error=999
     A1=np.zeros((len(x0),len(x0)))
