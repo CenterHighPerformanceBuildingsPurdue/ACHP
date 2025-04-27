@@ -1,7 +1,7 @@
 from __future__ import division, absolute_import, print_function
-from ACHP.Cycle import DXCycleClass,SecondaryCycleClass
-from ACHP.convert_units import F2K
-from ACHP.ACHPTools import Write2CSV
+from Cycle import DXCycleClass,SecondaryCycleClass
+from convert_units import F2K
+from ACHPTools import Write2CSV
 
 def SampleSecondaryLoopSystem():
     #########################################################################
